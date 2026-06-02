@@ -1,0 +1,102 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtualenv
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# uv
+.uv/
+
+# Testing / coverage
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+
+# Type checkers
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.pyre/
+
+# Ruff
+.ruff_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Splunk app build artifacts
+*.tgz
+*.tar.gz
+local/
+metadata/local.meta
+
+# Splunk runtime logs
+.splunk/
+splunk_internal_logs/
+
+# AppInspect output
+appinspect_report.json
+appinspect_report.html
+
+# Secrets / env
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+
+# OS
+Thumbs.db
+
+# Generated docs build
+site/
+_build/
+.docusaurus/
+
+# Node (if Dashboard Studio v2 tooling appears)
+node_modules/
+.next/
+
+# Eval artifacts (big)
+eval/results/
+eval/datasets/cached/

@@ -1,0 +1,276 @@
+project: aegis
+hackathon: splunk-agentic-ops-2026
+deadline: 2026-06-15T09:00:00-07:00
+license: Apache-2.0
+codename: Aegis
+status: SPEC_DRAFT
+repo: ""                        # filled by orchestrator Phase 1 after gh repo create
+thread_surface: ""              # telegram or discord — filled by orchestrator Phase 1
+thread_chat_id: ""
+thread_topic_id: ""
+thread_anchor: ""
+
+stories:
+  # EPIC-01 — CI/CD foundation
+  - id: story-cicd-01-build-pipeline-python-wheels
+    epic: "EPIC-01 — CI/CD foundation"
+    status: PENDING
+    depends_on: []
+  - id: story-cicd-02-test-pipeline-pytest-respx
+    epic: "EPIC-01 — CI/CD foundation"
+    status: PENDING
+    depends_on: [story-cicd-01-build-pipeline-python-wheels]
+  - id: story-cicd-03-loc-cap-enforcement
+    epic: "EPIC-01 — CI/CD foundation"
+    status: PENDING
+    depends_on: [story-cicd-01-build-pipeline-python-wheels]
+  - id: story-cicd-04-pre-commit-hooks
+    epic: "EPIC-01 — CI/CD foundation"
+    status: PENDING
+    depends_on: [story-cicd-03-loc-cap-enforcement]
+  - id: story-cicd-05-appinspect-gate
+    epic: "EPIC-01 — CI/CD foundation"
+    status: PENDING
+    depends_on: [story-cicd-01-build-pipeline-python-wheels]
+  - id: story-cicd-06-eval-smoke-job
+    epic: "EPIC-01 — CI/CD foundation"
+    status: PENDING
+    depends_on: [story-cicd-02-test-pipeline-pytest-respx]
+  - id: story-cicd-07-security-scan-pipeline
+    epic: "EPIC-01 — CI/CD foundation"
+    status: PENDING
+    depends_on: []
+  - id: story-cicd-08-release-pipeline-signed
+    epic: "EPIC-01 — CI/CD foundation"
+    status: PENDING
+    depends_on: [story-cicd-01-build-pipeline-python-wheels]
+
+  # EPIC-02 — Repo skeleton + coding standards
+  - id: story-skel-01-uv-workspace-pyproject
+    epic: "EPIC-02 — Repo skeleton + coding standards"
+    status: PENDING
+    depends_on: [story-cicd-01-build-pipeline-python-wheels]
+  - id: story-skel-02-ruff-mypy-config
+    epic: "EPIC-02 — Repo skeleton + coding standards"
+    status: PENDING
+    depends_on: [story-skel-01-uv-workspace-pyproject]
+  - id: story-skel-03-claude-md-and-contribution-conventions
+    epic: "EPIC-02 — Repo skeleton + coding standards"
+    status: PENDING
+    depends_on: [story-skel-01-uv-workspace-pyproject]
+  - id: story-skel-04-loc-check-script-and-pre-commit
+    epic: "EPIC-02 — Repo skeleton + coding standards"
+    status: PENDING
+    depends_on: [story-skel-02-ruff-mypy-config, story-cicd-04-pre-commit-hooks]
+
+  # EPIC-03 — Core domain types
+  - id: story-core-01-verdict-pydantic-types
+    epic: "EPIC-03 — Core domain types"
+    status: PENDING
+    depends_on: [story-skel-02-ruff-mypy-config]
+  - id: story-core-02-otel-evaluation-event-emitter
+    epic: "EPIC-03 — Core domain types"
+    status: PENDING
+    depends_on: [story-core-01-verdict-pydantic-types]
+  - id: story-core-03-error-model-and-trace-propagation
+    epic: "EPIC-03 — Core domain types"
+    status: PENDING
+    depends_on: [story-core-01-verdict-pydantic-types]
+  - id: story-core-04-structlog-config-and-conventions
+    epic: "EPIC-03 — Core domain types"
+    status: PENDING
+    depends_on: [story-skel-02-ruff-mypy-config]
+
+  # EPIC-04 — Cisco AI Defense client
+  - id: story-judges-01-ai-defense-request-response-models
+    epic: "EPIC-04 — Cisco AI Defense client"
+    status: PENDING
+    depends_on: [story-core-01-verdict-pydantic-types]
+  - id: story-judges-02-ai-defense-httpx-client-with-retries
+    epic: "EPIC-04 — Cisco AI Defense client"
+    status: PENDING
+    depends_on: [story-judges-01-ai-defense-request-response-models]
+  - id: story-judges-03-ai-defense-circuit-breaker-tenacity
+    epic: "EPIC-04 — Cisco AI Defense client"
+    status: PENDING
+    depends_on: [story-judges-02-ai-defense-httpx-client-with-retries]
+  - id: story-judges-04-ai-defense-mock-respx-fixtures
+    epic: "EPIC-04 — Cisco AI Defense client"
+    status: PENDING
+    depends_on: [story-judges-01-ai-defense-request-response-models]
+  - id: story-judges-05-ai-defense-end-to-end-integration-test
+    epic: "EPIC-04 — Cisco AI Defense client"
+    status: PENDING
+    depends_on: [story-judges-03-ai-defense-circuit-breaker-tenacity, story-judges-04-ai-defense-mock-respx-fixtures]
+
+  # EPIC-05 — Foundation-Sec invocation
+  - id: story-foundsec-01-splunk-rest-search-client
+    epic: "EPIC-05 — Foundation-Sec invocation"
+    status: PENDING
+    depends_on: [story-core-01-verdict-pydantic-types]
+  - id: story-foundsec-02-ai-spl-explanation-prompt
+    epic: "EPIC-05 — Foundation-Sec invocation"
+    status: PENDING
+    depends_on: [story-foundsec-01-splunk-rest-search-client]
+  - id: story-foundsec-03-foundation-sec-mock-and-integration-test
+    epic: "EPIC-05 — Foundation-Sec invocation"
+    status: PENDING
+    depends_on: [story-foundsec-02-ai-spl-explanation-prompt]
+
+  # EPIC-06 — Surface 1 (middleware library)
+  - id: story-mw-01-package-skeleton-and-public-api
+    epic: "EPIC-06 — Surface 1 middleware"
+    status: PENDING
+    depends_on: [story-core-01-verdict-pydantic-types]
+  - id: story-mw-02-tool-middleware-with-defenseclaw-args
+    epic: "EPIC-06 — Surface 1 middleware"
+    status: PENDING
+    depends_on: [story-mw-01-package-skeleton-and-public-api, story-judges-05-ai-defense-end-to-end-integration-test]
+  - id: story-mw-03-model-middleware-pre-inference-scan
+    epic: "EPIC-06 — Surface 1 middleware"
+    status: PENDING
+    depends_on: [story-mw-01-package-skeleton-and-public-api, story-judges-05-ai-defense-end-to-end-integration-test]
+  - id: story-mw-04-model-middleware-post-inference-pii-check
+    epic: "EPIC-06 — Surface 1 middleware"
+    status: PENDING
+    depends_on: [story-mw-03-model-middleware-pre-inference-scan, story-foundsec-03-foundation-sec-mock-and-integration-test]
+  - id: story-mw-05-subagent-middleware
+    epic: "EPIC-06 — Surface 1 middleware"
+    status: PENDING
+    depends_on: [story-mw-01-package-skeleton-and-public-api]
+  - id: story-mw-06-agent-middleware-trace-correlation
+    epic: "EPIC-06 — Surface 1 middleware"
+    status: PENDING
+    depends_on: [story-mw-01-package-skeleton-and-public-api, story-core-03-error-model-and-trace-propagation]
+  - id: story-mw-07-profiles-and-config-fsi-hipaa-pubsec
+    epic: "EPIC-06 — Surface 1 middleware"
+    status: PENDING
+    depends_on: [story-mw-02-tool-middleware-with-defenseclaw-args, story-mw-03-model-middleware-pre-inference-scan]
+
+  # EPIC-07 — Surface 2 (Aegis MCP Server)
+  - id: story-mcp-01-server-skeleton-with-mcp-python-sdk
+    epic: "EPIC-07 — Surface 2 MCP Server"
+    status: PENDING
+    depends_on: [story-core-01-verdict-pydantic-types]
+  - id: story-mcp-02-tool-score-prompt-injection
+    epic: "EPIC-07 — Surface 2 MCP Server"
+    status: PENDING
+    depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk, story-judges-05-ai-defense-end-to-end-integration-test]
+  - id: story-mcp-03-tool-judge-tool-call
+    epic: "EPIC-07 — Surface 2 MCP Server"
+    status: PENDING
+    depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk]
+  - id: story-mcp-04-tool-check-output-leak
+    epic: "EPIC-07 — Surface 2 MCP Server"
+    status: PENDING
+    depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk, story-judges-05-ai-defense-end-to-end-integration-test]
+  - id: story-mcp-05-tool-audit-trace
+    epic: "EPIC-07 — Surface 2 MCP Server"
+    status: PENDING
+    depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk]
+  - id: story-mcp-06-claude-desktop-cursor-config-examples
+    epic: "EPIC-07 — Surface 2 MCP Server"
+    status: PENDING
+    depends_on: [story-mcp-02-tool-score-prompt-injection, story-mcp-03-tool-judge-tool-call, story-mcp-04-tool-check-output-leak, story-mcp-05-tool-audit-trace]
+
+  # EPIC-08 — Surface 3 (DefenseClaw integration)
+  - id: story-dc-01-config-delta-docs-and-example
+    epic: "EPIC-08 — Surface 3 DefenseClaw"
+    status: PENDING
+    depends_on: [story-core-02-otel-evaluation-event-emitter]
+  - id: story-dc-02-ai-defense-backend-upstream-pr
+    epic: "EPIC-08 — Surface 3 DefenseClaw"
+    status: PENDING
+    depends_on: [story-dc-01-config-delta-docs-and-example]
+  - id: story-dc-03-langgraph-example-agent
+    epic: "EPIC-08 — Surface 3 DefenseClaw"
+    status: PENDING
+    depends_on: [story-dc-01-config-delta-docs-and-example]
+
+  # EPIC-09 — Surface 4 (Splunk app)
+  - id: story-app-01-app-conf-and-metadata-skeleton
+    epic: "EPIC-09 — Surface 4 Splunk app"
+    status: PENDING
+    depends_on: []
+  - id: story-app-02-props-transforms-for-aegis-verdict-sourcetype
+    epic: "EPIC-09 — Surface 4 Splunk app"
+    status: PENDING
+    depends_on: [story-app-01-app-conf-and-metadata-skeleton, story-core-02-otel-evaluation-event-emitter]
+  - id: story-app-03-savedsearches-and-mltk-macros
+    epic: "EPIC-09 — Surface 4 Splunk app"
+    status: PENDING
+    depends_on: [story-app-02-props-transforms-for-aegis-verdict-sourcetype]
+  - id: story-app-04-collections-conf-kvstore-verdict-history
+    epic: "EPIC-09 — Surface 4 Splunk app"
+    status: PENDING
+    depends_on: [story-app-01-app-conf-and-metadata-skeleton]
+  - id: story-app-05-dashboard-agent-risk-overview
+    epic: "EPIC-09 — Surface 4 Splunk app"
+    status: PENDING
+    depends_on: [story-app-03-savedsearches-and-mltk-macros]
+  - id: story-app-06-dashboard-verdict-inspector
+    epic: "EPIC-09 — Surface 4 Splunk app"
+    status: PENDING
+    depends_on: [story-app-03-savedsearches-and-mltk-macros, story-app-04-collections-conf-kvstore-verdict-history]
+  - id: story-app-07-dashboard-regulator-evidence-pack
+    epic: "EPIC-09 — Surface 4 Splunk app"
+    status: PENDING
+    depends_on: [story-app-03-savedsearches-and-mltk-macros, story-app-04-collections-conf-kvstore-verdict-history]
+  - id: story-app-08-risk-factors-conf-es-rba-integration
+    epic: "EPIC-09 — Surface 4 Splunk app"
+    status: PENDING
+    depends_on: [story-app-03-savedsearches-and-mltk-macros]
+  - id: story-app-09-static-icons-and-app-assets
+    epic: "EPIC-09 — Surface 4 Splunk app"
+    status: PENDING
+    depends_on: [story-app-01-app-conf-and-metadata-skeleton]
+  - id: story-app-10-app-vision-loop-validation
+    epic: "EPIC-09 — Surface 4 Splunk app"
+    status: PENDING
+    depends_on: [story-app-05-dashboard-agent-risk-overview, story-app-06-dashboard-verdict-inspector, story-app-07-dashboard-regulator-evidence-pack]
+
+  # EPIC-10 — Eval
+  - id: story-eval-01-synthetic-data-generator-dns-guard-pattern
+    epic: "EPIC-10 — Eval harness"
+    status: PENDING
+    depends_on: [story-core-01-verdict-pydantic-types]
+  - id: story-eval-02-jailbreakbench-and-advbench-loaders
+    epic: "EPIC-10 — Eval harness"
+    status: PENDING
+    depends_on: [story-eval-01-synthetic-data-generator-dns-guard-pattern]
+  - id: story-eval-03-imprompter-payload-corpus-from-pdf
+    epic: "EPIC-10 — Eval harness"
+    status: PENDING
+    depends_on: [story-eval-01-synthetic-data-generator-dns-guard-pattern]
+  - id: story-eval-04-three-baselines-defenseclaw-gptoss-aidefense-alone
+    epic: "EPIC-10 — Eval harness"
+    status: PENDING
+    depends_on: [story-judges-05-ai-defense-end-to-end-integration-test, story-foundsec-03-foundation-sec-mock-and-integration-test]
+  - id: story-eval-05-metrics-and-report-generator
+    epic: "EPIC-10 — Eval harness"
+    status: PENDING
+    depends_on: [story-eval-02-jailbreakbench-and-advbench-loaders, story-eval-03-imprompter-payload-corpus-from-pdf, story-eval-04-three-baselines-defenseclaw-gptoss-aidefense-alone]
+
+  # EPIC-12 — AppInspect hardening (runs before EPIC-11)
+  - id: story-app-11-appinspect-expect-yaml-and-manual-checks
+    epic: "EPIC-12 — AppInspect hardening"
+    status: PENDING
+    depends_on: [story-app-10-app-vision-loop-validation]
+  - id: story-app-12-splunkbase-submission-package-and-checklist
+    epic: "EPIC-12 — AppInspect hardening"
+    status: PENDING
+    depends_on: [story-app-11-appinspect-expect-yaml-and-manual-checks]
+
+  # EPIC-11 — README + demo (LAST)
+  - id: story-readme-01-headline-and-banner-and-credits
+    epic: "EPIC-11 — README + demo"
+    status: PENDING
+    depends_on: [story-eval-05-metrics-and-report-generator]
+  - id: story-readme-02-architecture-diagrams-light-dark-png
+    epic: "EPIC-11 — README + demo"
+    status: PENDING
+    depends_on: []
+  - id: story-demo-01-screencast-and-script
+    epic: "EPIC-11 — README + demo"
+    status: PENDING
+    depends_on: [story-app-12-splunkbase-submission-package-and-checklist, story-mw-07-profiles-and-config-fsi-hipaa-pubsec, story-mcp-06-claude-desktop-cursor-config-examples, story-readme-01-headline-and-banner-and-credits]
