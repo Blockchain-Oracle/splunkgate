@@ -10,13 +10,17 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
+  # Local mypy hook (NOT mirrors-mypy) so it runs in the uv venv where
+  # workspace packages (aegis_core, aegis_judges) are editable-installed.
+  # mirrors-mypy's hermetic env can't resolve workspace deps.
+  - repo: local
     hooks:
       - id: mypy
-        files: ^packages/(aegis_core|aegis_judges)/src/
-        args: [--strict]
-        additional_dependencies: [pydantic, httpx, structlog]
+        name: mypy --strict (aegis_core + aegis_judges)
+        entry: uv run mypy --strict -p aegis_core -p aegis_judges
+        language: system
+        pass_filenames: false
+        files: ^packages/(aegis_core|aegis_judges)/src/.*\.py$
 
   - repo: local
     hooks:

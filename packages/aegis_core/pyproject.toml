@@ -4,7 +4,7 @@ version = "0.0.1"
 description = "Aegis core domain types: Verdict, Severity, OTel emission, error model"
 requires-python = ">=3.13"
 license = { text = "Apache-2.0" }
-dependencies = []
+dependencies = ["pydantic>=2.10"]
 
 [build-system]
 requires = ["hatchling"]
