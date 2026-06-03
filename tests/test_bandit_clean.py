@@ -10,13 +10,10 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
-def _run_bandit(
-    target: Path, config: Path | None = None
-) -> subprocess.CompletedProcess[str]:
+def _run_bandit(target: Path, config: Path | None = None) -> subprocess.CompletedProcess[str]:
     cmd = ["uv", "run", "--with", "bandit", "bandit", "-r", str(target)]
     if config is not None:
         cmd += ["-c", str(config)]
@@ -42,9 +39,7 @@ def test_bandit_clean_on_aegis_judges_placeholder() -> None:
 def test_bandit_fires_on_eval_violator(tmp_path: Path) -> None:
     """bandit catches `eval(user_input)` (rule B307) in a tmp file."""
     violator = tmp_path / "violator.py"
-    violator.write_text(
-        "def run(user_input: str) -> object:\n    return eval(user_input)\n"
-    )
+    violator.write_text("def run(user_input: str) -> object:\n    return eval(user_input)\n")
     result = _run_bandit(tmp_path)
     assert result.returncode != 0, (
         f"bandit DID NOT catch eval() violator:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
