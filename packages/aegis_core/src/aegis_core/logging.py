@@ -40,9 +40,12 @@ LogKey = Literal[
     "agent_id",
     "model_name",
 ]
-"""The stable set of structured-log keys Aegis emits. Code that uses a key
-outside this list violates the architecture's stable-key contract — type-checkers
-flag it as a Literal mismatch when binding via `log.bind(**{k: v})`."""
+"""The stable set of structured-log keys Aegis emits.
+
+Documentation-only contract: structlog's `bind()` is typed `**kw: Any` so
+mypy won't enforce key spelling automatically. Surface code that wants
+the check should type-annotate intermediate variables as `LogKey` before
+passing — e.g. `key: LogKey = "verdict"; log.bind(**{key: "BLOCK"})`."""
 
 
 def _trace_id_processor(
@@ -57,10 +60,10 @@ def _trace_id_processor(
     return event_dict
 
 
-def _resolve_dev_mode(dev_mode: bool | None) -> bool:  # noqa: FBT001 — internal helper, explicit name documents intent
+def _resolve_dev_mode(*, dev_mode_kwarg: bool | None) -> bool:
     """Resolve dev/prod mode from explicit kwarg, env var, then TTY detection."""
-    if dev_mode is not None:
-        return dev_mode
+    if dev_mode_kwarg is not None:
+        return dev_mode_kwarg
     env = os.environ.get("AEGIS_LOG_FORMAT", "").strip().lower()
     if env == "json":
         return False
@@ -77,7 +80,7 @@ def configure_logging(*, dev_mode: bool | None = None) -> None:
       2. AEGIS_LOG_FORMAT env var ("json" → prod, "console" → dev)
       3. sys.stderr.isatty() — True (interactive) → dev, False (CI/prod) → prod
     """
-    is_dev = _resolve_dev_mode(dev_mode)
+    is_dev = _resolve_dev_mode(dev_mode_kwarg=dev_mode)
     renderer: structlog.types.Processor
     renderer = structlog.dev.ConsoleRenderer() if is_dev else structlog.processors.JSONRenderer()
     structlog.configure(
@@ -96,9 +99,10 @@ def configure_logging(*, dev_mode: bool | None = None) -> None:
     )
 
 
-def get_logger(name: str) -> structlog.stdlib.BoundLogger:
+def get_logger(name: str) -> structlog.BoundLogger:
     """Return a BoundLogger; safe to call before configure_logging()."""
     # structlog.get_logger returns BoundLoggerLazyProxy typed as Any —
     # cast to BoundLogger for the public API. The proxy resolves to a
-    # real BoundLogger on first call.
+    # real native BoundLogger on first call (not stdlib.BoundLogger —
+    # this module configures the native wrapper via make_filtering_bound_logger).
     return structlog.get_logger(name)  # type: ignore[no-any-return]
