@@ -32,6 +32,12 @@ HEC_URL = "https://hec.example.com:8088"
 HEC_TOKEN = "11111111-2222-3333-4444-555555555555"  # noqa: S105 — synthetic test fixture, not a real secret
 
 
+@pytest.fixture(autouse=True)
+def _patch_tenacity_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Skip real wait_exponential sleeps so retry tests run in milliseconds, not seconds."""
+    monkeypatch.setattr("tenacity.nap.time.sleep", lambda _seconds: None)
+
+
 @pytest.fixture
 def captured_span(otel_exporter: InMemorySpanExporter) -> Iterator[ReadableSpan]:
     """Emit a sample verdict event inside a span and yield the captured span."""
