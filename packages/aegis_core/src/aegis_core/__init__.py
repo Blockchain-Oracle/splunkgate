@@ -6,6 +6,7 @@ from aegis_core.errors import (
     JudgmentError,
     NetworkError,
 )
+from aegis_core.otel import emit_verdict_event, severity_to_score
 from aegis_core.trace import (
     current_trace_id,
     new_trace_id,
@@ -33,8 +34,10 @@ __all__: list[str] = [
     "VerdictContext",
     "VerdictLabel",
     "current_trace_id",
+    "emit_verdict_event",
     "new_trace_id",
     "set_trace_id",
+    "severity_to_score",
     "trace_context",
     "verdict_to_json_schema",
 ]

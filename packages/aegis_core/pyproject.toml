@@ -4,7 +4,12 @@ version = "0.0.1"
 description = "Aegis core domain types: Verdict, Severity, OTel emission, error model"
 requires-python = ">=3.13"
 license = { text = "Apache-2.0" }
-dependencies = ["pydantic>=2.10"]
+dependencies = [
+    "pydantic>=2.10",
+    "opentelemetry-api>=1.27",
+    "opentelemetry-sdk>=1.27",
+    "opentelemetry-util-genai>=0.4b0",
+]
 
 [build-system]
 requires = ["hatchling"]
