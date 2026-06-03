@@ -42,6 +42,18 @@ jobs:
       - run: uv run mypy --strict -p aegis_core -p aegis_judges
       - run: uv run mypy -p aegis_mw -p aegis_mcp -p aegis_eval
 
+  loc-cap:
+    name: 400-LOC cap
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv run python .github/scripts/check_loc.py
+
   test:
     name: Tests
     runs-on: ubuntu-latest
