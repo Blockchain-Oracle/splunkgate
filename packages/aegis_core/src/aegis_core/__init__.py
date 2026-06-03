@@ -1,4 +1,4 @@
-"""Aegis core domain types: Verdict, Severity, OTel emission, error model."""
+"""Aegis core domain types: Verdict, Severity, OTel emission, error model, logging."""
 
 from aegis_core.errors import (
     AegisError,
@@ -6,6 +6,7 @@ from aegis_core.errors import (
     JudgmentError,
     NetworkError,
 )
+from aegis_core.logging import configure_logging, get_logger
 from aegis_core.otel import emit_verdict_event, severity_to_score
 from aegis_core.trace import (
     current_trace_id,
@@ -33,8 +34,10 @@ __all__: list[str] = [
     "Verdict",
     "VerdictContext",
     "VerdictLabel",
+    "configure_logging",
     "current_trace_id",
     "emit_verdict_event",
+    "get_logger",
     "new_trace_id",
     "set_trace_id",
     "severity_to_score",
