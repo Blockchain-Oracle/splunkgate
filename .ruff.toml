@@ -1,0 +1,26 @@
+line-length = 100
+target-version = "py313"
+
+[lint]
+# Per docs/architecture.md § "Coding standards" hard rule 3: all rules enabled.
+select = ["ALL"]
+ignore = [
+    "E501",     # Line-length deferred to formatter (per spec)
+    "D203",     # Conflict with D211 (blank-line-before-class); pick D211
+    "D213",     # Conflict with D212 (multi-line-summary-first-line); pick D212
+    "COM812",   # Conflicts with ruff's own formatter
+    "ISC001",   # Conflicts with ruff's own formatter
+]
+
+[lint.per-file-ignores]
+# Test files don't need docstrings on every function; assert + magic numbers
+# are tester staples; allow subprocess in meta-tests.
+"**/tests/**/*.py" = ["D", "ANN", "S101", "S603", "S607", "PLR2004"]
+"tests/**/*.py"    = ["D", "ANN", "S101", "S603", "S607", "PLR2004"]
+# Eval scripts and ops scripts get docstring + magic-number relaxation
+# .github/scripts/check_loc.py prints status as part of its CLI contract;
+# T201 (no-print) suppressed here only. Use structlog in production code.
+".github/scripts/*.py" = ["D", "PLR2004", "TRY003", "T201"]
+
+[lint.pydocstyle]
+convention = "google"
