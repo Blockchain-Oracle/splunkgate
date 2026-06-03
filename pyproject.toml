@@ -28,6 +28,10 @@ asyncio_mode = "auto"
 testpaths = ["packages", "eval"]
 addopts = "--import-mode=importlib"
 
+[tool.mypy]
+explicit_package_bases = true
+namespace_packages = true
+
 [tool.uv.sources]
 aegis-core = { workspace = true }
 aegis-judges = { workspace = true }

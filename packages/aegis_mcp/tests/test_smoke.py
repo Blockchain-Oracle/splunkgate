@@ -1,5 +1,5 @@
 import aegis_mcp
 
 
-def test_aegis_mcp_imports() -> None:
+def test_version_present() -> None:
     assert aegis_mcp.__version__ == "0.0.1"
