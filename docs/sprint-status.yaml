@@ -126,8 +126,11 @@ stories:
     depends_on: [story-judges-02-ai-defense-httpx-client-with-retries]
   - id: story-judges-04-ai-defense-mock-respx-fixtures
     epic: "EPIC-04 — Cisco AI Defense client"
-    status: PENDING
+    status: COMPLETE
     depends_on: [story-judges-01-ai-defense-request-response-models]
+    pr: "https://github.com/Blockchain-Oracle/aegis/pull/81"
+    merged_at: "2026-06-03T15:30:00Z"
+    notes: "44-row matrix, from_env() closes judges-02 contract drift. Demo-without-API-key unblocked."
   - id: story-judges-05-ai-defense-end-to-end-integration-test
     epic: "EPIC-04 — Cisco AI Defense client"
     status: PENDING
