@@ -2,7 +2,6 @@
 name = "aegis-mw"
 version = "0.0.1"
 description = "Aegis middleware library for splunklib.ai (Surface 1)"
-readme = "../../README.md"
 requires-python = ">=3.13"
 license = { text = "Apache-2.0" }
 dependencies = ["aegis-core", "aegis-judges"]
