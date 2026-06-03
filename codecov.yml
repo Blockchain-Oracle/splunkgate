@@ -1,0 +1,17 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 70%
+        threshold: 1%
+    patch:
+      default:
+        target: 70%
+
+flags:
+  aegis_core:
+    paths:
+      - packages/aegis_core/src/aegis_core
+  aegis_judges:
+    paths:
+      - packages/aegis_judges/src/aegis_judges
