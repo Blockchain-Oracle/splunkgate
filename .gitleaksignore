@@ -7,3 +7,9 @@
 # string used to verify the gitleaks hook fires. Allowlisting THIS specific
 # fingerprint keeps gitleaks's full scan active on every other file in the repo.
 tests/fixtures/pre_commit_violators/has_secret.py.fixture:aws-access-token:2
+
+# packages/aegis_judges/tests/test_ai_defense_client.py — synthetic API_KEY
+# fixture used by respx mocks. Never reaches a real endpoint. The string is
+# intentionally shaped like a Cisco AI Defense key so the test exercises the
+# X-Cisco-AI-Defense-API-Key header path realistically.
+packages/aegis_judges/tests/test_ai_defense_client.py:generic-api-key:25
