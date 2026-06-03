@@ -65,8 +65,10 @@ stories:
     merged_at: "2026-06-03T08:30:00Z"
   - id: story-skel-02-ruff-mypy-config
     epic: "EPIC-02 — Repo skeleton + coding standards"
-    status: PENDING
+    status: COMPLETE
     depends_on: [story-skel-01-uv-workspace-pyproject]
+    pr: "https://github.com/Blockchain-Oracle/aegis/pull/73"
+    merged_at: "2026-06-03T11:10:00Z"
   - id: story-skel-03-claude-md-and-contribution-conventions
     epic: "EPIC-02 — Repo skeleton + coding standards"
     status: PENDING
