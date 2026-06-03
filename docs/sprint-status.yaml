@@ -88,8 +88,10 @@ stories:
     notes: "First product-code PR. 33 tests, 100% coverage on verdict.py + verdict_context.py."
   - id: story-core-02-otel-evaluation-event-emitter
     epic: "EPIC-03 — Core domain types"
-    status: PENDING
+    status: COMPLETE
     depends_on: [story-core-01-verdict-pydantic-types]
+    pr: "https://github.com/Blockchain-Oracle/aegis/pull/76"
+    merged_at: "2026-06-03T12:40:00Z"
   - id: story-core-03-error-model-and-trace-propagation
     epic: "EPIC-03 — Core domain types"
     status: COMPLETE
