@@ -34,9 +34,9 @@ def test_bandit_clean_on_aegis_judges_placeholder() -> None:
     target = REPO_ROOT / "packages" / "aegis_judges" / "src"
     config = REPO_ROOT / ".bandit"
     result = _run_bandit(target, config)
-    assert (
-        result.returncode == 0
-    ), f"bandit failed on placeholder code:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+    assert result.returncode == 0, (
+        f"bandit failed on placeholder code:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+    )
 
 
 def test_bandit_fires_on_eval_violator(tmp_path: Path) -> None:
@@ -46,9 +46,9 @@ def test_bandit_fires_on_eval_violator(tmp_path: Path) -> None:
         "def run(user_input: str) -> object:\n    return eval(user_input)\n"
     )
     result = _run_bandit(tmp_path)
-    assert (
-        result.returncode != 0
-    ), f"bandit DID NOT catch eval() violator:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
-    assert (
-        "B307" in result.stdout or "eval" in result.stdout.lower()
-    ), f"bandit output didn't mention eval/B307:\n{result.stdout}"
+    assert result.returncode != 0, (
+        f"bandit DID NOT catch eval() violator:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+    )
+    assert "B307" in result.stdout or "eval" in result.stdout.lower(), (
+        f"bandit output didn't mention eval/B307:\n{result.stdout}"
+    )

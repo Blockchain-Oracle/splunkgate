@@ -1,6 +1,10 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.7.0
+    # v0.15.15 — matches the ruff version resolved by the workspace dev-group
+    # (uv resolves `ruff>=0.6` to 0.15.15 as of 2026-06-03). Version drift
+    # between hook + dev-group causes silent format-style flapping; keep
+    # these aligned via skel-02 once it owns the canonical ruff pin.
+    rev: v0.15.15
     hooks:
       - id: ruff
         args: [--fix]
