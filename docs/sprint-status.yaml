@@ -14,8 +14,10 @@ stories:
   # EPIC-01 — CI/CD foundation
   - id: story-cicd-01-build-pipeline-python-wheels
     epic: "EPIC-01 — CI/CD foundation"
-    status: PENDING
+    status: COMPLETE
     depends_on: [story-skel-01-uv-workspace-pyproject]
+    pr: "https://github.com/Blockchain-Oracle/aegis/pull/68"
+    merged_at: "2026-06-03T09:00:00Z"
   - id: story-cicd-02-test-pipeline-pytest-respx
     epic: "EPIC-01 — CI/CD foundation"
     status: PENDING
