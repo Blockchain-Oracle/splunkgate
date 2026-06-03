@@ -1,0 +1,30 @@
+# Aegis gitleaks config — inherits gitleaks default ruleset.
+# Adds narrowly-scoped allowlist entries; every entry must reference a
+# docs/ file or fixture path with a justification.
+
+title = "Aegis gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Aegis-scoped carve-outs for synthetic fixtures and documented env-var names"
+
+# Per docs/cicd-spec.md § "Pre-commit hooks" + story-cicd-04, synthetic
+# fixture files under tests/fixtures/ contain intentionally-shaped secrets
+# used to verify gitleaks itself fires. Path scoped to fixture dirs only.
+paths = [
+  '''tests/fixtures/.*''',
+]
+
+# Per docs/cicd-spec.md § "Secrets to configure in GitHub", the env-var
+# name AEGIS_AI_DEFENSE_API_KEY appears throughout docs/ as a placeholder
+# (not a value). Same for AEGIS_SPLUNK_HEC_TOKEN, AEGIS_SPLUNK_API_TOKEN.
+# These are NAMES, never set in source.
+regexes = [
+  '''AEGIS_AI_DEFENSE_API_KEY''',
+  '''AEGIS_SPLUNK_HEC_TOKEN''',
+  '''AEGIS_SPLUNK_API_TOKEN''',
+  '''CODECOV_TOKEN''',
+  '''GITLEAKS_LICENSE''',
+]

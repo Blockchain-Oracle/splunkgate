@@ -1,0 +1,19 @@
+# Bandit config — YAML (bandit 1.7+ default loader).
+# Confidence and severity floors: only MEDIUM+ findings fail the build.
+
+# Skipped rules:
+#   B101 — `assert` usage. pytest is built on `assert`; splunklib's own tests
+#          use asserts. Skipping aligns with upstream convention.
+#   B404 — `subprocess` imports. EPIC-05 (story-foundsec-01-splunk-rest-search-client)
+#          may shell out to the Splunk CLI in test fixtures; legitimate use.
+skips:
+  - B101
+  - B404
+
+exclude_dirs:
+  - tests
+  - __pycache__
+  - .venv
+  - .mypy_cache
+  - .ruff_cache
+  - .pytest_cache

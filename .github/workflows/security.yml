@@ -1,0 +1,74 @@
+name: Security
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['main']
+  schedule:
+    - cron: '0 3 * * *'
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.13"
+  UV_VERSION: "latest"
+
+jobs:
+  pip-audit:
+    name: pip-audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --all-packages --frozen
+      # --skip-editable: workspace-local packages (aegis_core, aegis_judges, ...)
+      # aren't on PyPI so pip-audit can't query for CVEs against them. Their
+      # actual content is gated by ruff/mypy/bandit; pip-audit's value here is
+      # transitive PyPI deps (pytest, httpx, structlog, ...).
+      # --strict dropped: pip-audit treats every --skip-editable result as an
+      # error under --strict (incompatible with uv workspace layouts). Without
+      # --strict, vulns still fail the run; only Skip-rows are non-fatal.
+      - run: uv run --with pip-audit pip-audit --skip-editable
+
+  gitleaks:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+
+  trivy:
+    name: trivy
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+  bandit:
+    name: bandit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv run --with bandit bandit -r packages/aegis_judges/src/ -c .bandit
