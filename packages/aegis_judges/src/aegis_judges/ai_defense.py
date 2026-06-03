@@ -16,11 +16,15 @@ adds an env-var-toggled stub-client sibling for tests + dev runs without a
 real key.
 """
 
+import os
 import time
-from typing import Final, Self
+from typing import TYPE_CHECKING, Final, Self
 
 import httpx
 import structlog
+
+if TYPE_CHECKING:
+    from aegis_judges.ai_defense_mock import MockAIDefenseClient
 from tenacity import (
     AsyncRetrying,
     RetryError,
@@ -46,6 +50,13 @@ _QUOTA_PER_APP_PER_YEAR: Final[int] = 10_000_000
 # Exception message constants (ruff EM101 — exception strings must be variables).
 _MSG_TIMEOUT_AFTER_RETRIES: Final[str] = "Cisco AI Defense Inspection API timed out after retries"
 _MSG_RETRY_LOOP_EXITED: Final[str] = "Cisco AI Defense retry loop exited without response"
+_MSG_MISSING_API_KEY: Final[str] = (
+    "AEGIS_AI_DEFENSE_API_KEY is unset and AEGIS_AI_DEFENSE_MOCK is not truthy; "
+    "either set AEGIS_AI_DEFENSE_API_KEY for live mode or AEGIS_AI_DEFENSE_MOCK=1 "
+    "for the deterministic mock client"
+)
+
+_TRUTHY: Final[frozenset[str]] = frozenset({"1", "true", "yes", "on"})
 
 _logger = structlog.get_logger(__name__)
 _quota_note_logged = False
@@ -151,6 +162,32 @@ class AIDefenseClient:
     async def aclose(self) -> None:
         """Close the underlying httpx client."""
         await self._client.aclose()
+
+    @classmethod
+    def from_env(cls) -> "AIDefenseClient | MockAIDefenseClient":
+        """Construct the right client based on env vars.
+
+        AEGIS_AI_DEFENSE_MOCK truthy → MockAIDefenseClient
+        else AEGIS_AI_DEFENSE_API_KEY required → live AIDefenseClient
+        else raise AIDefenseAuthError naming the missing env var.
+
+        AEGIS_AI_DEFENSE_REGION defaults to "us".
+        """
+        if os.environ.get("AEGIS_AI_DEFENSE_MOCK", "").strip().lower() in _TRUTHY:
+            # Local import — avoids importing the mock module in live deployments.
+            from aegis_judges.ai_defense_mock import MockAIDefenseClient  # noqa: PLC0415
+
+            _logger.info("aidefense.client.constructed", mode="mock", region="n/a")
+            return MockAIDefenseClient()
+        api_key = os.environ.get("AEGIS_AI_DEFENSE_API_KEY", "").strip()
+        if not api_key:
+            raise AIDefenseAuthError(_MSG_MISSING_API_KEY)
+        region_raw = os.environ.get("AEGIS_AI_DEFENSE_REGION", "us").strip().lower()
+        region: Region = "us"
+        if region_raw in REGION_BASE_URLS:
+            region = region_raw  # narrowing handled at runtime
+        _logger.info("aidefense.client.constructed", mode="live", region=region)
+        return cls(api_key, region=region)
 
     async def __aenter__(self) -> Self:
         """Allow `async with AIDefenseClient(...) as client:` usage."""

@@ -15,8 +15,10 @@ ignore = [
 [lint.per-file-ignores]
 # Test files don't need docstrings on every function; assert + magic numbers
 # are tester staples; allow subprocess in meta-tests.
-"**/tests/**/*.py" = ["D", "ANN", "S101", "S603", "S607", "PLR2004"]
-"tests/**/*.py"    = ["D", "ANN", "S101", "S603", "S607", "PLR2004"]
+"**/tests/**/*.py"   = ["D", "ANN", "S101", "S603", "S607", "PLR2004"]
+"tests/**/*.py"      = ["D", "ANN", "S101", "S603", "S607", "PLR2004"]
+# Package-level conftest.py needs INP001 carve-out (implicit namespace package).
+"**/conftest.py"     = ["INP001"]
 # Eval scripts and ops scripts get docstring + magic-number relaxation
 # .github/scripts/check_loc.py prints status as part of its CLI contract;
 # T201 (no-print) suppressed here only. Use structlog in production code.
