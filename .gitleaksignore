@@ -1,0 +1,9 @@
+# Allowlist gitleaks fingerprints for known-synthetic fixtures only.
+# Every entry MUST be a fixture file under tests/fixtures/ with a comment
+# above the entry explaining what it allowlists and why.
+# Do NOT add real-key fingerprints. Real leaks require rotation + history rewrite.
+
+# tests/fixtures/pre_commit_violators/has_secret.py.fixture — synthetic AKIA-shaped
+# string used to verify the gitleaks hook fires. Allowlisting THIS specific
+# fingerprint keeps gitleaks's full scan active on every other file in the repo.
+tests/fixtures/pre_commit_violators/has_secret.py.fixture:aws-access-token:2

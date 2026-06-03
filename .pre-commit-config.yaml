@@ -1,0 +1,35 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        files: ^packages/(aegis_core|aegis_judges)/src/
+        args: [--strict]
+        additional_dependencies: [pydantic, httpx, structlog]
+
+  - repo: local
+    hooks:
+      - id: check-loc-400
+        name: 400-LOC cap
+        entry: uv run python .github/scripts/check_loc.py
+        language: system
+        pass_filenames: false
+        types: [python]
+
+      - id: no-print
+        name: No print() in production
+        entry: bash -c 'if grep -rn "print(" packages/aegis_*/src/ --include="*.py" | grep -v "structlog\|test\|_mock\.py"; then echo "Use structlog, not print()"; exit 1; fi'
+        language: system
+        pass_filenames: false
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks

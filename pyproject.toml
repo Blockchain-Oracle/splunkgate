@@ -16,6 +16,7 @@ dev = [
     "respx>=0.21",
     "ruff>=0.6",
     "mypy>=1.11",
+    "pre-commit>=4.0",
     "aegis-core",
     "aegis-judges",
     "aegis-mw",

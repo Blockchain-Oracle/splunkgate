@@ -60,6 +60,15 @@ aegis/
 └── (code arrives after specs land + epics get GitHub-issue'd)
 ```
 
+### Local development setup
+
+```bash
+uv sync --all-packages --frozen
+uv run pre-commit install
+```
+
+After this, `git commit` runs ruff + mypy --strict + 400-LOC cap + gitleaks + no-print locally before the commit lands. See `docs/ops/pre-commit-install.md` for hook details and bypass policy.
+
 ## Source-of-truth links
 
 - Architecture: `../research/splunk-agentic-ops-2026/13-architecture-recommendation-v2.md`
