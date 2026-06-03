@@ -9,6 +9,8 @@ dependencies = [
     "opentelemetry-api>=1.27",
     "opentelemetry-sdk>=1.27",
     "structlog>=24.4",
+    "httpx>=0.27",
+    "tenacity>=9.0",
     # Note: opentelemetry-util-genai was in the story spec but is not yet
     # imported. Hand-rolled gen_ai.evaluation.* attribute keys gave us full
     # control over the custom score.label values (block/allow/modify/review).

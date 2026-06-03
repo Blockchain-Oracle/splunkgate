@@ -17,26 +17,20 @@ from aegis_core.otel import (
 )
 from aegis_core.verdict import RuleHit, Severity, Verdict, VerdictLabel
 from opentelemetry import trace
-from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace import ReadableSpan
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
     InMemorySpanExporter,
 )
 
-# OTel's TracerProvider is process-global and set-once. Initialize once at
-# module load; expose the shared exporter and clear it between tests.
-_EXPORTER = InMemorySpanExporter()
-_PROVIDER = TracerProvider()
-_PROVIDER.add_span_processor(SimpleSpanProcessor(_EXPORTER))
-trace.set_tracer_provider(_PROVIDER)
+# Provider + exporter live in conftest.py — shared across test modules
+# because OTel's set_tracer_provider() is process-global and set-once.
 
 
 @pytest.fixture
-def exporter() -> Iterator[InMemorySpanExporter]:
-    """Yield the module-shared in-memory exporter, clearing before + after each test."""
-    _EXPORTER.clear()
-    yield _EXPORTER
-    _EXPORTER.clear()
+def exporter(otel_exporter: InMemorySpanExporter) -> Iterator[InMemorySpanExporter]:
+    """Re-export conftest's `otel_exporter` as `exporter` for legacy tests."""
+    yield otel_exporter
+    otel_exporter.clear()
 
 
 def _verdict(
