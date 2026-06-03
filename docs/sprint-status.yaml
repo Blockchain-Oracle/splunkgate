@@ -47,8 +47,10 @@ stories:
     depends_on: [story-skel-01-uv-workspace-pyproject, story-cicd-02-test-pipeline-pytest-respx]
   - id: story-cicd-07-security-scan-pipeline
     epic: "EPIC-01 — CI/CD foundation"
-    status: PENDING
+    status: COMPLETE
     depends_on: []
+    pr: "https://github.com/Blockchain-Oracle/aegis/pull/72"
+    merged_at: "2026-06-03T10:45:00Z"
   - id: story-cicd-08-release-pipeline-signed
     epic: "EPIC-01 — CI/CD foundation"
     status: PENDING
