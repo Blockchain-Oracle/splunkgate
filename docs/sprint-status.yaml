@@ -307,8 +307,11 @@ stories:
   # EPIC-03 addition — OTel HEC exporter bridge
   - id: story-core-05-otel-hec-exporter-config
     epic: "EPIC-03 — Core domain types"
-    status: PENDING
+    status: COMPLETE
     depends_on: [story-core-02-otel-evaluation-event-emitter]
+    pr: "https://github.com/Blockchain-Oracle/aegis/pull/79"
+    merged_at: "2026-06-03T14:15:00Z"
+    notes: "Demo wire CLOSED. HEC URL+token verified live (HTTP 200) before merge. EPIC-03 100% complete."
 
   # EPIC-04 addition — DefenseClaw Python shim (resolves the 3-story orphaned import)
   - id: story-judges-06-defenseclaw-python-shim
