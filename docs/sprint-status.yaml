@@ -108,8 +108,11 @@ stories:
   # EPIC-04 — Cisco AI Defense client
   - id: story-judges-01-ai-defense-request-response-models
     epic: "EPIC-04 — Cisco AI Defense client"
-    status: PENDING
+    status: COMPLETE
     depends_on: [story-core-01-verdict-pydantic-types]
+    pr: "https://github.com/Blockchain-Oracle/aegis/pull/78"
+    merged_at: "2026-06-03T13:30:00Z"
+    notes: "First EPIC-04 PR. Pivot to demo-critical path. Models locked; HTTP client in judges-02."
   - id: story-judges-02-ai-defense-httpx-client-with-retries
     epic: "EPIC-04 — Cisco AI Defense client"
     status: PENDING
