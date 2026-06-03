@@ -8,7 +8,11 @@ dependencies = [
     "pydantic>=2.10",
     "opentelemetry-api>=1.27",
     "opentelemetry-sdk>=1.27",
-    "opentelemetry-util-genai>=0.4b0",
+    # Note: opentelemetry-util-genai was in the story spec but is not yet
+    # imported. Hand-rolled gen_ai.evaluation.* attribute keys gave us full
+    # control over the custom score.label values (block/allow/modify/review).
+    # Re-add as a dep when a future story switches to its `Evaluation`/`emit`
+    # helpers — for now it would be dead weight in the lockfile.
 ]
 
 [build-system]

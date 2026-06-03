@@ -15,11 +15,14 @@ values block/allow/modify/review are custom; we propose this upstream
 post-hackathon.
 """
 
+import logging
 from uuid import UUID
 
 from opentelemetry import trace
 
 from aegis_core.verdict import Severity, Verdict
+
+_logger = logging.getLogger(__name__)
 
 EVALUATION_NAME = "aegis.safety_verdict"
 
@@ -78,6 +81,16 @@ def emit_verdict_event(
     correctly.
     """
     span = trace.get_current_span()
+    if not span.is_recording():
+        # No enclosing span = verdict silently doesn't reach the collector.
+        # Log a debug-level diagnostic so surface code can find missing-span
+        # bugs without polluting normal output. Calling surfaces MUST wrap
+        # this call in a tracer.start_as_current_span(...) block.
+        _logger.debug(
+            "emit_verdict_event called outside a recording span; "
+            "verdict will not reach the OTel collector. "
+            "Wrap call in tracer.start_as_current_span()."
+        )
     attrs = _build_attributes(
         verdict,
         mcp_method_name=mcp_method_name,
