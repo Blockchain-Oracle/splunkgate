@@ -25,6 +25,11 @@ from aegis_mw.model_middleware import (
 )
 from aegis_mw.profiles import Profile
 from opentelemetry import trace as otel_trace
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
+    InMemorySpanExporter,
+)
 from splunklib.ai.messages import (
     AIMessage,
     HumanMessage,
@@ -33,6 +38,26 @@ from splunklib.ai.messages import (
     ToolResult,
 )
 from splunklib.ai.middleware import AgentState, ModelRequest, ModelResponse
+
+# OTel TracerProvider is process-global + set-once. Add our SimpleSpanProcessor
+# to whatever provider is already configured (aegis_core conftest sets one
+# when those tests run first; for standalone aegis_mw runs we set it here).
+_MW_EXPORTER = InMemorySpanExporter()
+_provider = otel_trace.get_tracer_provider()
+if isinstance(_provider, TracerProvider):
+    _provider.add_span_processor(SimpleSpanProcessor(_MW_EXPORTER))
+else:
+    _provider = TracerProvider()
+    _provider.add_span_processor(SimpleSpanProcessor(_MW_EXPORTER))
+    otel_trace.set_tracer_provider(_provider)
+
+
+@pytest.fixture
+def otel_exporter() -> InMemorySpanExporter:
+    """Yield the shared exporter, clearing before each test."""
+    _MW_EXPORTER.clear()
+    return _MW_EXPORTER
+
 
 # Per ../context/02-agent-frameworks/06-splunklib-ai-deep-read.md § security.
 # Each of these strings is a verbatim trigger for one of the 9 splunklib.ai
