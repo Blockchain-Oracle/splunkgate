@@ -111,9 +111,16 @@ class InspectRequest(BaseModel):
 
 
 class RuleHit(BaseModel):
-    """A single triggered rule inside an InspectResponse."""
+    """A single triggered rule inside an InspectResponse.
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    Response models use `extra="ignore"` (Pydantic default kept explicit)
+    rather than `extra="forbid"`. Rationale: Cisco may add non-breaking
+    fields server-side; rejecting them would hard-fail us in production
+    for additions that should be transparent. Tradeoff: silent schema
+    drift. judges-02's live-API smoke test surfaces drift early enough.
+    """
+
+    model_config = ConfigDict(extra="ignore", frozen=True)
 
     rule_name: AIDefenseRule
     classification: Classification
@@ -124,10 +131,12 @@ class InspectResponse(BaseModel):
     """POST /api/v1/inspect/chat response body.
 
     Field name is `rules`, NOT `triggered_rules` — the earlier-research
-    hallucination is gated at the type system level.
+    hallucination is gated at the type system level. Uses `extra="ignore"`
+    for forward-compat with Cisco-side schema additions; request models
+    keep `extra="forbid"` so OUR typos still fail validation.
     """
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     is_safe: bool
     severity: Severity
