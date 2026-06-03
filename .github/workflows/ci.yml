@@ -39,14 +39,37 @@ jobs:
           version: ${{ env.UV_VERSION }}
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: uv sync --all-packages --frozen
-      - run: uv run mypy --strict packages/aegis_core packages/aegis_judges
-      - run: uv run mypy packages/aegis_mw packages/aegis_mcp eval
+      - run: uv run mypy --strict -p aegis_core -p aegis_judges
+      - run: uv run mypy -p aegis_mw -p aegis_mcp -p aegis_eval
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [lint, typecheck]
+    strategy:
+      matrix:
+        package: [aegis_core, aegis_judges, aegis_mw, aegis_mcp]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --all-packages --frozen
+      - run: uv run pytest packages/${{ matrix.package }} --cov=${{ matrix.package }} --cov-report=xml --cov-fail-under=70
+      - uses: codecov/codecov-action@v4
+        if: ${{ matrix.package == 'aegis_core' || matrix.package == 'aegis_judges' }}
+        with:
+          files: coverage.xml
+          flags: ${{ matrix.package }}
+          fail_ci_if_error: false
 
   build-wheels:
     name: Build wheels
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [lint, typecheck]
+    needs: [test]
     strategy:
       matrix:
         package: [aegis_core, aegis_judges, aegis_mw, aegis_mcp]
