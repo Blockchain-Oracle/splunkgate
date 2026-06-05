@@ -303,8 +303,11 @@ stories:
     notes: "ES Risk-Based Alerting integration. 11 per-rule scoring stanzas (40-70) verbatim Cisco AI Defense rule names + HIGH multiplier (×2) + whitelist exclusion (×0) + correlation alert wiring. Multi-reviewer pass (code-reviewer + comment-analyzer + silent-failure-hunter) caught CRITICAL S1: agent_id was never emitted on Verdict OTel events, silently breaking dashboards in app-05/06 AND RBA in app-08. Fixed in-PR via Verdict.agent_id field + otel.py emission + FIELDALIAS-agent_id. Middleware-side population (request.thread_id → Verdict.agent_id) tracked as story-mw-09 (issue #101). Also closed S10 (fillnull UNMAPPED on atlas lookup miss) + comment-analyzer ATLAS asymmetry nit. S2-S9 hardening backlog tracked as issue #102."
   - id: story-app-09-static-icons-and-app-assets
     epic: "EPIC-09 — Surface 4 Splunk app"
-    status: PENDING
+    status: COMPLETE
     depends_on: [story-app-01-app-conf-and-metadata-skeleton]
+    pr_url: "https://github.com/Blockchain-Oracle/aegis/pull/103"
+    merged_at: "2026-06-05T12:30:00Z"
+    notes: "Deterministic PIL icon generator + 5 PNG artifacts (appIcon/_2x/Alt/Alt_2x + 1280×720 screenshot placeholder). Multi-reviewer pass (code-reviewer + silent-failure-hunter + simplification-reviewer) converged on two HIGH blockers — both fixed in-PR: (a) font lookup walked Mac/Linux candidate paths, would silently drift md5 on cross-OS regen; replaced with ImageFont.load_default (Pillow-bundled bytes, OS-independent); (b) pillow>=12.2.0 floor would let minor bumps shift PNG bytes; pinned to ==12.2.0. AppInspect block 6 deferred to story-app-11."
   - id: story-app-10-app-vision-loop-validation
     epic: "EPIC-09 — Surface 4 Splunk app"
     status: PENDING
