@@ -6,13 +6,17 @@ Reads `appinspect-report.json` produced by
 exits 1 if any check has `result == "error"` that is NOT listed in
 the app's `.appinspect.expect.yaml` suppression file.
 
-Per `context/05-splunk-core/09-appinspect.md`:
-- `error`   = blocks the build unless suppressed in `.expect.yaml`
-- `failure` = same as error in modern AppInspect; treated as blocking
-- `warning` = documented in `.appinspect.warnings.md`; non-blocking
-- `manual_check` = listed in `.appinspect.manualcheck.yaml`; flagged
-                   for the human Splunkbase reviewer
-- `success` / `not_applicable` / `skipped` = silent
+Result handling uses an allow-list (PASS_RESULTS) — anything not on it
+blocks the build, so a future AppInspect severity like `critical` or
+`fatal` is loud by default. Per
+`context/05-splunk-core/09-appinspect.md`:
+
+- `success`        passes silently
+- `not_applicable` passes silently
+- `skipped`        passes silently
+- `warning`        passes; documented separately in `.appinspect.warnings.md`
+- `manual_check`   passes; listed in `.appinspect.manualcheck.yaml`
+- `error`/`failure`/anything-else BLOCKS unless suppressed in `.expect.yaml`
 
 CLI: `python _appinspect_postprocess.py <report.json> [--expect-file PATH]`
 
@@ -34,7 +38,11 @@ from typing import TypedDict
 
 import yaml
 
-BLOCKING_RESULTS = {"error", "failure"}
+# Allow-list rather than deny-list: anything NOT in this set is treated as
+# blocking. Future AppInspect releases could introduce a new severity
+# (`critical`, `fatal`, etc.) that a deny-list would silently let through.
+# Inverting the contract makes the gate loud on unknown results.
+PASS_RESULTS = {"success", "not_applicable", "skipped", "warning", "manual_check"}
 
 
 class CheckEntry(TypedDict, total=False):
@@ -68,23 +76,35 @@ def _walk_checks(report: dict[str, object]) -> list[CheckEntry]:
 def _load_suppressions(expect_path: Path) -> set[str]:
     """Return the set of check names suppressed in .appinspect.expect.yaml.
 
-    Empty/missing file returns an empty set; never raises on the empty
-    case because an empty expect file is the explicit "no suppressions"
-    contract.
+    Empty/missing file returns an empty set; never raises on the empty case
+    because an empty expect file is the explicit "no suppressions" contract.
+    Entries without a non-empty `comment` field are rejected with ValueError
+    — Splunkbase reviewer precedent requires every suppression to carry a
+    human-readable justification.
     """
     if not expect_path.exists():
         return set()
     data = yaml.safe_load(expect_path.read_text()) or {}
     if not isinstance(data, dict):
         return set()
-    return set(data.keys())
+    suppressed: set[str] = set()
+    for name, value in data.items():
+        if not isinstance(value, dict):
+            msg = f"expect.yaml entry {name!r} is not a mapping"
+            raise TypeError(msg)
+        comment = value.get("comment")
+        if not isinstance(comment, str) or not comment.strip():
+            msg = f"expect.yaml entry {name!r} missing non-empty 'comment'"
+            raise ValueError(msg)
+        suppressed.add(name)
+    return suppressed
 
 
 def _summarize(checks: list[CheckEntry], suppressed: set[str]) -> tuple[str, list[CheckEntry]]:
     """Return (summary table string, list of unsuppressed blocking checks)."""
     by_result: Counter[str] = Counter(c.get("result", "?") for c in checks)
     blocking_unsuppressed = [
-        c for c in checks if c.get("result") in BLOCKING_RESULTS and c.get("name") not in suppressed
+        c for c in checks if c.get("result") not in PASS_RESULTS and c.get("name") not in suppressed
     ]
     lines = ["AppInspect summary", "==================="]
     for result, count in sorted(by_result.items()):
@@ -126,7 +146,11 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     checks = _walk_checks(report)
-    suppressed = _load_suppressions(args.expect_file)
+    try:
+        suppressed = _load_suppressions(args.expect_file)
+    except (TypeError, ValueError) as e:
+        sys.stderr.write(f"invalid .appinspect.expect.yaml: {e}\n")
+        return 2
     summary, blocking = _summarize(checks, suppressed)
 
     summary_file = args.summary_file or (args.report.parent / "appinspect-summary.txt")

@@ -38,13 +38,24 @@ else
   RUNNER=(splunk-appinspect)
 fi
 
-INSTALLED=$("${RUNNER[@]}" --version 2>&1 | awk '{print $NF}' | tr -d '\r')
-uv run python - <<PY
-from packaging.version import Version
+INSTALLED=$("${RUNNER[@]}" --version 2>&1 | head -n1 | awk '{print $NF}' | tr -d '\r')
+# Loud-fail on parse miss (e.g. corrupt venv that prints nothing or a banner
+# instead of a version). Avoids a cryptic InvalidVersion traceback below.
+if [ -z "${INSTALLED}" ] || ! [[ "${INSTALLED}" =~ ^[0-9] ]]; then
+  echo "could not parse splunk-appinspect version: '${INSTALLED}'" >&2
+  exit 2
+fi
+# Pass the version through the environment to avoid bash-into-Python source
+# interpolation; the closing `'PY'` quotes disable heredoc interpolation.
+INSTALLED="${INSTALLED}" uv run python - <<'PY'
+import os
 import sys
-installed = "${INSTALLED}"
+
+from packaging.version import Version
+
+installed = os.environ["INSTALLED"]
 if Version(installed) < Version("4.2.1"):
-    sys.stderr.write(f"splunk-appinspect ${INSTALLED} too old; need >= 4.2.1\n")
+    sys.stderr.write(f"splunk-appinspect {installed} too old; need >= 4.2.1\n")
     sys.exit(2)
 PY
 
