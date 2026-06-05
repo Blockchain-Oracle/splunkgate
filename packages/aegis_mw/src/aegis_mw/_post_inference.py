@@ -77,7 +77,23 @@ async def post_inference_scan(
     trace_uuid = uuid4()
     now = datetime.now(UTC)
 
-    if not text.strip() or ai_defense is None:
+    # Per pr-review N1: split the two short-circuit ALLOWs so operators
+    # triaging "why did Aegis skip this scan?" can distinguish the two
+    # legitimate cases from the structured-log stream.
+    if not text.strip():
+        _logger.debug(
+            "post_inference.allow.empty_text",
+            trace_id=str(trace_uuid),
+            profile=profile.name,
+        )
+        return _allow_verdict(trace_uuid, now)
+    if ai_defense is None:
+        _logger.debug(
+            "post_inference.allow.no_client",
+            trace_id=str(trace_uuid),
+            profile=profile.name,
+            text_length=len(text),
+        )
         return _allow_verdict(trace_uuid, now)
 
     # Lazy import keeps aegis_mw decoupled from aegis_judges at module load.
