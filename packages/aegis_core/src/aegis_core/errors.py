@@ -62,3 +62,18 @@ class ModelInputBlockedByAegis(AegisError):  # noqa: N818 — name locked by sto
         message = f"Model input blocked by Aegis: {verdict!r}"
         super().__init__(message)
         self.verdict = verdict
+
+
+class ModelOutputBlockedByAegis(AegisError):  # noqa: N818 — name locked by story-mw-04 + architecture.md
+    """Raised by SafetyModelMiddleware when post-inference scan returns BLOCK.
+
+    Carries the Verdict that caused the block so callers can inspect rules,
+    severity, and explanation. The model WAS invoked but its output never
+    reaches the caller or any downstream tool.
+    """
+
+    def __init__(self, verdict: object) -> None:
+        """Wrap the blocking verdict; message is built from verdict.explanation."""
+        message = f"Model output blocked by Aegis: {verdict!r}"
+        super().__init__(message)
+        self.verdict = verdict

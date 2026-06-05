@@ -18,10 +18,10 @@ from typing import TYPE_CHECKING, Protocol
 from uuid import uuid4
 
 import structlog
-from aegis_core.errors import ModelInputBlockedByAegis
+from aegis_core.errors import ModelInputBlockedByAegis, ModelOutputBlockedByAegis
 from aegis_core.otel import emit_verdict_event
 from aegis_core.verdict import RuleHit, Severity, Verdict, VerdictLabel
-from splunklib.ai.messages import HumanMessage
+from splunklib.ai.messages import AIMessage, HumanMessage
 from splunklib.ai.middleware import (
     AgentMiddleware,
     ModelRequest,
@@ -33,6 +33,7 @@ from aegis_mw._first_pass import (
     extract_user_text,
     truncate_input,
 )
+from aegis_mw._post_inference import post_inference_scan
 from aegis_mw.config import Config
 from aegis_mw.profiles import Profile
 
@@ -181,11 +182,40 @@ class SafetyModelMiddleware(AgentMiddleware):  # type: ignore[misc]
             new_request = _rewrite_request(request, pre_verdict)
             response = await handler(new_request)
             # --- POST-INFERENCE SCAN: see story-mw-04 ---
-            return response  # noqa: RET504 — anchor line must precede return
+            return await self._apply_post_scan(response)
 
         response = await handler(request)
         # --- POST-INFERENCE SCAN: see story-mw-04 ---
-        return response  # noqa: RET504 — anchor line must precede return
+        return await self._apply_post_scan(response)
+
+    async def _apply_post_scan(self, response: ModelResponse) -> ModelResponse:
+        """Run post-inference scan; branch on label; emit OTel; deliver / redact / block."""
+        post_verdict = await post_inference_scan(
+            response,
+            self._profile,
+            self._config,
+            self._ai_defense,
+        )
+        emit_verdict_event(post_verdict)
+
+        if post_verdict.verdict is VerdictLabel.BLOCK:
+            self._logger.warning(
+                "model_output_blocked",
+                trace_id=str(post_verdict.trace_id),
+                rules=[r.rule for r in post_verdict.rules],
+                severity=post_verdict.severity.value,
+            )
+            raise ModelOutputBlockedByAegis(post_verdict)
+
+        if post_verdict.verdict is VerdictLabel.MODIFY:
+            mods = post_verdict.modifications or {}
+            redacted = str(mods.get("redacted_text", "[REDACTED]"))
+            return ModelResponse(
+                message=AIMessage(content=redacted, calls=[]),
+                structured_output=response.structured_output,
+            )
+
+        return response
 
 
 def _rewrite_request(request: ModelRequest, verdict: Verdict) -> ModelRequest:

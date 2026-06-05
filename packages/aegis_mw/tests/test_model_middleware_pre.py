@@ -246,9 +246,12 @@ async def test_allow_emits_one_otel_event_with_mw_model_surface(
     spans = cast_exporter.get_finished_spans()
     events = [e for s in spans for e in s.events]
     matching = [e for e in events if e.name == "gen_ai.evaluation.result"]
-    assert len(matching) == 1
-    attrs = dict(matching[0].attributes or {})
-    assert attrs["aegis.surface"] == "mw_model"
+    # Two events on ALLOW path: pre-inference scan + post-inference scan (story-mw-04).
+    # Both must carry surface=mw_model.
+    assert len(matching) == 2
+    for ev in matching:
+        attrs = dict(ev.attributes or {})
+        assert attrs["aegis.surface"] == "mw_model"
 
 
 def test_pre_inference_scan_is_coroutine() -> None:

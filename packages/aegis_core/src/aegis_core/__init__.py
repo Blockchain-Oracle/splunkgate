@@ -5,6 +5,7 @@ from aegis_core.errors import (
     ConfigError,
     JudgmentError,
     ModelInputBlockedByAegis,
+    ModelOutputBlockedByAegis,
     NetworkError,
 )
 from aegis_core.logging import configure_logging, get_logger
@@ -35,6 +36,7 @@ __all__: list[str] = [
     "ConfigError",
     "JudgmentError",
     "ModelInputBlockedByAegis",
+    "ModelOutputBlockedByAegis",
     "NetworkError",
     "RuleHit",
     "Severity",
