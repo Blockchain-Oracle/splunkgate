@@ -23,6 +23,9 @@ ignore = [
 # .github/scripts/check_loc.py prints status as part of its CLI contract;
 # T201 (no-print) suppressed here only. Use structlog in production code.
 ".github/scripts/*.py" = ["D", "PLR2004", "TRY003", "T201"]
+# Ops scripts under scripts/ are CLI tools, not importable packages — same
+# carve-out as .github/scripts/ + INP001 since scripts/ is not a package.
+"scripts/*.py"         = ["D", "PLR2004", "TRY003", "T201", "INP001"]
 
 [lint.pydocstyle]
 convention = "google"

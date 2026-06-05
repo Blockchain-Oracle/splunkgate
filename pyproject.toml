@@ -22,6 +22,10 @@ dev = [
     "aegis-mw",
     "aegis-mcp",
     "aegis-eval",
+    # Pinned exact: scripts/generate_app_icons.py promises md5-deterministic
+    # PNG output, and Pillow can ship encoder/font-metric tweaks in minor
+    # bumps that silently break the BDD block-4 determinism assertion.
+    "pillow==12.2.0",
 ]
 
 [tool.pytest.ini_options]
