@@ -254,8 +254,11 @@ stories:
     notes: "Sourcetype schema locked: props.conf (8 FIELDALIAS + 4 EVAL), transforms.conf (2 stanzas), eventtypes.conf (3), tags.conf (CIM bindings with cisco_ai_defense_family for ADR-005 colocation). All 7 BDD blocks pass."
   - id: story-app-03-savedsearches-and-mltk-macros
     epic: "EPIC-09 — Surface 4 Splunk app"
-    status: PENDING
+    status: COMPLETE
     depends_on: [story-app-02-props-transforms-for-aegis-verdict-sourcetype]
+    pr: "https://github.com/Blockchain-Oracle/aegis/pull/90"
+    merged_at: "2026-06-06T00:15:00Z"
+    notes: "8 MLTK macros + 10 saved searches + setup XML. Mirrors DNS Guard 2025 1st-place AI/ML winner shape verbatim. 5 ML pipeline searches disabled-by-default on cron 15 */6 * * *. Unblocks app-05/06/07 dashboards + app-08 ES RBA."
   - id: story-app-04-collections-conf-kvstore-verdict-history
     epic: "EPIC-09 — Surface 4 Splunk app"
     status: COMPLETE
