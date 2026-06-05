@@ -93,6 +93,12 @@ class Verdict(BaseModel):
         "defenseclaw",
     ]
     latency_ms: float
+    # agent_id is the logical agent identifier (e.g. splunklib.ai thread_id
+    # at the model_middleware integration point). Optional because some
+    # surfaces (mcp_audit on a session-less call) genuinely don't know one;
+    # downstream ES Risk-Based Alerting (story-app-08) uses agent_id as the
+    # _risk_object so populating it is load-bearing for the Splunk surface.
+    agent_id: str | None = None
 
 
 def verdict_to_json_schema() -> dict[str, object]:

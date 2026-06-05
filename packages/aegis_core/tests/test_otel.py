@@ -39,6 +39,7 @@ def _verdict(
     severity: Severity = Severity.NONE_SEVERITY,
     explanation: str | None = None,
     rules: list[RuleHit] | None = None,
+    agent_id: str | None = None,
 ) -> Verdict:
     return Verdict(
         trace_id=uuid4(),
@@ -49,6 +50,7 @@ def _verdict(
         surface="mw_model",
         latency_ms=10.0,
         explanation=explanation,
+        agent_id=agent_id,
     )
 
 
@@ -173,6 +175,32 @@ def test_aegis_trace_id_is_stringified_uuid(exporter: InMemorySpanExporter) -> N
     span = _emit_inside_span(exporter, v)
     attrs = dict(span.events[0].attributes or {})
     assert attrs["aegis.trace_id"] == str(v.trace_id)
+
+
+def test_aegis_agent_id_attr_absent_when_none(
+    exporter: InMemorySpanExporter,
+) -> None:
+    """Default Verdict.agent_id=None → attribute MUST NOT be set.
+
+    Splunk's JSON ingest distinguishes 'field absent' from 'field=null'; the
+    props.conf FIELDALIAS needs the attribute to be absent to keep the
+    sourcetype's null-handling clean.
+    """
+    span = _emit_inside_span(exporter, _verdict(agent_id=None))
+    attrs = dict(span.events[0].attributes or {})
+    assert "aegis.agent_id" not in attrs
+
+
+def test_aegis_agent_id_attr_present_when_supplied(
+    exporter: InMemorySpanExporter,
+) -> None:
+    """Load-bearing: props.conf FIELDALIAS-agent_id lifts this to flat
+    `agent_id` field which ES RBA (story-app-08) uses as _risk_object.
+    Saved-search `stats by agent_id` and risk_factors.conf both depend on it.
+    """
+    span = _emit_inside_span(exporter, _verdict(agent_id="support-agent-7"))
+    attrs = dict(span.events[0].attributes or {})
+    assert attrs["aegis.agent_id"] == "support-agent-7"
 
 
 def test_severity_to_score_is_monotonic() -> None:

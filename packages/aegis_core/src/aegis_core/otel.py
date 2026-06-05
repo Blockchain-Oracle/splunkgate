@@ -59,6 +59,11 @@ def _build_attributes(
         "aegis.rules": [hit.rule for hit in verdict.rules],
         "aegis.trace_id": str(verdict.trace_id),
     }
+    if verdict.agent_id is not None:
+        # Load-bearing for the Splunk surface: ES RBA correlation alert uses
+        # agent_id as _risk_object; props.conf FIELDALIAS lifts this onto the
+        # flat `agent_id` field that dashboards + saved searches consume.
+        attrs["aegis.agent_id"] = verdict.agent_id
     if verdict.explanation is not None:
         attrs["gen_ai.evaluation.explanation"] = verdict.explanation
     if mcp_method_name is not None:
