@@ -275,7 +275,10 @@ stories:
     depends_on: [story-app-03-savedsearches-and-mltk-macros]
   - id: story-app-06-dashboard-verdict-inspector
     epic: "EPIC-09 — Surface 4 Splunk app"
-    status: PENDING
+    status: COMPLETE
+    pr: "https://github.com/Blockchain-Oracle/aegis/pull/97"
+    merged_at: "2026-06-06T02:15:00Z"
+    notes: "Dashboard Studio v2, 5 inputs matching the token contract from app-05's drilldowns, 4 visualizations (filter bar / verdict table / detail panel / related events). Row click sets row_trace_id + row_agent_id tokens. Open-in-ES button drills into Investigation Workbench via form.search=trace_id pattern. Reviewer caught 3 silent-render bugs pre-merge: unquoted trace_id substitution, broken rule-filter OR clause, wrong ES URL form."
     depends_on: [story-app-03-savedsearches-and-mltk-macros, story-app-04-collections-conf-kvstore-verdict-history]
   - id: story-app-07-dashboard-regulator-evidence-pack
     epic: "EPIC-09 — Surface 4 Splunk app"
