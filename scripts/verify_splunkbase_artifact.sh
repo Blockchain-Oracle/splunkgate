@@ -85,6 +85,26 @@ if command -v splunk-appinspect >/dev/null 2>&1 || uv run splunk-appinspect --ve
   else
     APPINSPECT=(uv run splunk-appinspect)
   fi
+  # Version floor 4.2.1 per docs/architecture.md — older releases miss
+  # the cloud-mode tag set and silently skip the strictest checks.
+  # Mirrors the gate in splunk_apps/aegis_app/scripts/run_appinspect.sh
+  # (re-asserted here because the tarball intentionally omits scripts/).
+  INSTALLED=$("${APPINSPECT[@]}" --version 2>&1 | head -n1 | awk '{print $NF}' | tr -d '\r')
+  if [ -z "${INSTALLED}" ] || ! [[ "${INSTALLED}" =~ ^[0-9] ]]; then
+    echo "could not parse splunk-appinspect version: '${INSTALLED}'" >&2
+    exit 2
+  fi
+  INSTALLED="${INSTALLED}" uv run python - <<'PY'
+import os
+import sys
+
+from packaging.version import Version
+
+installed = os.environ["INSTALLED"]
+if Version(installed) < Version("4.2.1"):
+    sys.stderr.write(f"splunk-appinspect {installed} too old; need >= 4.2.1\n")
+    sys.exit(2)
+PY
   "${APPINSPECT[@]}" inspect "${APP_ROOT}" \
     --mode test \
     --included-tags cloud \
