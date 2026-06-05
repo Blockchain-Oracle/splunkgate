@@ -12,6 +12,15 @@ from aegis_core.verdict import (
     VerdictLabel,
 )
 from aegis_judges.ai_defense_mock import MockAIDefenseClient
+from aegis_judges.ai_defense_types import (
+    AIDefenseRule,
+    Classification,
+    InspectRequest,
+    InspectResponse,
+)
+from aegis_judges.ai_defense_types import (
+    RuleHit as InspectRuleHit,
+)
 from aegis_mw import _post_inference
 from aegis_mw._post_inference import post_inference_scan
 from aegis_mw.config import Config
@@ -19,6 +28,36 @@ from aegis_mw.model_middleware import SafetyModelMiddleware
 from aegis_mw.profiles import Profile
 from splunklib.ai.messages import AIMessage, HumanMessage
 from splunklib.ai.middleware import AgentState, ModelRequest, ModelResponse
+
+
+class _MediumSeverityClient:
+    """Minimal AIDefenseLike that returns MEDIUM severity + a PII rule hit.
+
+    Used to exercise the MODIFY → [REDACTED] branch of post_inference_scan
+    deterministically. The substring-mode MockAIDefenseClient picks the
+    highest-severity fixture for any matched phrase which would force BLOCK;
+    this stub is the cleanest way to exercise MODIFY without depending on
+    fixture-matrix behavior.
+    """
+
+    async def inspect_chat(
+        self,
+        request: InspectRequest,
+        *,
+        trace_id: str | None = None,
+    ) -> InspectResponse:
+        _ = request, trace_id
+        return InspectResponse(
+            is_safe=False,
+            severity=Severity.MEDIUM,
+            rules=[
+                InspectRuleHit(
+                    rule_name=AIDefenseRule.PII,
+                    classification=Classification.PRIVACY_VIOLATION,
+                )
+            ],
+        )
+
 
 # The fixture triggers carry a "[tier:*]" suffix. The MockAIDefenseClient also
 # substring-matches the phrase part (after the substring-match fix in PR #84).
@@ -80,16 +119,20 @@ async def test_post_scan_allows_when_no_client() -> None:
 
 
 @pytest.mark.asyncio
-async def test_post_scan_pii_modifies_with_redacted_text() -> None:
+async def test_post_scan_pii_returns_ai_defense_sourced_rules() -> None:
+    """Renamed in PR #92 fix-up for honesty: substring-mode mock returns
+    HIGH-severity → BLOCK for the bare PII phrase. This test asserts ONLY
+    the rule-shape + source invariant. The BLOCK path is covered by
+    test_post_scan_high_severity_blocks; the MODIFY → [REDACTED] path
+    is covered by test_post_scan_medium_severity_modifies_with_redacted_text
+    and test_middleware_post_modify_returns_redacted_response.
+    """
     verdict = await post_inference_scan(
         _response(_PII_PHRASE),
         Profile(name="default", description=""),
         Config(foundation_sec_enabled=False),
         ai_defense=MockAIDefenseClient(),
     )
-    # Mock dispatcher returns the highest-severity fixture for the matched phrase
-    # which is HIGH for the PII trigger → BLOCK semantics, not MODIFY.
-    # The non-ALLOW assertion is what matters here.
     assert verdict.verdict is not VerdictLabel.ALLOW
     assert any(r.rule == "PII" for r in verdict.rules)
     assert all(r.source == "ai_defense" for r in verdict.rules)
@@ -183,13 +226,12 @@ async def test_middleware_post_inference_block_attaches_explanation() -> None:
 
 
 @pytest.mark.asyncio
-async def test_middleware_preserves_structured_output_in_modify_path() -> None:
-    """If post-scan downgrades to MODIFY, returned ModelResponse keeps structured_output."""
-    # Construct a response with a non-None structured_output proxy. The mock
-    # client returns a non-ALLOW verdict for PII; whether it becomes BLOCK or
-    # MODIFY depends on severity. For this test we use a Cisco-substring that
-    # the mock matrix ranks below HIGH, which we don't have a fixture for —
-    # so we exercise the seam by ensuring an ALLOW passthrough preserves it.
+async def test_middleware_allow_passthrough_preserves_structured_output() -> None:
+    """Renamed from the prior misleadingly-named structured-output test:
+    this verifies that ALLOW passthrough preserves structured_output. The
+    actual MODIFY-path coverage is below in
+    test_middleware_post_modify_returns_redacted_response.
+    """
     sentinel = object()
     resp = ModelResponse(
         message=AIMessage(content=_BENIGN, calls=[]),
@@ -202,6 +244,66 @@ async def test_middleware_preserves_structured_output_in_modify_path() -> None:
     mw = SafetyModelMiddleware(ai_defense=MockAIDefenseClient())
     result = await mw.model_middleware(_request(), handler)
     assert result.structured_output is sentinel
+
+
+# ─── MODIFY branch — uses _MediumSeverityClient stub (PR #92 review fix) ─────
+
+
+@pytest.mark.asyncio
+async def test_post_scan_medium_severity_modifies_with_redacted_text() -> None:
+    """Unit-level MODIFY assertion on post_inference_scan."""
+    verdict = await post_inference_scan(
+        _response("anything triggers MEDIUM here"),
+        Profile(name="default", description=""),
+        Config(foundation_sec_enabled=False),
+        ai_defense=_MediumSeverityClient(),
+    )
+    assert verdict.verdict is VerdictLabel.MODIFY
+    assert verdict.severity is Severity.MEDIUM
+    assert verdict.modifications == {"redacted_text": "[REDACTED]"}
+    assert any(r.rule == "PII" for r in verdict.rules)
+
+
+@pytest.mark.asyncio
+async def test_middleware_post_modify_returns_redacted_response() -> None:
+    """End-to-end MODIFY path through _apply_post_scan: original model output
+    is replaced by a ModelResponse with content="[REDACTED]", and the
+    structured_output proxy is preserved unchanged.
+    """
+    sentinel = object()
+    original = ModelResponse(
+        message=AIMessage(content="my ssn is somewhere in here", calls=[]),
+        structured_output=sentinel,
+    )
+
+    async def handler(_req: ModelRequest) -> ModelResponse:
+        return original
+
+    mw = SafetyModelMiddleware(ai_defense=_MediumSeverityClient())
+    result = await mw.model_middleware(_request(), handler)
+
+    assert result is not original  # new ModelResponse constructed
+    assert result.message.content == "[REDACTED]"
+    assert result.structured_output is sentinel
+
+
+@pytest.mark.asyncio
+async def test_middleware_post_modify_carries_explanation_when_enabled() -> None:
+    """MODIFY path with foundation_sec_enabled=True: the verdict's
+    explanation field is populated (and observable via the OTel emitter,
+    which is exercised in the pre-tests). We assert via post_inference_scan
+    directly to keep the test focused on the explainer wiring.
+    """
+    verdict = await post_inference_scan(
+        _response("model emitted PII"),
+        Profile(name="default", description=""),
+        Config(foundation_sec_enabled=True),
+        ai_defense=_MediumSeverityClient(),
+    )
+    assert verdict.verdict is VerdictLabel.MODIFY
+    assert verdict.explanation is not None
+    assert "MODIFY" in verdict.explanation
+    assert "PII" in verdict.explanation
 
 
 # ─── File-level meta tests (story-mw-04 requirements) ────────────────────────
