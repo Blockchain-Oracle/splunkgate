@@ -1,0 +1,5 @@
+jurisdictional_tag,retention_years,applicable_regs
+FSI,7,FFIEC-AIML;SR-26-2
+HIPAA,7,HIPAA-SafeHarbor-18
+PUBSEC,3,NIST-AI-RMF
+PCI,1,PCI-DSS-11.x
