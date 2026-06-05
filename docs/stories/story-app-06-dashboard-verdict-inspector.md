@@ -20,7 +20,7 @@
 
 Exact files the coding agent creates or modifies for this story:
 
-- `splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml` — NEW — Dashboard Studio v2 dashboard. Wrapper: `<dashboard version="2.0" theme="dark"><label>Aegis — Verdict Inspector</label><description>SOC + AI platform engineer drill-down. Slide-in detail panel + related-events trace view. Sourced from cisco_ai_defense:aegis_verdict + aegis_verdict_history KV-store.</description><definition><![CDATA[ {JSON} ]]></definition></dashboard>`. JSON declares: 5 inputs (`input_time` timerange, `input_agent_id` dropdown — populated by `| stats values(agent_id)`, `input_rule` dropdown — populated by `| mvexpand rule | stats values(rule)`, `input_severity` dropdown — fixed values, `input_verdict_label` dropdown — fixed values). 4 visualizations: `verdict_filter_bar` (markdown showing active filters), `verdict_table` (the main table — columns timestamp/agent_id/surface/verdict_label/severity/rules/explanation_truncated/latency_ms/trace_id, click → opens detail panel via drilldown action), `detail_panel` (slide-in single-event viz showing full Verdict object, only renders when `$row.trace_id$` token is set), `related_events_panel` (related events from same trace_id across all four surfaces, columns timestamp/surface/verdict_label/severity). 4 dataSources (one per non-input viz), all using `aegis_data` macro + per-panel filters bound to inputs via `$input_*$` tokens. Layout: filter bar at top (full width), verdict_table (12-wide, h:400) below filters, detail_panel (8-wide, h:600, conditionally visible) + related_events_panel (4-wide, h:600) below table. Drill-down on detail_panel includes an "Open in Splunk ES" link (`/app/SplunkEnterpriseSecuritySuite/investigation_workbench?form.trace_id=$row.trace_id$`). File total: target ≤ 380 LOC.
+- `splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml` — NEW — Dashboard Studio v2 dashboard. Wrapper: `<dashboard version="2" theme="dark"><label>Aegis — Verdict Inspector</label><description>SOC + AI platform engineer drill-down. Slide-in detail panel + related-events trace view. Sourced from cisco_ai_defense:aegis_verdict + aegis_verdict_history KV-store.</description><definition><![CDATA[ {JSON} ]]></definition></dashboard>`. JSON declares: 5 inputs (`input_time` timerange, `input_agent_id` dropdown — populated by `| stats values(agent_id)`, `input_rule` dropdown — populated by `| mvexpand rule | stats values(rule)`, `input_severity` dropdown — fixed values, `input_verdict_label` dropdown — fixed values). 4 visualizations: `verdict_filter_bar` (markdown showing active filters), `verdict_table` (the main table — columns timestamp/agent_id/surface/verdict_label/severity/rules/explanation_truncated/latency_ms/trace_id, click → opens detail panel via drilldown action), `detail_panel` (slide-in single-event viz showing full Verdict object, only renders when `$row.trace_id$` token is set), `related_events_panel` (related events from same trace_id across all four surfaces, columns timestamp/surface/verdict_label/severity). 4 dataSources (one per non-input viz), all using `aegis_data` macro + per-panel filters bound to inputs via `$input_*$` tokens. Layout: filter bar at top (full width), verdict_table (12-wide, h:400) below filters, detail_panel (8-wide, h:600, conditionally visible) + related_events_panel (4-wide, h:600) below table. Drill-down on detail_panel includes an "Open in Splunk ES" link (`/app/SplunkEnterpriseSecuritySuite/investigation_workbench?form.trace_id=$row.trace_id$`). File total: target ≤ 380 LOC.
 
 The coding agent must NOT modify files outside this map without re-checking CLAUDE.md.
 
@@ -34,7 +34,7 @@ When  python -c "import xml.etree.ElementTree as ET; ET.parse(...)" runs
 Then  exit code is 0 (well-formed XML)
 
 Given the XML file is parsed
-When  grep -E '^<dashboard version="2.0"' runs
+When  grep -E '^<dashboard version="2"' runs
 Then  exactly one match (Dashboard Studio v2 declared)
 
 Given the XML file is parsed
@@ -100,7 +100,7 @@ test -f splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml
 python -c "import xml.etree.ElementTree as ET; ET.parse('splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml')"
 
 # 2. Dashboard Studio v2 + dark theme
-grep -q '<dashboard version="2.0"' splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml
+grep -q '<dashboard version="2"' splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml
 grep -q 'theme="dark"' splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml
 grep -q '<label>Aegis — Verdict Inspector</label>' splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml
 
