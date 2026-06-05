@@ -247,8 +247,11 @@ stories:
     notes: "Splunk app skeleton landed: app.conf (5 stanzas) + default.meta (system-wide exports) + extension-less README + nav/default.xml. Mirrors DNS Guard pattern. Unblocks every other EPIC-09 story."
   - id: story-app-02-props-transforms-for-aegis-verdict-sourcetype
     epic: "EPIC-09 — Surface 4 Splunk app"
-    status: PENDING
+    status: COMPLETE
     depends_on: [story-app-01-app-conf-and-metadata-skeleton, story-core-02-otel-evaluation-event-emitter]
+    pr: "https://github.com/Blockchain-Oracle/aegis/pull/88"
+    merged_at: "2026-06-05T23:20:00Z"
+    notes: "Sourcetype schema locked: props.conf (8 FIELDALIAS + 4 EVAL), transforms.conf (2 stanzas), eventtypes.conf (3), tags.conf (CIM bindings with cisco_ai_defense_family for ADR-005 colocation). All 7 BDD blocks pass."
   - id: story-app-03-savedsearches-and-mltk-macros
     epic: "EPIC-09 — Surface 4 Splunk app"
     status: PENDING
