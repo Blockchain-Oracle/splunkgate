@@ -1,0 +1,17 @@
+<dashboard version="1.1">
+  <label>Agent Risk Overview</label>
+  <description>Live counters and severity breakdown for Aegis verdicts. Full Dashboard Studio v2 implementation lands in story-app-05; this stub keeps the nav link resolvable.</description>
+  <row>
+    <panel>
+      <html>
+        <h2>Aegis Agent Risk Overview</h2>
+        <p>This dashboard is a placeholder. The full implementation (Dashboard Studio v2 with severity breakdown by hour, top-N agents by HIGH-severity count, and MSJ scaling indicator) lands in <b>story-app-05</b>.</p>
+        <p>The data is already flowing — try the underlying searches in the meantime:</p>
+        <ul>
+          <li><code>`aegis_data` earliest=-24h | stats count by verdict_label</code></li>
+          <li><code>`aegis_data` severity=HIGH earliest=-24h | stats count by agent_id | sort -count</code></li>
+        </ul>
+      </html>
+    </panel>
+  </row>
+</dashboard>

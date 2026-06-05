@@ -1,0 +1,16 @@
+<dashboard version="1.1">
+  <label>Verdict Inspector</label>
+  <description>Drill-down into individual Aegis verdicts with full provenance. Full Dashboard Studio v2 implementation lands in story-app-06; this stub keeps the nav link resolvable.</description>
+  <row>
+    <panel>
+      <html>
+        <h2>Aegis Verdict Inspector</h2>
+        <p>This dashboard is a placeholder. The full implementation (per-verdict drill-down with input text, evaluator chain, latency, OTel span data, and KV-store-backed history) lands in <b>story-app-06</b>.</p>
+        <p>In the meantime, browse persisted verdicts via:</p>
+        <ul>
+          <li><code>| inputlookup aegis_verdict_history_lookup | sort -timestamp | head 100</code></li>
+        </ul>
+      </html>
+    </panel>
+  </row>
+</dashboard>

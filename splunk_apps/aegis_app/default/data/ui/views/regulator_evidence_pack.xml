@@ -1,0 +1,13 @@
+<dashboard version="1.1">
+  <label>Regulator Evidence Pack</label>
+  <description>PDF-exportable evidence pack with NIST AI RMF + SR 26-2 framing, gated by jurisdictional_tag for HIPAA / PCI / FSI profiles. Full Dashboard Studio v2 implementation lands in story-app-07; this stub keeps the nav link resolvable.</description>
+  <row>
+    <panel>
+      <html>
+        <h2>Aegis Regulator Evidence Pack</h2>
+        <p>This dashboard is a placeholder. The full implementation (PDF export, NIST AI RMF function alignment, SR 26-2 framing, and jurisdictional_tag-gated panels for HIPAA Safe Harbor 18, PCI DSS 11.x, FFIEC-AIML) lands in <b>story-app-07</b>.</p>
+        <p>The profile index that gates panel visibility is bootstrapped by enabling the <b>Aegis - Bootstrap profile index</b> saved search (Settings &gt; Searches, reports, and alerts).</p>
+      </html>
+    </panel>
+  </row>
+</dashboard>
