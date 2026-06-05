@@ -345,8 +345,11 @@ stories:
     notes: "AppInspect submission-ready scaffold: 25-check manualcheck.yaml verbatim mirror of CIMplicity AI 2025, empty expect.yaml (zero binaries per ADR-008), warnings.md template, version-gated run_appinspect.sh runner, JSON-walking postprocessor with allow-list semantics (anything not in PASS_RESULTS blocks — defensive against future severities), 21 behavioral tests. Multi-reviewer pass (code-reviewer + comment-analyzer + silent-failure-hunter) caught and closed: S1 cryptic --version parse failure, S2 warnings.md lying about being parsed + 3 hallucinated check names, S3 deny-list bypass on future severities, S4 lax suppression validation, and code-reviewer Q3 bash-into-Python heredoc interpolation. Added 4 regression-guard tests for S3/S4 paths. Pending caveat: real AppInspect may emit 'na' shorthand for not_applicable; verify on first live run."
   - id: story-app-12-splunkbase-submission-package-and-checklist
     epic: "EPIC-12 — AppInspect hardening"
-    status: PENDING
+    status: COMPLETE
     depends_on: [story-app-11-appinspect-expect-yaml-and-manual-checks]
+    pr_url: "https://github.com/Blockchain-Oracle/aegis/pull/106"
+    merged_at: "2026-06-05T14:00:00Z"
+    notes: "Deterministic Splunkbase tarball pipeline. dist/aegis_app-1.0.0.tgz, 40114 bytes, sha256 7e39ab753c0106f65bfb75de47c8375391b7acf7b7c2413f584f32a3800d00c3. Python tarfile helper (BSD-tar-on-macOS lacked GNU determinism flags) + manifest.json schemaVersion 2.0.0 + LICENSE + RELEASE_NOTES.md + 88-line submission checklist + 18 behavioral tests. Multi-reviewer pass (code-reviewer + silent-failure-hunter + simplification-reviewer) caught and closed in-PR: S3 SKIP_APPINSPECT silent skip, S5 RELEASE_NOTES.md declared-but-missing, S6 operations tooling shipped inside tarball (created circular dep in verify script), version-gate regression in inlined verifier. Deleted dead-code _strip_dev_cruft.sh per simplification-reviewer. 3 follow-ups tracked as issue #107 (templatize releaseDate, pin Python patch, consolidate cruft+version-gate duplication). Path-B handoff: artifact is ready for Splunk Web > Manage Apps > Install from file upload to prd-p-t9irr.splunkcloud.com; after deploy + synthetic events, story-app-10 anchor capture unblocks."
 
   # EPIC-11 — README + demo (LAST)
   - id: story-readme-01-headline-and-banner-and-credits
