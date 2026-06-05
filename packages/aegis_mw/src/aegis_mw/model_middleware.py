@@ -182,14 +182,27 @@ class SafetyModelMiddleware(AgentMiddleware):  # type: ignore[misc]
             new_request = _rewrite_request(request, pre_verdict)
             response = await handler(new_request)
             # --- POST-INFERENCE SCAN: see story-mw-04 ---
-            return await self._apply_post_scan(response)
+            return await self._apply_post_scan(response, pre_verdict=pre_verdict)
 
         response = await handler(request)
         # --- POST-INFERENCE SCAN: see story-mw-04 ---
-        return await self._apply_post_scan(response)
+        return await self._apply_post_scan(response, pre_verdict=None)
 
-    async def _apply_post_scan(self, response: ModelResponse) -> ModelResponse:
-        """Run post-inference scan; branch on label; emit OTel; deliver / redact / block."""
+    async def _apply_post_scan(
+        self,
+        response: ModelResponse,
+        *,
+        pre_verdict: Verdict | None = None,
+    ) -> ModelResponse:
+        """Run post-inference scan; branch on label; emit OTel; deliver / redact / block.
+
+        Threads `aegis_pre_trace_id` and `aegis_post_trace_id` into the
+        returned AIMessage's `extras` whenever the corresponding verdict
+        was non-ALLOW. Closes issue #94 (F1): callers can recover the
+        full pre+post verdict chain in-band without joining OTel events
+        on trace_id post-hoc. The chain that lands in the
+        Regulator Evidence Pack dashboard (story-app-07) reads cleanly.
+        """
         post_verdict = await post_inference_scan(
             response,
             self._profile,
@@ -202,20 +215,32 @@ class SafetyModelMiddleware(AgentMiddleware):  # type: ignore[misc]
             self._logger.warning(
                 "model_output_blocked",
                 trace_id=str(post_verdict.trace_id),
+                pre_trace_id=str(pre_verdict.trace_id) if pre_verdict else None,
                 rules=[r.rule for r in post_verdict.rules],
                 severity=post_verdict.severity.value,
             )
             raise ModelOutputBlockedByAegis(post_verdict)
 
+        extras = _build_audit_extras(pre_verdict, post_verdict)
+
         if post_verdict.verdict is VerdictLabel.MODIFY:
             mods = post_verdict.modifications or {}
             redacted = str(mods.get("redacted_text", "[REDACTED]"))
             return ModelResponse(
-                message=AIMessage(content=redacted, calls=[]),
+                message=AIMessage(content=redacted, calls=[], extras=extras),
                 structured_output=response.structured_output,
             )
 
-        return response
+        # ALLOW post-scan: if the pre-scan also fired non-ALLOW (the
+        # pre-MODIFY → post-ALLOW chain), thread its trace_id into the
+        # response's AIMessage extras so the caller can recover the
+        # full audit chain. Otherwise return the response unchanged.
+        if extras is None:
+            return response
+        return ModelResponse(
+            message=_with_extras(response.message, extras),
+            structured_output=response.structured_output,
+        )
 
 
 def _rewrite_request(request: ModelRequest, verdict: Verdict) -> ModelRequest:
@@ -233,3 +258,35 @@ def _rewrite_request(request: ModelRequest, verdict: Verdict) -> ModelRequest:
     new_messages.reverse()
     new_state = replace(request.state, messages=new_messages)
     return replace(request, state=new_state)
+
+
+def _build_audit_extras(
+    pre_verdict: Verdict | None,
+    post_verdict: Verdict,
+) -> dict[str, object] | None:
+    """Return the AIMessage `extras` dict for the audit chain, or None if neither verdict fired.
+
+    Keys are namespaced `aegis_*` so they don't collide with splunklib.ai's
+    own extras (which carry LLM-specific provider metadata per the
+    splunklib deep-read context doc). Only non-ALLOW verdicts contribute
+    a trace_id — an ALLOW verdict has no audit value beyond the OTel event.
+    """
+    extras: dict[str, object] = {}
+    if pre_verdict is not None and pre_verdict.verdict is not VerdictLabel.ALLOW:
+        extras["aegis_pre_trace_id"] = str(pre_verdict.trace_id)
+    if post_verdict.verdict is not VerdictLabel.ALLOW:
+        extras["aegis_post_trace_id"] = str(post_verdict.trace_id)
+    return extras or None
+
+
+def _with_extras(message: AIMessage, extras: dict[str, object]) -> AIMessage:
+    """Return a new AIMessage with `extras` merged onto an existing message.
+
+    Preserves the original `content`, `calls`, and `structured_output_calls`.
+    The aegis_* keys take precedence on collision (defensive: agent code
+    upstream may have set its own aegis_* extras — we want our values
+    to win since we're the source of truth on verdict trace_ids).
+    """
+    merged: dict[str, object] = dict(message.extras or {})
+    merged.update(extras)
+    return replace(message, extras=merged)
