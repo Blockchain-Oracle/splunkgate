@@ -1,0 +1,34 @@
+{
+  "reports": [
+    {
+      "app": "aegis_app",
+      "groups": [
+        {
+          "name": "splunk_appinspect.checks.check_app_resources",
+          "checks": [
+            {
+              "name": "check_for_correctly_configured_default_app_conf",
+              "result": "success",
+              "messages": []
+            },
+            {
+              "name": "check_for_documented_setup_xml",
+              "result": "not_applicable",
+              "messages": [{"message": "No setup.xml present", "code": null}]
+            },
+            {
+              "name": "check_for_supported_tls",
+              "result": "manual_check",
+              "messages": [{"message": "Listed in .appinspect.manualcheck.yaml"}]
+            },
+            {
+              "name": "check_for_app_conf_information",
+              "result": "warning",
+              "messages": [{"message": "Build number not specified"}]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
