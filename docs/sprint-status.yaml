@@ -151,9 +151,11 @@ stories:
     depends_on: [story-foundsec-02-ai-spl-explanation-prompt]
   - id: story-explainer-01-template-based-verdict-explainer
     epic: "EPIC-05 — Verdict explainer (template v1, Foundation-Sec future)"
-    status: PENDING
+    status: COMPLETE
     depends_on: [story-core-01-verdict-pydantic-types]
-    notes: "Added 2026-06-05 per ADR-013 — replaces deferred Foundation-Sec stories with a deterministic template explainer. ~30 LOC."
+    pr: "https://github.com/Blockchain-Oracle/aegis/pull/85"
+    merged_at: "2026-06-05T22:00:00Z"
+    notes: "v1 explainer landed. explain_verdict(Verdict, VerdictContext | None) returns deterministic WHY-string. 8 BDD tests + ctx forward-compat regression guard. Unblocks story-mw-04 (dep swap from foundsec-03 already recorded)."
 
   # EPIC-06 — Surface 1 (middleware library)
   - id: story-mw-01-package-skeleton-and-public-api
