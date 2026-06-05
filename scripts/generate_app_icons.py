@@ -43,6 +43,14 @@ BLUE = "#1A8FFF"
 WORDMARK = "AEGIS"
 TAGLINE = "Real-time AI agent safety verdicts"
 
+# Pillow's bundled bitmap font: identical bytes across every install of the
+# same Pillow version, on every OS. Picking it kills the Mac-Arial vs
+# Ubuntu-DejaVu drift that would otherwise silently break BDD block 4 the
+# moment CI regenerates on a Linux runner. Pillow is pinned exact in
+# pyproject.toml so a future minor bump can't shift glyph metrics either.
+TITLE_PX = 120
+TAGLINE_PX = 36
+
 
 def _draw_shield(canvas: Image.Image, size: int, fg: str) -> None:
     """Draw a centered shield glyph on `canvas` of `size x size`.
@@ -88,23 +96,6 @@ def _make_icon(size: int, bg: str) -> Image.Image:
     return canvas
 
 
-def _load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    """Best-effort font lookup. Falls back to PIL's default bitmap font.
-
-    Pillow's load_default is deterministic across versions for the same
-    pixel size argument, so determinism contract holds either way.
-    """
-    candidates = [
-        "/System/Library/Fonts/Supplemental/Arial.ttf",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-        "/Library/Fonts/Arial.ttf",
-    ]
-    for path in candidates:
-        if Path(path).exists():
-            return ImageFont.truetype(path, size=size)
-    return ImageFont.load_default(size=size)
-
-
 def _make_screenshot(width: int = 1280, height: int = 720) -> Image.Image:
     """Splunkbase listing placeholder: wordmark + tagline on dark background.
 
@@ -112,8 +103,8 @@ def _make_screenshot(width: int = 1280, height: int = 720) -> Image.Image:
     """
     canvas = Image.new("RGB", (width, height), NAVY)
     draw = ImageDraw.Draw(canvas)
-    title_font = _load_font(120)
-    tagline_font = _load_font(36)
+    title_font = ImageFont.load_default(size=TITLE_PX)
+    tagline_font = ImageFont.load_default(size=TAGLINE_PX)
     tb = draw.textbbox((0, 0), WORDMARK, font=title_font)
     title_w, title_h = tb[2] - tb[0], tb[3] - tb[1]
     draw.text(
