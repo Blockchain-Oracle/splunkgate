@@ -1,4 +1,4 @@
-"""Aegis multi-judge layer: AI Defense client, DefenseClaw shim, Foundation-Sec explainer."""
+"""Aegis multi-judge layer: AI Defense client, DefenseClaw shim, template verdict explainer."""
 
 from aegis_judges.ai_defense_types import (
     AIDefenseRule,
@@ -10,6 +10,7 @@ from aegis_judges.ai_defense_types import (
     InspectResponse,
     RuleHit,
 )
+from aegis_judges.explainer import explain_verdict
 
 __version__ = "0.1.0"
 __all__: list[str] = [
@@ -21,4 +22,5 @@ __all__: list[str] = [
     "InspectRequest",
     "InspectResponse",
     "RuleHit",
+    "explain_verdict",
 ]
