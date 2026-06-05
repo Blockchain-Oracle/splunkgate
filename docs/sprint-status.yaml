@@ -139,16 +139,21 @@ stories:
   # EPIC-05 — Foundation-Sec invocation
   - id: story-foundsec-01-splunk-rest-search-client
     epic: "EPIC-05 — Foundation-Sec invocation"
-    status: PENDING
+    status: DEFERRED  # 2026-06-05 — see story file's "DEFERRED" banner + ADR-003a. Resume gate: AITK installed + `| ai` SPL runs in tenant + transport decision (A1/A2/B) made.
     depends_on: [story-core-01-verdict-pydantic-types]
   - id: story-foundsec-02-ai-spl-explanation-prompt
-    epic: "EPIC-05 — Foundation-Sec invocation"
-    status: PENDING
+    epic: "EPIC-05 — Verdict explainer (template v1, Foundation-Sec future)"
+    status: DEFERRED  # 2026-06-05 — superseded by template-based explainer (story-explainer-01). See ADR-013. Resume gate: Splunk Slack confirms Trial-tier Hosted Models access.
     depends_on: [story-foundsec-01-splunk-rest-search-client]
   - id: story-foundsec-03-foundation-sec-mock-and-integration-test
-    epic: "EPIC-05 — Foundation-Sec invocation"
-    status: PENDING
+    epic: "EPIC-05 — Verdict explainer (template v1, Foundation-Sec future)"
+    status: DEFERRED  # 2026-06-05 — superseded by template-based explainer. See ADR-013.
     depends_on: [story-foundsec-02-ai-spl-explanation-prompt]
+  - id: story-explainer-01-template-based-verdict-explainer
+    epic: "EPIC-05 — Verdict explainer (template v1, Foundation-Sec future)"
+    status: PENDING
+    depends_on: [story-core-01-verdict-pydantic-types]
+    notes: "Added 2026-06-05 per ADR-013 — replaces deferred Foundation-Sec stories with a deterministic template explainer. ~30 LOC."
 
   # EPIC-06 — Surface 1 (middleware library)
   - id: story-mw-01-package-skeleton-and-public-api
@@ -172,7 +177,8 @@ stories:
   - id: story-mw-04-model-middleware-post-inference-pii-check
     epic: "EPIC-06 — Surface 1 middleware"
     status: PENDING
-    depends_on: [story-mw-03-model-middleware-pre-inference-scan, story-foundsec-03-foundation-sec-mock-and-integration-test]
+    depends_on: [story-mw-03-model-middleware-pre-inference-scan, story-explainer-01-template-based-verdict-explainer]
+    notes: "2026-06-05 — depends_on swap: story-foundsec-03 DEFERRED per ADR-013, replaced by story-explainer-01 (template-based explainer)."
   - id: story-mw-05-subagent-middleware
     epic: "EPIC-06 — Surface 1 middleware"
     status: PENDING
@@ -201,16 +207,17 @@ stories:
     depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk]
   - id: story-mcp-04-tool-check-output-leak
     epic: "EPIC-07 — Surface 2 MCP Server"
-    status: PENDING
+    status: DEFERRED  # 2026-06-05 — per ADR-013 slim, redundant with S1 model_middleware post-inference scan and S4 dashboard verdict surfacing.
     depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk, story-judges-05-ai-defense-end-to-end-integration-test]
   - id: story-mcp-05-tool-audit-trace
     epic: "EPIC-07 — Surface 2 MCP Server"
-    status: PENDING
+    status: DEFERRED  # 2026-06-05 — per ADR-013 slim, redundant with S4 Splunk app's KV-store verdict history (story-app-04) + OTel trace propagation (story-core-03).
     depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk]
   - id: story-mcp-06-claude-desktop-cursor-config-examples
     epic: "EPIC-07 — Surface 2 MCP Server"
     status: PENDING
-    depends_on: [story-mcp-02-tool-score-prompt-injection, story-mcp-03-tool-judge-tool-call, story-mcp-04-tool-check-output-leak, story-mcp-05-tool-audit-trace]
+    depends_on: [story-mcp-02-tool-score-prompt-injection, story-mcp-03-tool-judge-tool-call]
+    notes: "2026-06-05 — depends_on trimmed to drop deferred mcp-04 + mcp-05 per ADR-013. Example MCP-client config now references the live Splunk MCP Server (Splunkbase app 7931) alongside aegis_* tools — the concrete MCP coexistence story for judges."
 
   # EPIC-08 — Surface 3 (DefenseClaw integration)
   - id: story-dc-01-config-delta-docs-and-example
@@ -219,11 +226,11 @@ stories:
     depends_on: [story-core-02-otel-evaluation-event-emitter]
   - id: story-dc-02-ai-defense-backend-upstream-pr
     epic: "EPIC-08 — Surface 3 DefenseClaw"
-    status: PENDING
+    status: DEFERRED  # 2026-06-05 — per ADR-013 cut. Upstream merge timing is outside our control and adds submission risk; the README's DefenseClaw credit + config docs (story-dc-01) cover the "depend, don't rebuild" framing without the PR.
     depends_on: [story-dc-01-config-delta-docs-and-example]
   - id: story-dc-03-langgraph-example-agent
     epic: "EPIC-08 — Surface 3 DefenseClaw"
-    status: PENDING
+    status: DEFERRED  # 2026-06-05 — per ADR-013 cut. Surface 3 demo isn't load-bearing for Security track verdict; LangGraph example deferred.
     depends_on: [story-dc-01-config-delta-docs-and-example]
 
   # EPIC-09 — Surface 4 (Splunk app)
@@ -313,6 +320,11 @@ stories:
     epic: "EPIC-11 — README + demo"
     status: PENDING
     depends_on: [story-app-12-splunkbase-submission-package-and-checklist, story-mw-07-profiles-and-config-fsi-hipaa-pubsec, story-mcp-06-claude-desktop-cursor-config-examples, story-readme-01-headline-and-banner-and-credits]
+  - id: story-demo-02-saia-nl-query-demo-moment
+    epic: "EPIC-11 — README + demo"
+    status: PENDING
+    depends_on: [story-app-05-dashboard-agent-risk-overview, story-app-13-synthetic-verdict-emitter-script, story-demo-01-screencast-and-script]
+    notes: "Added 2026-06-05 per ADR-013 — Scene 4 of demo video shows SOC analyst → SAIA → NL→SPL → Aegis dashboard live update. Uses SAIA app 7245 installed in tenant 2026-06-05."
 
   # ---- BLOCK D additions (audit-driven new stories) ----
 
@@ -336,6 +348,13 @@ stories:
     epic: "EPIC-09 — Surface 4 Splunk app"
     status: PENDING
     depends_on: [story-app-02-props-transforms-for-aegis-verdict-sourcetype, story-eval-01-synthetic-data-generator-dns-guard-pattern]
+
+  # EPIC-09 addition (2026-06-05) — MITRE ATLAS technique-ID lookup mapping for SOC pivots
+  - id: story-app-14-mitre-atlas-technique-mapping
+    epic: "EPIC-09 — Surface 4 Splunk app"
+    status: PENDING
+    depends_on: [story-app-02-props-transforms-for-aegis-verdict-sourcetype]
+    notes: "Added 2026-06-05 per ADR-013 — CSV lookup maps 11 Cisco AI Defense rule names → MITRE ATLAS technique IDs (AML.T0051 etc.). Open-standards signal for Quality of Idea + Tech Impl judges."
 
   # EPIC-10 addition — End-to-end agent → Splunk integration dress rehearsal
   - id: story-eval-06-end-to-end-agent-to-splunk-integration

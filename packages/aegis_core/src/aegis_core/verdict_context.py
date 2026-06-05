@@ -1,14 +1,18 @@
-"""VerdictContext — the agent-side context passed to Foundation-Sec for explanations.
+"""VerdictContext — the agent-side context passed to the explainer.
 
-Per ADR-003, Foundation-Sec is positioned as an EXPLAINER (not classifier);
-it never populates RuleHit.source. It receives VerdictContext alongside the
-live Verdict so it can compose an SPL `| ai` prompt referencing agent state.
+Per ADR-003, the explainer is EXPLAINER-only (not classifier); it never
+populates RuleHit.source. It receives VerdictContext alongside the live
+Verdict so it can compose a human-readable WHY-string referencing agent state.
+
+Per ADR-013 (2026-06-05), the v1 explainer is `aegis_judges.explainer.explain_verdict`
+(template-based, deterministic). The future Foundation-Sec implementation is
+the swap target once Splunk Hosted Models access is unblocked; the same
+VerdictContext shape is the input to both.
 
 Used by:
-- story-foundsec-02 (build_explanation_spl signature)
+- aegis_judges.explainer (v1)
 - aegis_mw post-tool / post-inference hooks
 - aegis_mcp tool handlers
-- aegis_judges DefenseClaw shim
 """
 
 from typing import Literal

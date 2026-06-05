@@ -1,5 +1,7 @@
 # Story — DefenseClaw contribute-back: AI Defense Inspection API rule backend (upstream PR notes + fork branch)
 
+**Status:** ⚠ **DEFERRED** (2026-06-05 per ADR-013). Upstream merge timing on the DefenseClaw project is outside our control and adds submission risk. The README's DefenseClaw credit + config-delta docs (story-dc-01) preserve the "depend, don't rebuild" framing without the upstream PR.
+
 **ID:** story-dc-02-ai-defense-backend-upstream-pr
 **Epic:** EPIC-08 — Surface 3: DefenseClaw integration
 **Depends on:** story-dc-01-config-delta-docs-and-example

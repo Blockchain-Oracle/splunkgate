@@ -1,9 +1,11 @@
 # PRD — Aegis
 
 **Hackathon:** Splunk Agentic Ops Hackathon (Devpost)
-**Track:** Security (primary). Eligible to compete for Best Use of MCP Server, Best Use of Splunk Hosted Models, Best Use of Splunk Developer Tools as side effects (not drivers).
+**Track:** **Security (primary)**.
+**Bonus prize target:** **Best Use of Splunk Developer Tools** ($1K — most reliably winnable given AITK + AppInspect + Python SDK usage already in plan). **Best Use of Splunk MCP Server** is a stretch ($1K — winnable IF the demo concretely shows our `aegis_*` tools coexisting with Splunkbase app 7931's `splunk_*` tools in one MCP client config). **Best Use of Splunk Hosted Models** is forfeited for v1 per ADR-013 (Trial-tier access path publicly undocumented; pivotable on Splunk Slack confirmation with a 30-LOC swap inside `aegis_judges/explainer.py`).
+**Realistic solo target:** Security track $3K + Developer Tools bonus $1K = **$4K cash + .conf26 pass**.
 **Deadline:** 2026-06-15 09:00 PDT
-**Status:** DRAFT
+**Status:** DRAFT — scope locked 2026-06-05 via ADR-013
 **Approved by Abu:** [ ] pending — approval gates GitHub repo creation
 
 ---
@@ -34,7 +36,7 @@ Aegis ships as a Splunk app (Surface 4 — `splunk_apps/aegis_app/` with SPL sea
 
 ## Out of scope
 
-Explicit list — guards against scope creep.
+Explicit list — guards against scope creep. Items moved out of scope in the 2026-06-05 ADR-013 pivot are flagged inline.
 
 - Standalone CISO webapp (React/Next.js separate from Splunk) — Dashboard Studio v2 inside Splunk is the CISO UI; v1 ships zero external web frontend
 - FedRAMP deployment — Splunk Hosted Models is AWS commercial only; Cisco AI Defense is not FedRAMP; future work
@@ -43,7 +45,10 @@ Explicit list — guards against scope creep.
 - Multi-tenant deployment within a single Splunk instance — v1 is single-tenant per Splunk instance
 - SOAR playbook generation — Aegis emits HEC events and ES correlation searches consume them; we don't author playbooks
 - A v1 Splunk Observability Cloud integration — Aegis events land in Splunk Enterprise / Cloud Platform; Observability Cloud / AI Agent Monitoring integration via OTel auto-ingest is best-effort, not promised
-- Splunk MCP Server tool registration — Splunk's MCP Server is closed-source (CiscoDevNet repo is README+LICENSE only — `context/06-splunk-ai-stack/03-splunk-mcp-server.md`); we run our own MCP server alongside
+- Splunk MCP Server tool registration — Splunk's MCP Server is now Splunkbase app 7931 (per ADR-004a 2026-06-05) but we still run our own MCP server alongside; we do NOT register tools into Splunk's server, we coexist via standard MCP client multi-server configs
+- **(ADR-013, 2026-06-05) Foundation-Sec via `| ai` SPL as the live v1 explainer.** Splunk Hosted Models access is publicly undocumented for Trial-tier Cloud tenants. v1 ships a deterministic template-based explainer (`packages/aegis_judges/explainer.py`, ~30 LOC) populating the same `Verdict.explanation` field. The Foundation-Sec swap is a one-file change pending Splunk Slack confirmation.
+- **(ADR-013, 2026-06-05) MCP tools `aegis_check_output_leak` and `aegis_audit_trace`.** Redundant with S1 post-inference scan + S4 KV-store verdict history. Surface 2 ships skeleton + `aegis_judge_prompt` + Claude Desktop config example only.
+- **(ADR-013, 2026-06-05) DefenseClaw upstream PR and LangGraph example agent.** Out-of-our-control merge timing + not load-bearing for Security track demo. We keep `story-dc-01` (config-delta docs) so README's DefenseClaw credit stays accurate.
 
 ---
 

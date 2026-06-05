@@ -2,9 +2,68 @@
 
 **ID:** story-foundsec-01-splunk-rest-search-client
 **Epic:** EPIC-05 — Foundation-Sec invocation via `| ai` SPL
-**Depends on:** story-core-01-verdict-pydantic-types
-**Estimate:** ~2h
-**Status:** PENDING
+**Depends on:** story-core-01-verdict-pydantic-types, story-app-01 (the Splunk app holding the saved search + summary index — new dependency added 2026-06-05)
+**Estimate:** ~2h (assumes Transport A path below; +1h if we fall back to Transport B)
+**Status:** DEFERRED — pending live verification
+
+---
+
+## ⚠ DEFERRED — read this first (added 2026-06-05)
+
+Live Playwright probe of Abu's Splunk Cloud tenant on 2026-06-05 found three constraints that change this story's design (see ADR-003a in `docs/architecture.md`):
+
+1. **Splunk Cloud Platform 10.4 does NOT bundle `| ai` natively.** "Unknown search command 'ai'" — confirmed via in-tenant SPL run. Requires the **Splunk AI Toolkit** (Splunkbase app 2890) to be installed. AITK install is gated on Splunkbase login credentials Abu is still resetting as of 2026-06-05.
+2. **Splunk Cloud REST API on port 8089 is closed** without a Splunk Support ticket. The original story's `splunklib.client.connect(host=..., port=8089, token=session_token, ...)` pattern is **not viable** for Splunk Cloud tenants out of the box. Splunk Cloud does expose the management API on port 443 via the standard tenant URL, but only with a **Splunk Cloud API token** (different from a session token); this requires verification once AITK is installed.
+3. **The `| ai` provider= value for Splunk Hosted Models is undocumented in public docs.** Until we run `| ai` against AITK in the live tenant we don't know whether the provider keyword is `splunk_hosted`, `hosted_models`, or something else.
+
+Because of (1), (2), and (3), this story's design needs to **pivot from "direct REST submit" to "saved-search trigger via HEC + summary-index poll"** — see the new design below. Do NOT implement the original `SplunkSearchClient` against port 8089; it will not connect.
+
+### Revised transport (Transport A per ADR-003a)
+
+```
+┌────────────┐   1. POST event   ┌──────────────┐
+│ middleware │ ───── (HEC) ────▶ │ Splunk Cloud │
+│  (Aegis)   │                   │  index=trig  │
+└────────────┘                   └──────┬───────┘
+       ▲                                │ 2. real-time saved
+       │                                │    search triggered
+       │ 4. read result row             ▼
+       │   (REST search jobs           ┌──────────────┐
+       │   on 443 OR re-poll           │ saved search │
+       │   via index=results)          │ runs `| ai ` │
+       │                               │ pipeline     │
+       │                               └──────┬───────┘
+       │                                      │ 3. result written
+       │                                      │    to summary index
+       │                                      ▼
+       │                              ┌──────────────┐
+       └──────────────────────────────│ index=results│
+                                      │ (summary)    │
+                                      └──────────────┘
+```
+
+The two unknowns that gate which "step 4" we use:
+- **U1:** Does Splunk Cloud's tenant URL expose `/services/search/jobs` on port 443 with a Cloud API token? (Testable in 5 minutes once we have a Cloud API token — separate from sc_admin login.)
+- **U2:** Does HEC have any "trigger saved search on event" hook, or do we need a 1-second-scheduled saved search polling its own input index? (Latter is the safe default; not real-time but bounded latency.)
+
+### What this story becomes after deferral resolves
+
+If both Transports A1 (REST on 443) and A2 (poll summary index via REST on 443) are viable: rename this story to `story-foundsec-01-search-jobs-cloud-rest-client`, keep most of the code shape from the original spec, but target `host=<tenant>.splunkcloud.com`, `port=443`, `scheme=https`, and the token type becomes "Splunk Cloud API token" (documented in `docs/ops/secrets.md` once story-ops-02 lands).
+
+If REST on 443 also fails: switch to **Transport B** — direct HuggingFace inference from middleware (`fdtn-ai/Foundation-Sec-8B-Instruct`). Story-foundsec-01 then becomes a stub and `story-foundsec-02` carries the full implementation as an HF Inference client. The $1K "Best Use of Splunk Hosted Models" bonus prize is forfeit but the Foundation-Sec demo still works.
+
+### Resume gate
+
+This story un-defers when **all three** are true:
+- [ ] AITK installed in Abu's tenant (task #69).
+- [ ] `| ai` SPL runs in Search & Reporting without "Unknown search command" — provider keyword + Foundation-Sec model name both known.
+- [ ] Either: (a) Splunk Cloud API token obtained AND `/services/search/jobs` on port 443 returns 200 for a trivial `| makeresults` POST, OR (b) decision to drop Transport A and ship Transport B is recorded in a new ADR-003b.
+
+**Until then, do NOT begin implementation** of `foundation_sec.py`, `_foundation_sec_errors.py`, or `test_splunk_search_client.py`. The acceptance criteria below describe the **pre-deferral** design and are kept for reference; they will be rewritten before this story re-enters the sprint queue.
+
+---
+
+## Original spec (pre-2026-06-05, kept for reference — DO NOT IMPLEMENT)
 
 ---
 

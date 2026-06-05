@@ -1,5 +1,7 @@
 # Story — LangGraph example agent proxied through DefenseClaw → Aegis HEC sink
 
+**Status:** ⚠ **DEFERRED** (2026-06-05 per ADR-013). The Surface 3 LangGraph demo is not load-bearing for the Security track verdict — S1 (splunklib.ai middleware) is the agent-side demo surface, and S4 (Splunk app) is the CISO/SOC-side. The LangGraph example becomes a post-hackathon community contribution.
+
 **ID:** story-dc-03-langgraph-example-agent
 **Epic:** EPIC-08 — Surface 3: DefenseClaw integration
 **Depends on:** story-dc-01-config-delta-docs-and-example

@@ -1,5 +1,7 @@
 # Story — Foundation-Sec mock + live integration test (Splunk-gated)
 
+**Status:** ⚠ **DEFERRED** (2026-06-05 per ADR-013). Superseded by `story-explainer-01-template-based-verdict-explainer.md`. The template explainer is deterministic so it needs no mock/integration test pair — story-explainer-01's behavioral tests cover the same surface.
+
 **ID:** story-foundsec-03-foundation-sec-mock-and-integration-test
 **Epic:** EPIC-05 — Foundation-Sec invocation via `| ai` SPL
 **Depends on:** story-foundsec-02-ai-spl-explanation-prompt

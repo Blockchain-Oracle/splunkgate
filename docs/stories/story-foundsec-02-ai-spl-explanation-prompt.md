@@ -1,5 +1,7 @@
 # Story — `| ai` SPL explanation-prompt builder + result parser
 
+**Status:** ⚠ **DEFERRED** (2026-06-05 per ADR-013). Superseded by `story-explainer-01-template-based-verdict-explainer.md`. Re-open only if Splunk Slack confirms Trial-tier Hosted Models access; at that point this story's `| ai` prompt design becomes the swap target for the explainer module.
+
 **ID:** story-foundsec-02-ai-spl-explanation-prompt
 **Epic:** EPIC-05 — Foundation-Sec invocation via `| ai` SPL
 **Depends on:** story-foundsec-01-splunk-rest-search-client

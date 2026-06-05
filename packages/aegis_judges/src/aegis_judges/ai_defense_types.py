@@ -17,9 +17,10 @@ Key invariants enforced by these types:
 
 DefenseClaw's `cisco_inspect.go` line 38-51 hard-codes 12 names that don't
 fully match the public 11 (DefenseClaw adds Jailbreak / Sensitive Data /
-Data Leakage; lacks PCI / PHI). That contradiction is logged in the
-context corpus and will be resolved by a live-API call in a later story.
-This module uses the public-docs 11 only.
+Data Leakage; lacks PCI / PHI). Per ADR-013 (2026-06-05), the live-API
+reconciliation is deferred — the upstream DefenseClaw PR (story-dc-02)
+was cut to reduce submission risk. This module continues to use the
+public-docs 11 verbatim; the DefenseClaw 12 are not re-exported here.
 """
 
 from enum import StrEnum

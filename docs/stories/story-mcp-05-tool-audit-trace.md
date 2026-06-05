@@ -1,5 +1,7 @@
 # Story — MCP tool `aegis_audit_trace`
 
+**Status:** ⚠ **DEFERRED** (2026-06-05 per ADR-013). The audit-trace surface is already provided by S4's KV-store verdict history (story-app-04) plus OTel trace propagation (story-core-03). An MCP tool that returns the same data is redundant for the demo.
+
 **ID:** story-mcp-05-tool-audit-trace
 **Epic:** EPIC-07 — Surface 2 Aegis MCP Server (own server, parallel to Splunk's)
 **Depends on:** story-mcp-01-server-skeleton-with-mcp-python-sdk

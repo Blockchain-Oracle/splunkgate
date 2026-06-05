@@ -1,5 +1,7 @@
 # Story — MCP tool `aegis_check_output_leak`
 
+**Status:** ⚠ **DEFERRED** (2026-06-05 per ADR-013). The output-leak check is redundant — S1 `SafetyModelMiddleware.post_inference_scan` already runs the same PII/PHI/PCI check against model outputs via Cisco AI Defense, and S4 surfaces the resulting verdict in the Verdict Inspector dashboard. Adding an MCP tool with the same behavior duplicates the judgment without adding judge-scoring value.
+
 **ID:** story-mcp-04-tool-check-output-leak
 **Epic:** EPIC-07 — Surface 2 Aegis MCP Server (own server, parallel to Splunk's)
 **Depends on:** story-mcp-01-server-skeleton-with-mcp-python-sdk, story-judges-05-ai-defense-end-to-end-integration-test

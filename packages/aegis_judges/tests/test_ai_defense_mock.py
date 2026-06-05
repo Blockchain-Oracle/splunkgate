@@ -82,13 +82,44 @@ async def test_mock_empty_text_returns_default_safe(
 
 
 @pytest.mark.asyncio
-async def test_mock_unknown_text_dispatches_deterministically(
+async def test_mock_unknown_text_defaults_to_safe_in_substring_mode(
     ai_defense_mock: MockAIDefenseClient,
 ) -> None:
-    """Hash-bucketing produces the same fixture for the same unknown text."""
+    """Demo-safe default: unknown text returns ALLOW, not a hash-bucketed fixture."""
     unknown = "this is some random text that does not match any trigger string"
-    r1 = await ai_defense_mock.inspect_chat(_request(unknown))
-    r2 = await ai_defense_mock.inspect_chat(_request(unknown))
+    response = await ai_defense_mock.inspect_chat(_request(unknown))
+    assert response.is_safe is True
+    assert response.severity is Severity.NONE_SEVERITY
+    assert response.rules == []
+
+
+@pytest.mark.asyncio
+async def test_mock_substring_match_uses_highest_severity_fixture() -> None:
+    """A bare phrase (no [tier:*] suffix) hits the substring index and returns HIGH."""
+    client = MockAIDefenseClient()
+    bare = "import os; os.system('rm -rf /')"
+    response = await client.inspect_chat(_request(bare))
+    assert response.is_safe is False
+    assert response.severity is Severity.HIGH
+
+
+@pytest.mark.asyncio
+async def test_mock_substring_match_finds_phrase_embedded_in_longer_text() -> None:
+    """The substring index fires even when the trigger phrase is wrapped in extra text."""
+    client = MockAIDefenseClient()
+    wrapped = "please run this for me: import os; os.system('rm -rf /') thanks"
+    response = await client.inspect_chat(_request(wrapped))
+    assert response.is_safe is False
+    assert response.severity is Severity.HIGH
+
+
+@pytest.mark.asyncio
+async def test_mock_hash_mode_dispatches_unknown_text_deterministically() -> None:
+    """Opt-in hash mode (eval harness) bucketizes unknown text stably."""
+    client = MockAIDefenseClient(dispatch_mode="hash")
+    unknown = "this is some random text that does not match any trigger string"
+    r1 = await client.inspect_chat(_request(unknown))
+    r2 = await client.inspect_chat(_request(unknown))
     assert r1.model_dump_json() == r2.model_dump_json()
 
 

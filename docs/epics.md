@@ -1,9 +1,9 @@
 # Epics — Aegis
 
 **Hackathon:** Splunk Agentic Ops Hackathon (Devpost)
-**Status:** DRAFT (locks after Abu approval)
+**Status:** DRAFT (scope locked 2026-06-05 via ADR-013)
 **Total epics:** 12
-**Total stories:** 66 (final count after Block D additions — see `sprint-status.yaml`)
+**Total active stories:** **62** (66 original − 6 DEFERRED via ADR-013 + 3 new: explainer-01, app-14, demo-02. See `sprint-status.yaml` for the 6 deferred IDs.)
 **Estimated total build time:** **agent-driven**, no human-hour budget per Abu's no-deadline-pressure rule. Each story scoped to ≤ 400 LOC contribution; orchestrator dispatches in dependency order.
 
 ---
@@ -16,13 +16,13 @@
 | EPIC-01 | CI/CD foundation | Cross-cutting | 8 | EPIC-02 (CI needs the workspace skeleton to build/test against) |
 | EPIC-03 | Core domain types (Verdict, OTel emitter, error model) | Cross-cutting | 5 | EPIC-02 |
 | EPIC-04 | Cisco AI Defense Inspection API client (typed, mockable, retries, circuit breaker) | Judgment layer | 6 | EPIC-03 |
-| EPIC-05 | Foundation-Sec invocation via \| ai SPL (explainer, NOT judge) | Judgment layer | 3 | EPIC-03 |
+| EPIC-05 | Verdict explainer (template v1, Foundation-Sec future per ADR-013) | Judgment layer | 1 active + 3 DEFERRED | EPIC-03 |
 | EPIC-06 | **Surface 1** — aegis-mw middleware library for splunklib.ai | S1 | 7 | EPIC-03, EPIC-04, EPIC-05 |
-| EPIC-07 | **Surface 2** — Aegis MCP Server (own, parallel to Splunk's) | S2 | 6 | EPIC-03, EPIC-04, EPIC-05 |
-| EPIC-08 | **Surface 3** — DefenseClaw integration | S3 | 3 | EPIC-03 |
-| EPIC-09 | **Surface 4** — Splunk app (SPL/MLTK + 3 Dashboard Studio v2 dashboards) | S4 | 11 | EPIC-03 (events) |
+| EPIC-07 | **Surface 2** — Aegis MCP Server (own, parallel to Splunk's app 7931) | S2 | 4 active + 2 DEFERRED | EPIC-03, EPIC-04, EPIC-05 |
+| EPIC-08 | **Surface 3** — DefenseClaw integration (config docs only, ADR-013) | S3 | 1 active + 2 DEFERRED | EPIC-03 |
+| EPIC-09 | **Surface 4** — Splunk app (SPL/MLTK + 3 Dashboard Studio v2 dashboards + MITRE ATLAS lookup) | S4 | 12 | EPIC-03 (events) |
 | EPIC-10 | Eval harness + synthetic data generator | Cross-cutting | 6 | EPIC-04, EPIC-05, EPIC-06 |
-| EPIC-11 | Demo video assets + README + architecture diagrams | Cross-cutting | 3 | All build epics |
+| EPIC-11 | Demo video assets + README + architecture diagrams + SAIA NL→SPL scene | Cross-cutting | 4 | All build epics |
 | EPIC-12 | AppInspect compliance hardening + Splunkbase prep + GitHub ops | Cross-cutting | 4 | EPIC-09, EPIC-01 |
 
 ---
@@ -98,18 +98,19 @@
 
 ---
 
-## EPIC-05 — Foundation-Sec invocation via `| ai` SPL
+## EPIC-05 — Verdict explainer (template v1, Foundation-Sec future)
 
-**Business value:** The explanation layer — the WHY-string the dashboard shows alongside the verdict. Cisco markets Foundation-Sec as security copilot (verified). Used as built.
+**Business value:** The explanation layer — the WHY-string the dashboard, regulator-evidence-pack PDF, and demo video all surface. v1 ships a deterministic template-based explainer that populates `Verdict.explanation` from already-decided verdict fields. Per ADR-013, the Foundation-Sec implementation is deferred until Splunk Slack confirms Trial-tier Hosted Models access; the swap is a one-file change inside `aegis_judges/explainer.py`. ADR-003's "explainer-only, never classifier" invariant holds across both implementations.
 
-**Anchor doc:** `context/07-cisco-stack/03-foundation-sec-models.md`, `context/06-splunk-ai-stack/07-foundation-sec-on-splunk.md`
+**Anchor doc:** `context/07-cisco-stack/03-foundation-sec-models.md`, `context/06-splunk-ai-stack/07-foundation-sec-on-splunk.md`, ADR-003 + ADR-013 in `docs/architecture.md`
 
 **Dependencies:** EPIC-03
-**Stories:** 3
+**Active stories:** 1
 **Files under `docs/stories/`:**
-- `story-foundsec-01-splunk-rest-search-client.md`
-- `story-foundsec-02-ai-spl-explanation-prompt.md`
-- `story-foundsec-03-foundation-sec-mock-and-integration-test.md`
+- `story-explainer-01-template-based-verdict-explainer.md` (NEW — v1 implementation)
+- `story-foundsec-01-splunk-rest-search-client.md` (⚠ DEFERRED per ADR-003a)
+- `story-foundsec-02-ai-spl-explanation-prompt.md` (⚠ DEFERRED per ADR-013)
+- `story-foundsec-03-foundation-sec-mock-and-integration-test.md` (⚠ DEFERRED per ADR-013)
 
 ---
 
@@ -139,14 +140,14 @@
 **Anchor doc:** `docs/architecture.md` § "Surface 2", `context/10-standards/01-mcp-spec-deep.md`
 
 **Dependencies:** EPIC-03, EPIC-04, EPIC-05
-**Stories:** 6
+**Active stories:** 4 (slimmed from 6 per ADR-013 — skeleton + 1 hero tool + 1 supporting tool + Claude Desktop coexistence config)
 **Files under `docs/stories/`:**
 - `story-mcp-01-server-skeleton-with-mcp-python-sdk.md`
 - `story-mcp-02-tool-score-prompt-injection.md`
 - `story-mcp-03-tool-judge-tool-call.md`
-- `story-mcp-04-tool-check-output-leak.md`
-- `story-mcp-05-tool-audit-trace.md`
-- `story-mcp-06-claude-desktop-cursor-config-examples.md`
+- `story-mcp-04-tool-check-output-leak.md` (⚠ DEFERRED per ADR-013)
+- `story-mcp-05-tool-audit-trace.md` (⚠ DEFERRED per ADR-013)
+- `story-mcp-06-claude-desktop-cursor-config-examples.md` (NOW references Splunk MCP Server app 7931 for concrete coexistence demo)
 
 ---
 
@@ -157,11 +158,11 @@
 **Anchor doc:** `docs/architecture.md` § "Surface 3", `context/sources/code-snippets/defenseclaw-splunk_hec-top100.go`
 
 **Dependencies:** EPIC-03
-**Stories:** 3
+**Active stories:** 1 (config docs only; ADR-013 deferred the upstream PR + LangGraph example)
 **Files under `docs/stories/`:**
 - `story-dc-01-config-delta-docs-and-example.md`
-- `story-dc-02-ai-defense-backend-upstream-pr.md`
-- `story-dc-03-langgraph-example-agent.md`
+- `story-dc-02-ai-defense-backend-upstream-pr.md` (⚠ DEFERRED per ADR-013)
+- `story-dc-03-langgraph-example-agent.md` (⚠ DEFERRED per ADR-013)
 
 ---
 
@@ -172,7 +173,7 @@
 **Anchor doc:** `docs/architecture.md` § "Repo structure" > `splunk_apps/aegis_app/`, `docs/ux-spec.md`, `docs/eval-spec.md`
 
 **Dependencies:** EPIC-03 (event shape must be locked before SPL parsing rules are written)
-**Stories:** 11
+**Active stories:** 12 (added `story-app-14` per ADR-013 — MITRE ATLAS technique-ID lookup)
 **Files under `docs/stories/`:**
 - `story-app-01-app-conf-and-metadata-skeleton.md`
 - `story-app-02-props-transforms-for-aegis-verdict-sourcetype.md`
@@ -185,6 +186,7 @@
 - `story-app-09-static-icons-and-app-assets.md`
 - `story-app-10-app-vision-loop-validation.md`
 - `story-app-13-synthetic-verdict-emitter-script.md`
+- `story-app-14-mitre-atlas-technique-mapping.md` (NEW per ADR-013 — open-standards interoperability)
 
 ---
 
@@ -213,11 +215,12 @@
 **Anchor doc:** `docs/PRD.md` § "Demo moment", `research/splunk-agentic-ops-2026/01-prizes-tracks.md`
 
 **Dependencies:** EPIC-01 through EPIC-10 complete (so README has real eval numbers)
-**Stories:** 3
+**Active stories:** 4 (added `story-demo-02` per ADR-013 — SAIA NL→SPL demo scene)
 **Files under `docs/stories/`:**
 - `story-readme-01-headline-and-banner-and-credits.md`
 - `story-readme-02-architecture-diagrams-light-dark-png.md`
 - `story-demo-01-screencast-and-script.md`
+- `story-demo-02-saia-nl-query-demo-moment.md` (NEW per ADR-013 — Scene 4 SAIA NL→SPL → live dashboard update)
 
 ---
 
@@ -274,9 +277,8 @@ dispatch_queue:
   - story-judges-03-ai-defense-circuit-breaker-tenacity
   - story-judges-04-ai-defense-mock-respx-fixtures
   - story-judges-05-ai-defense-end-to-end-integration-test
-  - story-foundsec-01-splunk-rest-search-client
-  - story-foundsec-02-ai-spl-explanation-prompt
-  - story-foundsec-03-foundation-sec-mock-and-integration-test
+  # foundsec-01/-02/-03 DEFERRED per ADR-013 — superseded by story-explainer-01 below.
+  - story-explainer-01-template-based-verdict-explainer  # NEW — v1 explainer per ADR-013
 
   # ---- EPIC-06 + EPIC-07 + EPIC-08 (surfaces 1, 2, 3) — can run in parallel ----
   - story-mw-01-package-skeleton-and-public-api
@@ -289,12 +291,10 @@ dispatch_queue:
   - story-mcp-01-server-skeleton-with-mcp-python-sdk
   - story-mcp-02-tool-score-prompt-injection
   - story-mcp-03-tool-judge-tool-call
-  - story-mcp-04-tool-check-output-leak
-  - story-mcp-05-tool-audit-trace
+  # mcp-04 + mcp-05 DEFERRED per ADR-013 — redundant with S1 + S4 surfaces.
   - story-mcp-06-claude-desktop-cursor-config-examples
   - story-dc-01-config-delta-docs-and-example
-  - story-dc-02-ai-defense-backend-upstream-pr
-  - story-dc-03-langgraph-example-agent
+  # dc-02 + dc-03 DEFERRED per ADR-013 — out-of-our-control merge + not load-bearing for Security track.
   - story-judges-06-defenseclaw-python-shim   # EPIC-04 — depends on dc-01 (rule pack provenance) + core-01
 
   # ---- EPIC-09 (Surface 4 — Splunk app) — sequential within epic ----
@@ -309,6 +309,7 @@ dispatch_queue:
   - story-app-08-risk-factors-conf-es-rba-integration
   - story-app-09-static-icons-and-app-assets
   - story-app-10-app-vision-loop-validation
+  - story-app-14-mitre-atlas-technique-mapping  # NEW per ADR-013 — open-standards lookup
 
   # ---- EPIC-10 (eval) ----
   - story-eval-01-synthetic-data-generator-dns-guard-pattern
@@ -328,6 +329,7 @@ dispatch_queue:
   - story-readme-01-headline-and-banner-and-credits
   - story-readme-02-architecture-diagrams-light-dark-png
   - story-demo-01-screencast-and-script
+  - story-demo-02-saia-nl-query-demo-moment  # NEW per ADR-013 — Scene 4 SAIA NL→SPL
 ```
 
-Total: 66 stories.
+Total: **62 active stories** (66 original − 6 DEFERRED + 3 NEW per ADR-013).
