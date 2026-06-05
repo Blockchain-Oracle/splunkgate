@@ -338,8 +338,11 @@ stories:
   # EPIC-12 — AppInspect hardening (runs before EPIC-11)
   - id: story-app-11-appinspect-expect-yaml-and-manual-checks
     epic: "EPIC-12 — AppInspect hardening"
-    status: PENDING
-    depends_on: [story-app-10-app-vision-loop-validation]
+    status: COMPLETE
+    depends_on: []  # spec said app-10 but path-B reorders (2026-06-05); app-10 needs deployed app, which needs app-11/12
+    pr_url: "https://github.com/Blockchain-Oracle/aegis/pull/104"
+    merged_at: "2026-06-05T12:50:00Z"
+    notes: "AppInspect submission-ready scaffold: 25-check manualcheck.yaml verbatim mirror of CIMplicity AI 2025, empty expect.yaml (zero binaries per ADR-008), warnings.md template, version-gated run_appinspect.sh runner, JSON-walking postprocessor with allow-list semantics (anything not in PASS_RESULTS blocks — defensive against future severities), 21 behavioral tests. Multi-reviewer pass (code-reviewer + comment-analyzer + silent-failure-hunter) caught and closed: S1 cryptic --version parse failure, S2 warnings.md lying about being parsed + 3 hallucinated check names, S3 deny-list bypass on future severities, S4 lax suppression validation, and code-reviewer Q3 bash-into-Python heredoc interpolation. Added 4 regression-guard tests for S3/S4 paths. Pending caveat: real AppInspect may emit 'na' shorthand for not_applicable; verify on first live run."
   - id: story-app-12-splunkbase-submission-package-and-checklist
     epic: "EPIC-12 — AppInspect hardening"
     status: PENDING
