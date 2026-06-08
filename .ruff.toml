@@ -35,6 +35,11 @@ ignore = [
 # covers them for D/ANN/S101/S603/S607/PLR2004; INP001 needs an explicit
 # add because Splunk apps aren't Python packages.
 "**/splunkgate_app/tests/**/*.py" = ["INP001"]
+# Synthetic-Data is the documented §14 carve-out (synthetic fixture generator
+# for demos / vision loop). CLI script + tests get the same carve-out as
+# scripts/*.py — and tests get extras for subprocess + sys.path manipulation.
+"Synthetic-Data/scripts/*.py" = ["D", "PLR2004", "TRY003", "T201", "INP001"]
+"Synthetic-Data/scripts/tests/**/*.py" = ["D", "ANN", "S101", "S105", "S106", "S603", "S607", "PLR2004", "INP001", "E402"]
 
 [lint.pydocstyle]
 convention = "google"
