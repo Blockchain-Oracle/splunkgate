@@ -99,9 +99,25 @@ def test_aux_fields_live_on_hec_envelope_fields_sibling_not_event() -> None:
     for env in envelopes:
         assert "model_name" not in env["event"]
         assert "jurisdictional_tag" not in env["event"]
+        assert "tokens_used" not in env["event"]
         assert "fields" in env
         assert "model_name" in env["fields"]
         assert "jurisdictional_tag" in env["fields"]
+        assert "tokens_used" in env["fields"]
+
+
+def test_tokens_used_is_int_in_sensible_range() -> None:
+    """Token count borrowed from TruongSinhAI/splunk-token-optimizer narrative.
+
+    Used by Agent Risk Overview's 'tokens saved' KPI tile — aggregated over
+    BLOCK verdicts to show what interception prevented.
+    """
+    envelopes = _run_dry_run(100)
+    for env in envelopes:
+        tokens_str = env["fields"]["tokens_used"]
+        # JSON normalizes to string on HEC `fields` block; verify it's a clean int.
+        tokens = int(tokens_str)
+        assert 80 <= tokens <= 8000, f"tokens out of range: {tokens}"
 
 
 # ---------- BDD #4: sourcetype is the canonical string ----------

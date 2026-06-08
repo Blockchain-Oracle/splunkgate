@@ -250,8 +250,20 @@ def _synthesize_verdict(
     aux_fields = {
         "model_name": _model_name(rng),
         "jurisdictional_tag": _jurisdictional_tag(rng),
+        # Token cost — what the LLM inference WOULD have used.
+        # For BLOCK verdicts, dashboards aggregate this as "tokens saved"
+        # (the interception prevented the inference). For ALLOW, it's the
+        # actual model spend. Borrowed from TruongSinhAI/splunk-token-optimizer
+        # — token-progressive-disclosure pattern as a dashboard narrative.
+        "tokens_used": str(_tokens_used(rng)),
     }
     return verdict_payload, aux_fields
+
+
+def _tokens_used(rng: random.Random) -> int:
+    """Log-normal token count, clamped to a sensible chat-LLM range."""
+    raw = rng.lognormvariate(6.6, 0.65)
+    return int(max(80, min(8000, raw)))
 
 
 def _explanation(label: str, severity: str, rules: list[dict[str, Any]]) -> str:

@@ -4,7 +4,7 @@
   <definition><![CDATA[
 {
   "title": "SplunkGate — Agent Risk Overview",
-  "description": "4 KPI tiles + verdicts-by-label time series + rules-by-hour heatmap + top-agents table + MSJ scaling indicator.",
+  "description": "5 KPI tiles (incl. tokens saved by BLOCK) + verdicts-by-label time series + rules-by-hour heatmap + top-agents table + MSJ scaling indicator.",
   "inputs": {
     "input_time": {
       "type": "input.timerange",
@@ -44,6 +44,14 @@
         "queryParameters": {"earliest": "$input_time.earliest$", "latest": "$input_time.latest$"}
       },
       "name": "ds_agents"
+    },
+    "ds_tokens_saved": {
+      "type": "ds.search",
+      "options": {
+        "query": "`splunkgate_data` verdict_label=block | stats sum(tokens_used) as tokens_saved",
+        "queryParameters": {"earliest": "$input_time.earliest$", "latest": "$input_time.latest$"}
+      },
+      "name": "ds_tokens_saved"
     },
     "ds_ts": {
       "type": "ds.search",
@@ -108,6 +116,17 @@
       "title": "Distinct agents",
       "dataSources": {"primary": "ds_agents"},
       "options": {"sparklineDisplay": "off"}
+    },
+    "kpi_tokens_saved": {
+      "type": "splunk.singlevalue",
+      "title": "Tokens saved (BLOCK)",
+      "description": "Sum of tokens_used across BLOCK verdicts — what the intercepted LLM inference would have spent. Narrative pattern borrowed from TruongSinhAI/splunk-token-optimizer; emphasizes the cost-side ROI of runtime gating, not just safety.",
+      "dataSources": {"primary": "ds_tokens_saved"},
+      "options": {
+        "majorColor": "#5BC0DE",
+        "sparklineDisplay": "off",
+        "unit": "tokens"
+      }
     },
     "ts_verdicts_24h": {
       "type": "splunk.area",
@@ -175,10 +194,11 @@
     "type": "absolute",
     "options": {"width": 1440, "height": 960, "backgroundColor": "#0e1a2b"},
     "structure": [
-      {"item": "kpi_total_verdicts", "type": "block", "position": {"x": 0, "y": 0, "w": 360, "h": 140}},
-      {"item": "kpi_block_verdicts", "type": "block", "position": {"x": 360, "y": 0, "w": 360, "h": 140}},
-      {"item": "kpi_high_severity", "type": "block", "position": {"x": 720, "y": 0, "w": 360, "h": 140}},
-      {"item": "kpi_distinct_agents", "type": "block", "position": {"x": 1080, "y": 0, "w": 360, "h": 140}},
+      {"item": "kpi_total_verdicts", "type": "block", "position": {"x": 0, "y": 0, "w": 288, "h": 140}},
+      {"item": "kpi_block_verdicts", "type": "block", "position": {"x": 288, "y": 0, "w": 288, "h": 140}},
+      {"item": "kpi_high_severity", "type": "block", "position": {"x": 576, "y": 0, "w": 288, "h": 140}},
+      {"item": "kpi_distinct_agents", "type": "block", "position": {"x": 864, "y": 0, "w": 288, "h": 140}},
+      {"item": "kpi_tokens_saved", "type": "block", "position": {"x": 1152, "y": 0, "w": 288, "h": 140}},
       {"item": "ts_verdicts_24h", "type": "block", "position": {"x": 0, "y": 160, "w": 1440, "h": 280}},
       {"item": "heatmap_rules_by_hour", "type": "block", "position": {"x": 0, "y": 460, "w": 960, "h": 320}},
       {"item": "table_top_agents", "type": "block", "position": {"x": 980, "y": 460, "w": 460, "h": 320}},
