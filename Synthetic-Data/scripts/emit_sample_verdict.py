@@ -283,9 +283,13 @@ def _wrap_for_hec(
     NOT pollute the canonical event payload. `Verdict(extra="forbid")` would
     otherwise raise ValidationError for any consumer that round-trips the
     envelope's `event` through the Pydantic model.
+
+    The `time` field is omitted intentionally — Splunk falls back to the HEC
+    receive-time, so demo dashboards filtered to "Last 24h" show data
+    immediately. The verdict.timestamp inside the event payload preserves
+    the deterministic anchor for vision-loop anchor capture.
     """
     return {
-        "time": datetime.fromisoformat(verdict["timestamp"]).timestamp(),
         "sourcetype": _SOURCETYPE,
         "source": _SOURCE,
         "index": index,
