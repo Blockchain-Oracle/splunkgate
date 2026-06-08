@@ -17,7 +17,7 @@ This writes `.git/hooks/pre-commit` to your local clone. Every subsequent `git c
 |---|---|
 | `ruff` (`--fix`) | Lint violations + auto-fix |
 | `ruff-format` | Formatter drift |
-| `mypy --strict` (on `aegis_core`/`aegis_judges` only) | Type errors in the load-bearing packages |
+| `mypy --strict` (on `splunkgate_core`/`splunkgate_judges` only) | Type errors in the load-bearing packages |
 | `check-loc-400` | Any `*.py` file exceeding 400 LOC |
 | `no-print` | `print(` in production code (use `structlog` instead) |
 | `gitleaks` | Committed secrets (AWS keys, tokens, etc.) |

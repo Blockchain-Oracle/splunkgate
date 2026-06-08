@@ -9,7 +9,7 @@
 | `pip-audit` | Python deps in `uv.lock` for known CVEs | strict (any vuln) | Triage GHSA; ignore via `--ignore-vuln <GHSA-ID>` ONLY with ADR documenting why |
 | `gitleaks` | Full git history for secret patterns | default ruleset | Rotate the secret + `git-filter-repo` to rewrite history (per `docs/cicd-spec.md` line 496) |
 | `trivy` (fs) | Committed files for OS/lib CVEs | `CRITICAL,HIGH` | Patch the lib or pin a fixed version; document in ADR if no fix exists |
-| `bandit` | `packages/aegis_judges/src/` only | `MEDIUM,MEDIUM` | Fix the smell; rule skip ONLY in `.bandit` with comment justifying |
+| `bandit` | `packages/splunkgate_judges/src/` only | `MEDIUM,MEDIUM` | Fix the smell; rule skip ONLY in `.bandit` with comment justifying |
 
 ## Triage runbook
 

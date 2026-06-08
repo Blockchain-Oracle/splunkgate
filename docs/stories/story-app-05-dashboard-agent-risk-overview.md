@@ -20,8 +20,8 @@
 
 Exact files the coding agent creates or modifies for this story:
 
-- `splunk_apps/aegis_app/default/data/ui/views/agent_risk_overview.xml` — NEW — Dashboard Studio v2 dashboard in JSON-in-XML format. Wrapper: `<dashboard version="2" theme="dark"><label>Aegis — Agent Risk Overview</label><description>Real-time CISO view of AI agent safety verdicts. Aegis events land in the same cisco_ai_defense:* sourcetype family as the Cisco Security Cloud add-on (Splunkbase 7404).</description><definition><![CDATA[ {JSON} ]]></definition></dashboard>`. The CDATA JSON declares: 4 KPI single-value visualizations (`kpi_total_verdicts`, `kpi_block_verdicts`, `kpi_high_severity`, `kpi_distinct_agents`), 1 line chart with stacked verdicts (`ts_verdicts_24h`), 1 heatmap (`heatmap_rules_by_hour`), 1 table (`table_top_agents`), 1 small MSJ scaling line chart (`msj_scaling_chart`); 8 dataSources (one per viz), each `type: "ds.search"` using `aegis_data` macro + per-panel `| stats`/`| timechart`; 1 timerange input (`input_time`); layout block uses absolute positioning per Dashboard Studio v2 grid (12-column, panels sized 3/6/12 wide depending on KPI vs main vs full-width). All drill-downs point at `verdict_inspector` with URL params using the destination dashboard's input NAMES (`form.input_time.earliest=...&form.input_rule=...&form.input_agent_id=...`) — see story-app-06's input declarations at line 23. This is the resolved drilldown contract per the 2026-06-03 audit fix. File total: target ≤ 380 LOC; if approaching 400, split panel JSON into a 2nd view file via Splunk view-include (`<view ref="agent_risk_overview_panels">`).
-- `splunk_apps/aegis_app/default/data/ui/nav/default.xml` — UPDATE — confirm `<view name="agent_risk_overview" default="true" />` is set as the default view (this is the landing dashboard).
+- `splunk_apps/splunkgate_app/default/data/ui/views/agent_risk_overview.xml` — NEW — Dashboard Studio v2 dashboard in JSON-in-XML format. Wrapper: `<dashboard version="2" theme="dark"><label>SplunkGate — Agent Risk Overview</label><description>Real-time CISO view of AI agent safety verdicts. SplunkGate events land in the same cisco_ai_defense:* sourcetype family as the Cisco Security Cloud add-on (Splunkbase 7404).</description><definition><![CDATA[ {JSON} ]]></definition></dashboard>`. The CDATA JSON declares: 4 KPI single-value visualizations (`kpi_total_verdicts`, `kpi_block_verdicts`, `kpi_high_severity`, `kpi_distinct_agents`), 1 line chart with stacked verdicts (`ts_verdicts_24h`), 1 heatmap (`heatmap_rules_by_hour`), 1 table (`table_top_agents`), 1 small MSJ scaling line chart (`msj_scaling_chart`); 8 dataSources (one per viz), each `type: "ds.search"` using `splunkgate_data` macro + per-panel `| stats`/`| timechart`; 1 timerange input (`input_time`); layout block uses absolute positioning per Dashboard Studio v2 grid (12-column, panels sized 3/6/12 wide depending on KPI vs main vs full-width). All drill-downs point at `verdict_inspector` with URL params using the destination dashboard's input NAMES (`form.input_time.earliest=...&form.input_rule=...&form.input_agent_id=...`) — see story-app-06's input declarations at line 23. This is the resolved drilldown contract per the 2026-06-03 audit fix. File total: target ≤ 380 LOC; if approaching 400, split panel JSON into a 2nd view file via Splunk view-include (`<view ref="agent_risk_overview_panels">`).
+- `splunk_apps/splunkgate_app/default/data/ui/nav/default.xml` — UPDATE — confirm `<view name="agent_risk_overview" default="true" />` is set as the default view (this is the landing dashboard).
 
 The coding agent must NOT modify files outside this map without re-checking CLAUDE.md.
 
@@ -30,7 +30,7 @@ The coding agent must NOT modify files outside this map without re-checking CLAU
 ## Acceptance criteria (BDD — machine-verifiable)
 
 ```
-Given splunk_apps/aegis_app/default/data/ui/views/agent_risk_overview.xml exists
+Given splunk_apps/splunkgate_app/default/data/ui/views/agent_risk_overview.xml exists
 When  python -c "import xml.etree.ElementTree as ET; ET.parse(...)" runs
 Then  exit code is 0 (well-formed XML)
 
@@ -59,7 +59,7 @@ When  python -c "j = json.load(...); print(len(j['dataSources']))" runs
 Then  output is exactly 8 (one dataSource per visualization)
 
 Given each dataSource SPL query
-When  grep -c "sourcetype=cisco_ai_defense:aegis_verdict\|`aegis_data`" across all dataSources runs
+When  grep -c "sourcetype=cisco_ai_defense:splunkgate_verdict\|`splunkgate_data`" across all dataSources runs
 Then  count == 8 (every panel uses the canonical sourcetype or macro)
 
 Given the parsed JSON
@@ -75,12 +75,12 @@ When  wc -l runs
 Then  output is <= 400 (LOC cap per docs/architecture.md ADR-009)
 
 Given a Splunk Cloud instance with the app installed and synthetic verdict events loaded
-When  the dashboard is loaded via Playwright at /en-US/app/aegis_app/agent_risk_overview
+When  the dashboard is loaded via Playwright at /en-US/app/splunkgate_app/agent_risk_overview
 Then  the 4 KPI tiles render numeric values within 3s
 And   the heatmap shows ≥ 1 cell with severity-weighted color within 5s
 And   browser console errors == 0
 
-Given splunk-appinspect runs against splunk_apps/aegis_app/
+Given splunk-appinspect runs against splunk_apps/splunkgate_app/
 When  the output is parsed
 Then  zero "error"-severity findings against tags dashboard_studio_v2_valid, simple_xml_valid_views
 ```
@@ -93,18 +93,18 @@ Then  zero "error"-severity findings against tags dashboard_studio_v2_valid, sim
 set -euo pipefail
 
 # 1. File exists and is well-formed XML
-test -f splunk_apps/aegis_app/default/data/ui/views/agent_risk_overview.xml
-python -c "import xml.etree.ElementTree as ET; ET.parse('splunk_apps/aegis_app/default/data/ui/views/agent_risk_overview.xml')"
+test -f splunk_apps/splunkgate_app/default/data/ui/views/agent_risk_overview.xml
+python -c "import xml.etree.ElementTree as ET; ET.parse('splunk_apps/splunkgate_app/default/data/ui/views/agent_risk_overview.xml')"
 
 # 2. Dashboard Studio v2 + dark theme declared
-grep -q '<dashboard version="2"' splunk_apps/aegis_app/default/data/ui/views/agent_risk_overview.xml
-grep -q 'theme="dark"' splunk_apps/aegis_app/default/data/ui/views/agent_risk_overview.xml
-grep -q '<label>Aegis — Agent Risk Overview</label>' splunk_apps/aegis_app/default/data/ui/views/agent_risk_overview.xml
+grep -q '<dashboard version="2"' splunk_apps/splunkgate_app/default/data/ui/views/agent_risk_overview.xml
+grep -q 'theme="dark"' splunk_apps/splunkgate_app/default/data/ui/views/agent_risk_overview.xml
+grep -q '<label>SplunkGate — Agent Risk Overview</label>' splunk_apps/splunkgate_app/default/data/ui/views/agent_risk_overview.xml
 
 # 3. CDATA JSON parses
 python - <<'PY'
 import xml.etree.ElementTree as ET, json, sys
-root = ET.parse("splunk_apps/aegis_app/default/data/ui/views/agent_risk_overview.xml").getroot()
+root = ET.parse("splunk_apps/splunkgate_app/default/data/ui/views/agent_risk_overview.xml").getroot()
 defn = root.find(".//definition")
 j = json.loads(defn.text)
 
@@ -117,7 +117,7 @@ assert len(j["dataSources"]) == 8, f"Expected 8 dataSources, got {len(j['dataSou
 # 5. Every dataSource references our sourcetype or macro
 for name, ds in j["dataSources"].items():
     q = ds.get("options",{}).get("query","")
-    assert "cisco_ai_defense:aegis_verdict" in q or "`aegis_data`" in q, f"{name} missing sourcetype: {q}"
+    assert "cisco_ai_defense:splunkgate_verdict" in q or "`splunkgate_data`" in q, f"{name} missing sourcetype: {q}"
 
 # 6. Time-range input present
 assert "input_time" in j.get("inputs",{}), "input_time missing"
@@ -136,15 +136,15 @@ print("All structural checks passed.")
 PY
 
 # 9. LOC cap
-test "$(wc -l < splunk_apps/aegis_app/default/data/ui/views/agent_risk_overview.xml)" -le 400
+test "$(wc -l < splunk_apps/splunkgate_app/default/data/ui/views/agent_risk_overview.xml)" -le 400
 
-# 10. Playwright visual smoke (gated on AEGIS_SPLUNK_HOST)
-if [ -n "${AEGIS_SPLUNK_HOST:-}" ]; then
+# 10. Playwright visual smoke (gated on SPLUNKGATE_SPLUNK_HOST)
+if [ -n "${SPLUNKGATE_SPLUNK_HOST:-}" ]; then
   uv run playwright install --with-deps chromium >/dev/null 2>&1 || true
   uv run python - <<'PY'
 from playwright.sync_api import sync_playwright
 import os, sys
-url = f"https://{os.environ['AEGIS_SPLUNK_HOST']}:8000/en-US/app/aegis_app/agent_risk_overview"
+url = f"https://{os.environ['SPLUNKGATE_SPLUNK_HOST']}:8000/en-US/app/splunkgate_app/agent_risk_overview"
 with sync_playwright() as p:
     b = p.chromium.launch(); ctx = b.new_context(ignore_https_errors=True); page = ctx.new_page()
     errors = []
@@ -159,7 +159,7 @@ PY
 fi
 
 # 11. AppInspect
-uv run splunk-appinspect inspect splunk_apps/aegis_app/ --mode test --included-tags cloud \
+uv run splunk-appinspect inspect splunk_apps/splunkgate_app/ --mode test --included-tags cloud \
   --output-file appinspect-report.json --data-format json
 python - <<'PY'
 import json, sys
@@ -182,11 +182,11 @@ All eleven blocks must exit 0 before opening the PR (block 10 gated on env var).
 - Per `../../../context/05-splunk-core/07-dashboard-studio-v2.md`, Dashboard Studio v2's JSON spec requires top-level keys: `title`, `visualizations` (dict of named viz configs), `dataSources` (dict of named query configs), `inputs`, `defaults`, `layout`. Each visualization references `dataSources` by ID. Each `ds.search` dataSource has `options.query` (the SPL) and `options.earliestTime` / `options.latestTime` (token-bound to the timerange input).
 - Per `../../../context/11-prior-art/01-build-a-thon-2025-deep-read.md`, DNS Guard 1st-place winner used `theme="dark"` — judge pool rewarded the dark-mode Splunk-native look. Do not override to `theme="light"`.
 - Per `docs/ux-spec.md` § "Design tokens", do NOT add custom CSS, custom fonts, or `rounded-xl`-style styling. Splunk's design tokens handle color + spacing. Custom overrides defeat the Splunk-native winning pattern.
-- The 11 Cisco AI Defense rule names for the heatmap Y-axis come verbatim from `../../../context/07-cisco-stack/01-ai-defense-deep.md` (and `docs/PRD.md` § "Verified-grounded promises"): **Code Detection, Harassment, Hate Speech, PCI, PHI, PII, Prompt Injection, Profanity, Sexual Content & Exploitation, Social Division & Polarization, Violence & Public Safety Threats**. Use these *verbatim* in any data-source query, lookup, or fixed-list config — earlier drafts contained hallucinated names (`Toxicity`, `Self-Harm`, bare `Violence`) which DO NOT exist in the AI Defense API and would silently produce empty heatmap rows. The heatmap query is approximately: `` `aegis_data` earliest=-24h | mvexpand rule | bin _time span=1h | stats sum(severity_score) as score by _time, rule ``.
-- The MSJ scaling panel must cite `../../../context/01-threat-landscape/02-jailbreak-techniques.md` in its `description` field — exact quote: "Detection rate degrades as in-context message count grows (Anthropic 2024). Aegis shows the live floor — be honest about the probabilistic ceiling." This is the credibility move per ux-spec.md.
-- Drill-down URL pattern for Dashboard Studio v2: `{"type":"link.url","url":"/app/aegis_app/verdict_inspector?form.input_time.earliest=$row._time$&form.input_rule=$row.rule$"}`. **Token substitution must use the destination dashboard's input NAMES** (`input_time`, `input_rule`) per Dashboard Studio v2 URL-binding spec — NOT the unprefixed field names. This is the canonical contract with story-app-06's Verdict Inspector inputs (`input_time` + `input_rule` declared on line 23 of story-app-06).
+- The 11 Cisco AI Defense rule names for the heatmap Y-axis come verbatim from `../../../context/07-cisco-stack/01-ai-defense-deep.md` (and `docs/PRD.md` § "Verified-grounded promises"): **Code Detection, Harassment, Hate Speech, PCI, PHI, PII, Prompt Injection, Profanity, Sexual Content & Exploitation, Social Division & Polarization, Violence & Public Safety Threats**. Use these *verbatim* in any data-source query, lookup, or fixed-list config — earlier drafts contained hallucinated names (`Toxicity`, `Self-Harm`, bare `Violence`) which DO NOT exist in the AI Defense API and would silently produce empty heatmap rows. The heatmap query is approximately: `` `splunkgate_data` earliest=-24h | mvexpand rule | bin _time span=1h | stats sum(severity_score) as score by _time, rule ``.
+- The MSJ scaling panel must cite `../../../context/01-threat-landscape/02-jailbreak-techniques.md` in its `description` field — exact quote: "Detection rate degrades as in-context message count grows (Anthropic 2024). SplunkGate shows the live floor — be honest about the probabilistic ceiling." This is the credibility move per ux-spec.md.
+- Drill-down URL pattern for Dashboard Studio v2: `{"type":"link.url","url":"/app/splunkgate_app/verdict_inspector?form.input_time.earliest=$row._time$&form.input_rule=$row.rule$"}`. **Token substitution must use the destination dashboard's input NAMES** (`input_time`, `input_rule`) per Dashboard Studio v2 URL-binding spec — NOT the unprefixed field names. This is the canonical contract with story-app-06's Verdict Inspector inputs (`input_time` + `input_rule` declared on line 23 of story-app-06).
 - 12-column grid layout with absolute positioning: KPIs at `y:0, h:120, w:3` each (x: 0/3/6/9 for the 4 tiles in a row), time-series at `y:120, h:280, w:12`, heatmap at `y:400, h:320, w:8`, top-agents table at `y:400, h:320, w:4`, MSJ chart at `y:720, h:200, w:4`. Adjust dimensions if any panel feels cramped during Playwright visual review (story app-10).
 - If the JSON-in-XML file approaches 400 LOC, split visualization JSON into a sibling file `agent_risk_overview_panels.xml` referenced via `<view ref="agent_risk_overview_panels" />` per Splunk Classic Simple XML view-include docs. Splunk Dashboard Studio v2 does not natively support JSON includes — the include happens at the XML wrapper layer, with the JSON spread across two `<definition>` blocks loaded sequentially. If this is too clunky, simplify by reducing per-panel SPL complexity (use `tstats` instead of `stats` for top-N panels, drops ~30 LOC).
 - The Playwright smoke test in shell block 10 generates `screenshots/current/agent_risk_overview--desktop.png` — story app-10 owns the anchor diff against `screenshots/anchor/agent_risk_overview--desktop.png`. This story just generates the current screenshot if env vars permit; the anchor comparison gates the PR in app-10.
-- Do NOT inline panel SPL with hardcoded `index=main` — use the `aegis_data` macro so it inherits the index from the macro definition (story app-03). Hardcoding fails multi-tenant deployments and AppInspect.
+- Do NOT inline panel SPL with hardcoded `index=main` — use the `splunkgate_data` macro so it inherits the index from the macro definition (story app-03). Hardcoding fails multi-tenant deployments and AppInspect.
 - Theme color for severity: re-use the design token palette from ux-spec.md (`#5CB85C` NONE, `#F0AD4E` LOW, `#FF9900` MEDIUM, `#D9534F` HIGH). Dashboard Studio v2 supports `colorPalette` per visualization — wire it on the time-series and heatmap.

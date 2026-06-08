@@ -27,14 +27,14 @@ ignore = [
 # carve-out as .github/scripts/ + INP001 since scripts/ is not a package.
 "scripts/*.py"         = ["D", "PLR2004", "TRY003", "T201", "INP001"]
 # Per-app scripts mirror the same carve-out: helpers that ship with the
-# Splunk app (e.g. splunk_apps/aegis_app/scripts/run_appinspect.sh
+# Splunk app (e.g. splunk_apps/splunkgate_app/scripts/run_appinspect.sh
 # companions) are not importable packages.
-"**/aegis_app/scripts/*.py" = ["D", "PLR2004", "TRY003", "T201", "INP001"]
-# Per-app tests live under splunk_apps/aegis_app/tests/ — same shape as
+"**/splunkgate_app/scripts/*.py" = ["D", "PLR2004", "TRY003", "T201", "INP001"]
+# Per-app tests live under splunk_apps/splunkgate_app/tests/ — same shape as
 # packages/*/tests/ but the existing **/tests/**/*.py rule already
 # covers them for D/ANN/S101/S603/S607/PLR2004; INP001 needs an explicit
 # add because Splunk apps aren't Python packages.
-"**/aegis_app/tests/**/*.py" = ["INP001"]
+"**/splunkgate_app/tests/**/*.py" = ["INP001"]
 
 [lint.pydocstyle]
 convention = "google"

@@ -20,9 +20,9 @@
 
 Exact files the coding agent creates or modifies for this story:
 
-- `architecture_diagram.png` — NEW — light-variant PNG at the repo root (NOT in `docs/`, NOT nested). Per `../../../research/splunk-agentic-ops-2026/01-prizes-tracks.md`, filename pattern is verbatim `architecture_diagram.(md|pdf|png)` at root. Rendered from `docs/assets/architecture.mmd` via mermaid-cli (mmdc) using the default light theme. Dimensions ≥ 1600×900 (readable on a 27" monitor without zoom). PNG must include all four surfaces labelled S1–S4, the judgment layer labelled with the three named models (Cisco AI Defense, Foundation-Sec-1.1-8B-Instruct, Luna-2 stub), the OTel emit arrow labelled `gen_ai.evaluation.result`, the Splunk HEC arrow labelled `cisco_ai_defense:aegis_verdict` sourcetype, and the three dashboard names verbatim (Agent Risk Overview, Verdict Inspector, Regulator Evidence Pack).
+- `architecture_diagram.png` — NEW — light-variant PNG at the repo root (NOT in `docs/`, NOT nested). Per `../../../research/splunk-agentic-ops-2026/01-prizes-tracks.md`, filename pattern is verbatim `architecture_diagram.(md|pdf|png)` at root. Rendered from `docs/assets/architecture.mmd` via mermaid-cli (mmdc) using the default light theme. Dimensions ≥ 1600×900 (readable on a 27" monitor without zoom). PNG must include all four surfaces labelled S1–S4, the judgment layer labelled with the three named models (Cisco AI Defense, Foundation-Sec-1.1-8B-Instruct, Luna-2 stub), the OTel emit arrow labelled `gen_ai.evaluation.result`, the Splunk HEC arrow labelled `cisco_ai_defense:splunkgate_verdict` sourcetype, and the three dashboard names verbatim (Agent Risk Overview, Verdict Inspector, Regulator Evidence Pack).
 - `architecture_diagram_dark.png` — NEW — dark-variant PNG at the repo root (same content, dark theme). Per `../../../context/11-prior-art/01-build-a-thon-2025-deep-read.md`, DNS Guard 2025 winner shipped light + dark variants of all visual assets — mirror this. Rendered from the same `docs/assets/architecture.mmd` source via mermaid-cli with the `dark` theme flag.
-- `docs/assets/architecture.mmd` — NEW — single Mermaid source file (`flowchart LR` or `flowchart TB`, agent decides which reads better at 1600×900). Defines: agent client node → 4 surface nodes (S1 `aegis-mw`, S2 `aegis-mcp`, S3 DefenseClaw, S4 `aegis_app`) → judgment-layer subgraph (3 model nodes) → OTel emitter → Splunk HEC → 3 dashboard nodes. Comments at top of the file cite `docs/architecture.md` § "Repo structure" + § "API schemas" + ADR-005 (sourcetype) + ADR-007 (Luna-2 stub). Mermaid spec stable since v10.0.0; mermaid-cli 11.x renders this without breaking changes.
+- `docs/assets/architecture.mmd` — NEW — single Mermaid source file (`flowchart LR` or `flowchart TB`, agent decides which reads better at 1600×900). Defines: agent client node → 4 surface nodes (S1 `splunkgate-mw`, S2 `splunkgate-mcp`, S3 DefenseClaw, S4 `splunkgate_app`) → judgment-layer subgraph (3 model nodes) → OTel emitter → Splunk HEC → 3 dashboard nodes. Comments at top of the file cite `docs/architecture.md` § "Repo structure" + § "API schemas" + ADR-005 (sourcetype) + ADR-007 (Luna-2 stub). Mermaid spec stable since v10.0.0; mermaid-cli 11.x renders this without breaking changes.
 - `scripts/build_diagrams.sh` — NEW — POSIX sh build script (≤ 60 LOC). Renders both PNGs from the single `.mmd` source via `mmdc` (mermaid-cli). Two invocations: one for light, one for dark (via `-t dark` flag). Uses `puppeteer-config.json` for headless-chromium sandboxing flags (required on GitHub Actions runners — known mermaid-cli pitfall). Exits non-zero if `mmdc` is not on PATH or if either PNG fails to render. Re-run-safe: produces byte-identical output on identical input (mermaid-cli is deterministic given fixed theme + viewport).
 - `scripts/puppeteer-config.json` — NEW — single JSON object `{"args": ["--no-sandbox", "--disable-setuid-sandbox"]}` consumed by mermaid-cli on Linux runners.
 - `.github/workflows/diagrams.yml` — NEW — GitHub Actions workflow that runs `scripts/build_diagrams.sh` on every push to `main` that touches `docs/assets/architecture.mmd`, and commits the regenerated PNGs back to the same branch via the standard `stefanzweifel/git-auto-commit-action` pattern. Workflow runs `mmdc --version` first; fails fast if mermaid-cli install failed. Optional pre-merge job runs the script in dry-run mode on PRs that touch the `.mmd` to verify the source still renders, but does not commit on PRs.
@@ -55,7 +55,7 @@ When  grep -cE "^(flowchart|graph)" docs/assets/architecture.mmd runs
 Then  count is exactly 1 (single Mermaid diagram declaration)
 
 Given docs/assets/architecture.mmd exists
-When  grep -cE "aegis-mw|aegis-mcp|DefenseClaw|aegis_app" docs/assets/architecture.mmd runs
+When  grep -cE "splunkgate-mw|splunkgate-mcp|DefenseClaw|splunkgate_app" docs/assets/architecture.mmd runs
 Then  count is >= 4 (all four surfaces named verbatim per docs/architecture.md § "Repo structure")
 
 Given docs/assets/architecture.mmd exists
@@ -63,7 +63,7 @@ When  grep -cE "Cisco AI Defense|Foundation-Sec|Luna-2" docs/assets/architecture
 Then  count is >= 3 (all three judgment-layer models named per docs/architecture.md § "Judgment layer")
 
 Given docs/assets/architecture.mmd exists
-When  grep -cE "gen_ai\.evaluation\.result|cisco_ai_defense:aegis_verdict" docs/assets/architecture.mmd runs
+When  grep -cE "gen_ai\.evaluation\.result|cisco_ai_defense:splunkgate_verdict" docs/assets/architecture.mmd runs
 Then  count is >= 2 (OTel event name + sourcetype both labelled — per docs/architecture.md § "OTel emission shape" + ADR-005)
 
 Given docs/assets/architecture.mmd exists
@@ -125,14 +125,14 @@ python -c "from PIL import Image; im = Image.open('architecture_diagram_dark.png
 
 # 4. Mermaid source covers the architecture surface verbatim
 grep -cE "^(flowchart|graph)" docs/assets/architecture.mmd | grep -qx 1
-for surface in "aegis-mw" "aegis-mcp" "DefenseClaw" "aegis_app"; do
+for surface in "splunkgate-mw" "splunkgate-mcp" "DefenseClaw" "splunkgate_app"; do
   grep -qF "$surface" docs/assets/architecture.mmd
 done
 for model in "Cisco AI Defense" "Foundation-Sec" "Luna-2"; do
   grep -qF "$model" docs/assets/architecture.mmd
 done
 grep -qF "gen_ai.evaluation.result" docs/assets/architecture.mmd
-grep -qF "cisco_ai_defense:aegis_verdict" docs/assets/architecture.mmd
+grep -qF "cisco_ai_defense:splunkgate_verdict" docs/assets/architecture.mmd
 for dash in "Agent Risk Overview" "Verdict Inspector" "Regulator Evidence Pack"; do
   grep -qF "$dash" docs/assets/architecture.mmd
 done
@@ -173,9 +173,9 @@ All ten blocks must exit 0 before opening the PR.
 
 - Per `../../../research/splunk-agentic-ops-2026/01-prizes-tracks.md`, the architecture diagram filename MUST be `architecture_diagram.(md|pdf|png)` at the repo root — NOT in `docs/`, NOT nested. We pick `.png` because Devpost judges open it inline without a viewer (PDF requires a download click) and Markdown auto-renders less reliably in the preview pane. Light + dark variant filenames mirror the DNS Guard pattern (see next bullet).
 - Per `../../../context/11-prior-art/01-build-a-thon-2025-deep-read.md`, DNS Guard 2025 winner (Splunkbase 7922, 1st-place AI/ML) shipped `Images/architecture/architecture.png` + `Images/architecture/architecture_dark.png` from a single `architecture.drawio` source. We use Mermaid instead of drawio because: (a) Mermaid source is plain-text and grep-friendly so BDD checks #5–#9 can verify content without parsing binary, (b) mermaid-cli is npm-installable with no GUI dependency, (c) drawio's CLI requires an X server which doesn't run on GitHub Actions runners without extra setup. The visual look-and-feel mirrors DNS Guard's dual-variant pattern even if the source format differs.
-- Per `docs/architecture.md` § "Repo structure", the four surfaces are `aegis-mw` (S1), `aegis-mcp` (S2), DefenseClaw (S3), `aegis_app` (S4) — use these exact names in the Mermaid node labels. The eval BDD criterion #6 grep-checks each by literal substring.
+- Per `docs/architecture.md` § "Repo structure", the four surfaces are `splunkgate-mw` (S1), `splunkgate-mcp` (S2), DefenseClaw (S3), `splunkgate_app` (S4) — use these exact names in the Mermaid node labels. The eval BDD criterion #6 grep-checks each by literal substring.
 - Per `docs/architecture.md` § "Judgment layer", the three models are Cisco AI Defense, Foundation-Sec-1.1-8B-Instruct, and Luna-2 (stub per ADR-007). The diagram should visually mark Luna-2 as dashed-border / "future" so judges see the realistic-honesty signal — Cisco hasn't published a Luna-2 SDK yet.
-- Per `docs/architecture.md` § "OTel emission shape", the emit-event name is `gen_ai.evaluation.result` — quote it verbatim as an edge label in the Mermaid. Per `docs/architecture.md` § "ADR-005", events land in `cisco_ai_defense:aegis_verdict` sourcetype — also verbatim as an edge label downstream of the OTel emitter, before the HEC arrow into Splunk.
+- Per `docs/architecture.md` § "OTel emission shape", the emit-event name is `gen_ai.evaluation.result` — quote it verbatim as an edge label in the Mermaid. Per `docs/architecture.md` § "ADR-005", events land in `cisco_ai_defense:splunkgate_verdict` sourcetype — also verbatim as an edge label downstream of the OTel emitter, before the HEC arrow into Splunk.
 - Per `docs/PRD.md` § "Demo moment", the three dashboard names are verbatim "Agent Risk Overview", "Verdict Inspector", "Regulator Evidence Pack" — use these exact strings in the Mermaid node labels for the three terminal nodes. BDD criterion #9 grep-checks each.
 - Mermaid theme switching for dark variant: `mmdc -t dark -i input.mmd -o output.png` produces a dark-theme rendering of the same source. The light variant is the default theme. Use the same source `.mmd` for both — single source of truth for content.
 - Mermaid-cli viewport: pass `-w 1920 -H 1080` (or higher) so the PNG dimensions exceed the 1600×900 BDD threshold without manual scaling. Higher resolution is fine; smaller fails BDD criteria #3 and #4.

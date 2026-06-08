@@ -1,4 +1,4 @@
-"""Deterministic tarball packer for the Aegis Splunk app.
+"""Deterministic tarball packer for the SplunkGate Splunk app.
 
 Story-app-12 contract is "second build produces the same sha256." On
 macOS the system `tar` is BSD libarchive which lacks GNU's `--mtime`,
@@ -17,9 +17,9 @@ The packer:
 
 Usage:
     python scripts/_pack_tarball.py \\
-        --source splunk_apps/aegis_app \\
-        --top-level aegis_app \\
-        --output dist/aegis_app-1.0.0.tgz
+        --source splunk_apps/splunkgate_app \\
+        --top-level splunkgate_app \\
+        --output dist/splunkgate_app-1.0.0.tgz
 """
 
 from __future__ import annotations
@@ -114,7 +114,7 @@ def build_tarball(source: Path, top_level: str, output: Path) -> None:
     tar_buf = io.BytesIO()
     with tarfile.open(fileobj=tar_buf, mode="w", format=tarfile.PAX_FORMAT) as tar:
         # Add the top-level directory entry explicitly so the archive starts
-        # with `aegis_app/` rather than the first file inside it.
+        # with `splunkgate_app/` rather than the first file inside it.
         top_info = tarfile.TarInfo(name=top_level)
         top_info.type = tarfile.DIRTYPE
         _normalize(top_info)

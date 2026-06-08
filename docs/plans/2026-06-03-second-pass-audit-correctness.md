@@ -34,7 +34,7 @@ The fix pass is mostly excellent. There is **ONE CRITICAL DEFECT** the second-ro
 
 - **Original finding**: ✓ correct (contradicts ADR-003).
 - **Fix in `docs/architecture.md`**: ✓ correct (line 272 + lines 273-275 explanatory NOTE preventing re-introduction).
-- **Smaller new issue**: `docs/stories/story-core-01-verdict-pydantic-types.md:171` STILL contains `"foundation_sec_classifier"` in the canonical reference Pydantic shape. This is the literal copy-paste source for the coding agent shipping `aegis_core.verdict`. The architecture.md fix protects the spec; the story does not protect the build.
+- **Smaller new issue**: `docs/stories/story-core-01-verdict-pydantic-types.md:171` STILL contains `"foundation_sec_classifier"` in the canonical reference Pydantic shape. This is the literal copy-paste source for the coding agent shipping `splunkgate_core.verdict`. The architecture.md fix protects the spec; the story does not protect the build.
 - **Severity**: CRITICAL. The agent will ship the wrong type.
 - **Recommendation**: Edit `docs/stories/story-core-01-verdict-pydantic-types.md:171` from `Literal["ai_defense", "defenseclaw_regex", "splunklib_security", "foundation_sec_classifier"]` to `Literal["ai_defense", "defenseclaw_regex", "splunklib_security"]`. Also worth adding an inline comment matching architecture.md's NOTE block.
 
@@ -72,9 +72,9 @@ The fix pass is mostly excellent. There is **ONE CRITICAL DEFECT** the second-ro
 - **Root cause**: B-1 fix added `Verdict` as a parameter inside the prompt body composition without updating the file-map signature line.
 - **Recommendation**: Update story-foundsec-02:24 signature to `build_explanation_spl(ctx: VerdictContext, verdict: Verdict, provider: str, model: str) -> str`. Also add a one-line note in §Notes that the `verdict` parameter carries the rules / classifications / severity / offending_text view that the prompt body needs.
 
-### N-02 — story-judges-06 uses banned `Any` in `aegis_judges` (CRITICAL — introduced by Block D)
+### N-02 — story-judges-06 uses banned `Any` in `splunkgate_judges` (CRITICAL — introduced by Block D)
 
-- **Issue**: story-judges-06 line 23 declares `def evaluate_tool_call(self, tool_name: str, tool_args: dict[str, Any]) -> RuleHit | None`. The architecture.md § "Banned patterns" line 360 explicitly bans `Any` in `aegis_core` and `aegis_judges` (mypy --strict catches this; story-core-01 line 189 already calls it out for `Verdict.modifications`).
+- **Issue**: story-judges-06 line 23 declares `def evaluate_tool_call(self, tool_name: str, tool_args: dict[str, Any]) -> RuleHit | None`. The architecture.md § "Banned patterns" line 360 explicitly bans `Any` in `splunkgate_core` and `splunkgate_judges` (mypy --strict catches this; story-core-01 line 189 already calls it out for `Verdict.modifications`).
 - **Severity**: CRITICAL. mypy --strict job will fail; the story cannot pass its own typecheck BDD.
 - **Recommendation**: Replace `dict[str, Any]` with `dict[str, object]` everywhere in judges-06 (lines 23 — 2 occurrences). The same fix story-core-01 already applies for `modifications: dict`.
 
@@ -90,7 +90,7 @@ The fix pass is mostly excellent. There is **ONE CRITICAL DEFECT** the second-ro
 
 ### V-01 — A-1 (`../../../research/...` path)
 
-The sed proposed in audit-synthesis line 21 is literally `X → X` (no change). The path `../../../research/splunk-agentic-ops-2026/01-prizes-tracks.md` from `aegis/docs/stories/<file>.md` resolves correctly to `workspace/research/splunk-agentic-ops-2026/01-prizes-tracks.md`, which exists. The original audit was wrong; no fix was needed. Audit-synthesis Block A-1 row should be marked OVERTURNED in the synthesis history (cosmetic — no code action).
+The sed proposed in audit-synthesis line 21 is literally `X → X` (no change). The path `../../../research/splunk-agentic-ops-2026/01-prizes-tracks.md` from `splunkgate/docs/stories/<file>.md` resolves correctly to `workspace/research/splunk-agentic-ops-2026/01-prizes-tracks.md`, which exists. The original audit was wrong; no fix was needed. Audit-synthesis Block A-1 row should be marked OVERTURNED in the synthesis history (cosmetic — no code action).
 
 ### V-02 — Dispatch order EPIC-02 → EPIC-01 → EPIC-02 remainder
 
@@ -128,7 +128,7 @@ Looks suspicious but is fine. Only `story-skel-01` (the workspace skeleton) genu
 | D | story-eval-06 (e2e) | YES | YES | — | UPHELD |
 | D | story-ops-01 (branch protection) | YES | YES (14 status checks match cicd-spec) | — | UPHELD |
 | D | story-ops-02 (secrets + ADR template) | YES | YES | — | UPHELD |
-| D | story-judges-06 (DefenseClaw shim) | YES | PARTIAL (uses `dict[str, Any]` — banned in aegis_judges) | CRITICAL | UPHELD w/ new finding N-02 |
+| D | story-judges-06 (DefenseClaw shim) | YES | PARTIAL (uses `dict[str, Any]` — banned in splunkgate_judges) | CRITICAL | UPHELD w/ new finding N-02 |
 | D | sprint-status.yaml epic-name | — | — | minor | N-03 |
 
 ---

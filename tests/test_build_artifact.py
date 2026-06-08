@@ -19,7 +19,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-APP_SRC = REPO_ROOT / "splunk_apps" / "aegis_app"
+APP_SRC = REPO_ROOT / "splunk_apps" / "splunkgate_app"
 APP_CONF = APP_SRC / "default" / "app.conf"
 MANIFEST = APP_SRC / "META-INF" / "manifest.json"
 BUILD_SCRIPT = REPO_ROOT / "scripts" / "build_splunk_app_tgz.sh"
@@ -56,7 +56,7 @@ def built_artifact(tmp_path: Path) -> Path:
         env=env,
         capture_output=True,
     )
-    artifacts = list(dist.glob("aegis_app-*.tgz"))
+    artifacts = list(dist.glob("splunkgate_app-*.tgz"))
     assert len(artifacts) == 1, f"expected 1 tarball, got {artifacts}"
     return artifacts[0]
 
@@ -67,7 +67,7 @@ def test_manifest_exists() -> None:
 
 def test_manifest_parses_and_has_expected_id() -> None:
     data = json.loads(MANIFEST.read_text())
-    assert data["info"]["id"] == "aegis_app"
+    assert data["info"]["id"] == "splunkgate_app"
 
 
 def test_manifest_version_matches_app_conf() -> None:
@@ -91,13 +91,13 @@ def test_license_exists_and_is_apache_2() -> None:
 
 def test_build_produces_single_tarball(built_artifact: Path) -> None:
     assert built_artifact.exists()
-    assert built_artifact.name == f"aegis_app-{_app_version()}.tgz"
+    assert built_artifact.name == f"splunkgate_app-{_app_version()}.tgz"
 
 
-def test_build_tarball_has_aegis_app_top_level(built_artifact: Path) -> None:
+def test_build_tarball_has_splunkgate_app_top_level(built_artifact: Path) -> None:
     with tarfile.open(built_artifact, "r:gz") as tar:
         names = tar.getnames()
-    assert any(n == "aegis_app" or n.startswith("aegis_app/") for n in names)
+    assert any(n == "splunkgate_app" or n.startswith("splunkgate_app/") for n in names)
     assert not any(n.startswith("splunk_apps/") for n in names)
 
 
@@ -105,11 +105,11 @@ def test_build_tarball_contains_required_files(built_artifact: Path) -> None:
     with tarfile.open(built_artifact, "r:gz") as tar:
         names = set(tar.getnames())
     required = {
-        "aegis_app/default/app.conf",
-        "aegis_app/README",
-        "aegis_app/LICENSE",
-        "aegis_app/RELEASE_NOTES.md",
-        "aegis_app/META-INF/manifest.json",
+        "splunkgate_app/default/app.conf",
+        "splunkgate_app/README",
+        "splunkgate_app/LICENSE",
+        "splunkgate_app/RELEASE_NOTES.md",
+        "splunkgate_app/META-INF/manifest.json",
     }
     missing = required - names
     assert not missing, f"missing in tarball: {missing}"
@@ -157,7 +157,7 @@ def test_build_script_loud_fails_when_appinspect_missing_and_not_skipped(tmp_pat
     fixup makes the absent-runner case exit 2 with a clear message.
     """
     # Shadow the runner so the build script sees it as missing.
-    fake_app = tmp_path / "splunk_apps" / "aegis_app"
+    fake_app = tmp_path / "splunk_apps" / "splunkgate_app"
     fake_app.mkdir(parents=True)
     (fake_app / "default").mkdir()
     (fake_app / "default" / "app.conf").write_text("[install]\nversion = 1.0.0\n")
@@ -190,8 +190,8 @@ def test_build_is_deterministic(tmp_path: Path) -> None:
     env_b = {**os.environ, "DIST_DIR": str(dist_b), "SKIP_APPINSPECT": "1"}
     subprocess.run(["bash", str(BUILD_SCRIPT)], check=True, env=env_a, capture_output=True)
     subprocess.run(["bash", str(BUILD_SCRIPT)], check=True, env=env_b, capture_output=True)
-    a = next(dist_a.glob("aegis_app-*.tgz"))
-    b = next(dist_b.glob("aegis_app-*.tgz"))
+    a = next(dist_a.glob("splunkgate_app-*.tgz"))
+    b = next(dist_b.glob("splunkgate_app-*.tgz"))
     assert _sha256(a) == _sha256(b), "non-deterministic build"
 
 
@@ -257,7 +257,7 @@ def test_pack_helper_runs_standalone(tmp_path: Path) -> None:
             "--source",
             str(APP_SRC),
             "--top-level",
-            "aegis_app",
+            "splunkgate_app",
             "--output",
             str(out),
         ],
@@ -268,4 +268,4 @@ def test_pack_helper_runs_standalone(tmp_path: Path) -> None:
     assert out.exists()
     with tarfile.open(out, "r:gz") as tar:
         names = tar.getnames()
-    assert "aegis_app/default/app.conf" in names
+    assert "splunkgate_app/default/app.conf" in names

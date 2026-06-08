@@ -22,7 +22,7 @@ Exact files the coding agent creates or modifies for this story:
 
 - `CLAUDE.md` — NEW — repo-root agent contract: stack pin, ≤400-LOC rule, mypy-strict scope, ruff config, banned patterns (`requests`, `verify=False`, `Any` in core/judges, `unittest.mock` for HTTP), context/-citation rule, file-modification-map discipline
 - `CONTRIBUTING.md` — NEW — human-facing contributor doc: how to set up `uv sync`, run tests, run lint+typecheck, the 400-LOC rule, where stories live, the PR template requirement
-- `.github/PULL_REQUEST_TEMPLATE.md` — NEW — checklist forcing each PR to (1) link the story ID, (2) cite at least one `context/<folder>/<file>.md` source, (3) confirm `uv run pytest && uv run ruff check . && uv run mypy packages/aegis_core/src packages/aegis_judges/src` is green locally, (4) confirm no file > 400 LOC
+- `.github/PULL_REQUEST_TEMPLATE.md` — NEW — checklist forcing each PR to (1) link the story ID, (2) cite at least one `context/<folder>/<file>.md` source, (3) confirm `uv run pytest && uv run ruff check . && uv run mypy packages/splunkgate_core/src packages/splunkgate_judges/src` is green locally, (4) confirm no file > 400 LOC
 - `.github/ISSUE_TEMPLATE/bug_report.md` — NEW — bug template (matches `docs/architecture.md` § "Repo structure" layout)
 - `.github/ISSUE_TEMPLATE/story.md` — NEW — story template (matches `docs/architecture.md` § "Repo structure" layout)
 
@@ -119,7 +119,7 @@ test "$LOC" -le 400 && echo "CLAUDE.md ≤ 400 LOC ($LOC)"
 - Per `docs/architecture.md` § "File-level references back into `context/`", every load-bearing claim must cite back into `context/` using the pattern `Per context/<folder>/<file>.md §<section>:`. CLAUDE.md must require this in the PR template — bare assertions without citations get blocked by `sahil-pr-audit`.
 - Per `docs/architecture.md` § "Coding standards" hard rules, encode in CLAUDE.md verbatim:
   - rule 1: every source file ≤ 400 LOC (excluding blank lines + pure comments)
-  - rule 2: `mypy --strict` clean for `packages/aegis_core/` and `packages/aegis_judges/`
+  - rule 2: `mypy --strict` clean for `packages/splunkgate_core/` and `packages/splunkgate_judges/`
   - rule 3: `ruff` clean monorepo-wide (line-length 100, all rules except E501)
   - rule 4: all tests pass (`uv run pytest` exit 0)
   - rule 5: no real Cisco API credentials in code or fixtures
@@ -130,9 +130,9 @@ test "$LOC" -le 400 && echo "CLAUDE.md ≤ 400 LOC ($LOC)"
   - `verify=False` in production
   - `print()` for logs (use `structlog`)
   - `unittest.mock` for HTTP (use `respx`)
-  - `try/except: pass` (always re-raise as `AegisError` subclass)
+  - `try/except: pass` (always re-raise as `SplunkGateError` subclass)
   - `# type: ignore` without inline justification
-  - `Any` type annotations in `aegis_core` or `aegis_judges`
+  - `Any` type annotations in `splunkgate_core` or `splunkgate_judges`
   - Foundation-Sec used as a classifier (explainer only — ADR-003)
 - Per `docs/architecture.md` § "Required external libraries" Context7 library research rule, CLAUDE.md must require: before implementing anything from scratch, the coding agent uses `mcp__context7__resolve-library-id` + `mcp__context7__query-docs` to confirm no existing library solves it.
 - Per `docs/architecture.md` § "ADR-009", the 400-LOC rule is enforced by both pre-commit (local) and CI (server). CLAUDE.md should make clear the pre-commit hook + CI gate are the source of truth, not vibe.

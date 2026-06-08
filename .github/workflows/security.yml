@@ -28,7 +28,7 @@ jobs:
           version: ${{ env.UV_VERSION }}
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: uv sync --all-packages --frozen
-      # --skip-editable: workspace-local packages (aegis_core, aegis_judges, ...)
+      # --skip-editable: workspace-local packages (splunkgate_core, splunkgate_judges, ...)
       # aren't on PyPI so pip-audit can't query for CVEs against them. Their
       # actual content is gated by ruff/mypy/bandit; pip-audit's value here is
       # transitive PyPI deps (pytest, httpx, structlog, ...).
@@ -72,4 +72,4 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
       - run: uv python install ${{ env.PYTHON_VERSION }}
-      - run: uv run --with bandit bandit -r packages/aegis_judges/src/ -c .bandit
+      - run: uv run --with bandit bandit -r packages/splunkgate_judges/src/ -c .bandit

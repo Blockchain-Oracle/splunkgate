@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """400-LOC cap enforcement.
 
-Walks `*.py` files (defaults: packages/, eval/, splunk_apps/aegis_app/bin/),
+Walks `*.py` files (defaults: packages/, eval/, splunk_apps/splunkgate_app/bin/),
 counts non-blank non-pure-comment lines per file, and rejects any file
 exceeding the threshold. Used by both the `loc-cap` CI job (story-cicd-03)
 and the pre-commit hook (story-cicd-04).
@@ -19,7 +19,7 @@ from pathlib import Path
 
 THRESHOLD = 400
 
-DEFAULT_ROOTS = ("packages", "eval", "splunk_apps/aegis_app/bin")
+DEFAULT_ROOTS = ("packages", "eval", "splunk_apps/splunkgate_app/bin")
 SKIP_DIR_NAMES = {".venv", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
 
 

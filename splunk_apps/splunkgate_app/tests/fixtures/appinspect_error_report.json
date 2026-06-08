@@ -1,0 +1,31 @@
+{
+  "reports": [
+    {
+      "app": "splunkgate_app",
+      "groups": [
+        {
+          "name": "splunk_appinspect.checks.check_security",
+          "checks": [
+            {
+              "name": "check_for_secret_disclosure",
+              "result": "manual_check",
+              "messages": [{"message": "Listed in .appinspect.manualcheck.yaml"}]
+            },
+            {
+              "name": "check_for_missing_app_conf",
+              "result": "error",
+              "messages": [
+                {"message": "default/app.conf is missing required [launcher] stanza"}
+              ]
+            },
+            {
+              "name": "check_for_correctly_configured_default_app_conf",
+              "result": "success",
+              "messages": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

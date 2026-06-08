@@ -20,10 +20,10 @@
 
 Exact files the coding agent creates or modifies for this story:
 
-- `docs/ops/secrets.md` — NEW — operator-facing registry of every GitHub Actions secret Aegis depends on. Sections: (1) one-paragraph purpose citing `docs/cicd-spec.md` § "Secrets to configure in GitHub"; (2) per-secret table with columns `Secret name | Source | Provisioned by | Consumed by workflow:job | Required-or-optional | Rotation policy`; (3) verbatim entries for `AEGIS_AI_DEFENSE_API_KEY` (Cisco Security Cloud Control tenant, Abu provisions, `eval.yml:eval-full`, required for live judge chain — gated by `AEGIS_AI_DEFENSE_MOCK=false`, rotate every 90 days per Cisco docs), `AEGIS_SPLUNK_HEC_TOKEN` (Splunk Cloud Explorer Edition HEC config, Abu provisions, `eval.yml:eval-full` + `story-eval-06:e2e_demo`, required, rotate on token leak only — long-lived), `AEGIS_SPLUNK_HEC_URL` (Abu's `https://prd-p-t9irr.splunkcloud.com:8088/services/collector/event` per `docs/cicd-spec.md`, Abu provisions, required, change on instance migration), `AEGIS_SPLUNK_HOST` + `AEGIS_SPLUNK_API_TOKEN` (for `story-eval-06` SPL polling — Splunk REST API on port 8089), `GITLEAKS_LICENSE` (optional, free for OSS via gitleaks.io, used by `security.yml:gitleaks`), `CODECOV_TOKEN` (optional, codecov.io, used by `ci.yml:test` matrix); (4) "How to set" — `gh secret set <NAME> --body "$(cat secret.txt)"` per secret; (5) "How to verify" — `gh secret list` shows every required name (script provided at `scripts/check_required_secrets.sh`); (6) "How to revoke" — `gh secret delete <NAME>` + rotation guidance; (7) §14 disclaimer that this file documents NAMES + SOURCES only, never values.
+- `docs/ops/secrets.md` — NEW — operator-facing registry of every GitHub Actions secret SplunkGate depends on. Sections: (1) one-paragraph purpose citing `docs/cicd-spec.md` § "Secrets to configure in GitHub"; (2) per-secret table with columns `Secret name | Source | Provisioned by | Consumed by workflow:job | Required-or-optional | Rotation policy`; (3) verbatim entries for `SPLUNKGATE_AI_DEFENSE_API_KEY` (Cisco Security Cloud Control tenant, Abu provisions, `eval.yml:eval-full`, required for live judge chain — gated by `SPLUNKGATE_AI_DEFENSE_MOCK=false`, rotate every 90 days per Cisco docs), `SPLUNKGATE_SPLUNK_HEC_TOKEN` (Splunk Cloud Explorer Edition HEC config, Abu provisions, `eval.yml:eval-full` + `story-eval-06:e2e_demo`, required, rotate on token leak only — long-lived), `SPLUNKGATE_SPLUNK_HEC_URL` (Abu's `https://prd-p-t9irr.splunkcloud.com:8088/services/collector/event` per `docs/cicd-spec.md`, Abu provisions, required, change on instance migration), `SPLUNKGATE_SPLUNK_HOST` + `SPLUNKGATE_SPLUNK_API_TOKEN` (for `story-eval-06` SPL polling — Splunk REST API on port 8089), `GITLEAKS_LICENSE` (optional, free for OSS via gitleaks.io, used by `security.yml:gitleaks`), `CODECOV_TOKEN` (optional, codecov.io, used by `ci.yml:test` matrix); (4) "How to set" — `gh secret set <NAME> --body "$(cat secret.txt)"` per secret; (5) "How to verify" — `gh secret list` shows every required name (script provided at `scripts/check_required_secrets.sh`); (6) "How to revoke" — `gh secret delete <NAME>` + rotation guidance; (7) §14 disclaimer that this file documents NAMES + SOURCES only, never values.
 - `scripts/check_required_secrets.sh` — NEW — ~80 LOC bash. Reads the list of required secret names (hardcoded from this story's spec; future-edit signals are caught by `sahil-pr-audit` cross-spec consistency). Calls `gh secret list --json name`, asserts every required name present, prints a table with one-line OK/MISSING column per secret. Exit codes: 0 all required present, 1 one or more missing, 2 `gh` not authenticated. Verbose flag `-v` lists every secret (required + optional).
 - `docs/adrs/_template.md` — NEW — ADR template matching the existing in-architecture ADR shape (`docs/architecture.md` § "Architecture decisions"). Sections: `# ADR-NNN — <Title>`, `**Status:** Proposed | Accepted | Superseded by ADR-XXX | Deprecated`, `**Date:** YYYY-MM-DD`, `**Context:** <one paragraph — why this decision matters>`, `**Decision:** <the decision in declarative voice>`, `**Consequences:** <bulleted list of positive + negative impacts>`, `**Citations:** <bulleted list of `context/` and `docs/` paths backing the decision>`. The template is short (≤ 60 lines) so it doesn't intimidate contributors.
-- `docs/adrs/README.md` — NEW — index of ADRs. (1) one-paragraph purpose ("Architecture Decision Records — formal post-build decisions that change Aegis's shape outside the locked `docs/architecture.md` ADR list. Use the `_template.md` and number sequentially."); (2) table listing ADR-001 through ADR-011 with their titles + a note that they live verbatim in `docs/architecture.md` § "Architecture decisions" (NOT duplicated here — the README points at the source); (3) "How to add ADR-012+" — copy `_template.md` to `ADR-012-<slug>.md`, fill, link from this README; (4) status flow diagram or list (Proposed → Accepted → Superseded); (5) citation to `docs/architecture.md` § "Architecture decisions" and `https://adr.github.io/`.
+- `docs/adrs/README.md` — NEW — index of ADRs. (1) one-paragraph purpose ("Architecture Decision Records — formal post-build decisions that change SplunkGate's shape outside the locked `docs/architecture.md` ADR list. Use the `_template.md` and number sequentially."); (2) table listing ADR-001 through ADR-011 with their titles + a note that they live verbatim in `docs/architecture.md` § "Architecture decisions" (NOT duplicated here — the README points at the source); (3) "How to add ADR-012+" — copy `_template.md` to `ADR-012-<slug>.md`, fill, link from this README; (4) status flow diagram or list (Proposed → Accepted → Superseded); (5) citation to `docs/architecture.md` § "Architecture decisions" and `https://adr.github.io/`.
 - `docs/ops/README.md` — UPDATE (or NEW if `story-ops-01` hasn't landed yet — coordinate via this story's PR, do not race-condition the file) — append a bullet pointing at `secrets.md`. Final file should list both `branch-protection.md` (from ops-01) and `secrets.md` (from this story).
 - `scripts/tests/test_check_required_secrets.sh` — NEW — ~60 LOC test harness. Covers: missing-required-secret returns exit 1; all-required-present returns exit 0; verbose mode lists all secrets; `gh` unauthenticated returns exit 2. Uses a PATH-overridden `gh` stub (§14 carve-out for ops test scaffolding).
 
@@ -35,11 +35,11 @@ The coding agent must NOT modify files outside this map without re-checking `CLA
 
 ```
 Given docs/ops/secrets.md exists
-When  `grep -cE "AEGIS_AI_DEFENSE_API_KEY|AEGIS_SPLUNK_HEC_TOKEN|AEGIS_SPLUNK_HEC_URL" docs/ops/secrets.md` runs
+When  `grep -cE "SPLUNKGATE_AI_DEFENSE_API_KEY|SPLUNKGATE_SPLUNK_HEC_TOKEN|SPLUNKGATE_SPLUNK_HEC_URL" docs/ops/secrets.md` runs
 Then  the count is ≥ 3
 
 Given docs/ops/secrets.md exists
-When  the file is grepped for "AEGIS_SPLUNK_HOST" and "AEGIS_SPLUNK_API_TOKEN" and "GITLEAKS_LICENSE" and "CODECOV_TOKEN"
+When  the file is grepped for "SPLUNKGATE_SPLUNK_HOST" and "SPLUNKGATE_SPLUNK_API_TOKEN" and "GITLEAKS_LICENSE" and "CODECOV_TOKEN"
 Then  all four names appear
 
 Given docs/ops/secrets.md exists
@@ -75,10 +75,10 @@ Given a PATH-overridden gh stub reports all required secrets present
 When  `bash scripts/check_required_secrets.sh` runs
 Then  exit code is 0
 
-Given the gh stub reports AEGIS_SPLUNK_HEC_TOKEN missing
+Given the gh stub reports SPLUNKGATE_SPLUNK_HEC_TOKEN missing
 When  `bash scripts/check_required_secrets.sh` runs
 Then  exit code is 1
-And   stdout names "AEGIS_SPLUNK_HEC_TOKEN" as MISSING
+And   stdout names "SPLUNKGATE_SPLUNK_HEC_TOKEN" as MISSING
 
 Given the gh stub returns auth-error
 When  `bash scripts/check_required_secrets.sh` runs
@@ -116,7 +116,7 @@ test -x scripts/check_required_secrets.sh
 test -f scripts/tests/test_check_required_secrets.sh
 
 # 2. Secrets doc enumerates every required + optional secret
-for name in AEGIS_AI_DEFENSE_API_KEY AEGIS_SPLUNK_HEC_TOKEN AEGIS_SPLUNK_HEC_URL AEGIS_SPLUNK_HOST AEGIS_SPLUNK_API_TOKEN GITLEAKS_LICENSE CODECOV_TOKEN; do
+for name in SPLUNKGATE_AI_DEFENSE_API_KEY SPLUNKGATE_SPLUNK_HEC_TOKEN SPLUNKGATE_SPLUNK_HEC_URL SPLUNKGATE_SPLUNK_HOST SPLUNKGATE_SPLUNK_API_TOKEN GITLEAKS_LICENSE CODECOV_TOKEN; do
   grep -qF "$name" docs/ops/secrets.md || { echo "MISSING: $name"; exit 1; }
 done
 
@@ -140,7 +140,7 @@ grep -qF 'secrets.md' docs/ops/README.md
 
 # 7. check_required_secrets.sh --help works
 out=$(bash scripts/check_required_secrets.sh --help)
-for name in AEGIS_AI_DEFENSE_API_KEY AEGIS_SPLUNK_HEC_TOKEN AEGIS_SPLUNK_HEC_URL; do
+for name in SPLUNKGATE_AI_DEFENSE_API_KEY SPLUNKGATE_SPLUNK_HEC_TOKEN SPLUNKGATE_SPLUNK_HEC_URL; do
   echo "$out" | grep -qF "$name"
 done
 
@@ -167,13 +167,13 @@ All blocks must exit 0 before opening the PR (block 11 is conditional + best-eff
 ## Notes for coding agent
 
 - **Per `docs/cicd-spec.md` § "Secrets to configure in GitHub"**, the canonical table of required + optional secrets is verbatim:
-  - `AEGIS_AI_DEFENSE_API_KEY` — required for `eval-full` live judge chain
-  - `AEGIS_SPLUNK_HEC_TOKEN` — required for `eval-full` + e2e demo
-  - `AEGIS_SPLUNK_HEC_URL` — required for HEC write
+  - `SPLUNKGATE_AI_DEFENSE_API_KEY` — required for `eval-full` live judge chain
+  - `SPLUNKGATE_SPLUNK_HEC_TOKEN` — required for `eval-full` + e2e demo
+  - `SPLUNKGATE_SPLUNK_HEC_URL` — required for HEC write
   - `PYPI_API_TOKEN` — NOT wired in v0.1 (deferred per spec — document as future)
   - `GITLEAKS_LICENSE` — optional, free OSS license
   - `CODECOV_TOKEN` — optional
-  - Plus: `AEGIS_SPLUNK_HOST` + `AEGIS_SPLUNK_API_TOKEN` (added by `story-eval-06` for SPL polling — document them here as a forward-reference; the eval-06 story will consume them).
+  - Plus: `SPLUNKGATE_SPLUNK_HOST` + `SPLUNKGATE_SPLUNK_API_TOKEN` (added by `story-eval-06` for SPL polling — document them here as a forward-reference; the eval-06 story will consume them).
 - **Per audit Block B-5 in `docs/plans/2026-06-03-audit-synthesis.md`**, `docs/architecture.md:68` references a `docs/adrs/` directory that doesn't yet exist. This story creates the directory + a template + a README. The 11 in-architecture ADRs (001–011) are NOT duplicated into `docs/adrs/` files — they stay locked in `architecture.md`. The README points at architecture.md as the canonical source. Future ADRs (012+) get their own files.
 - **Per `docs/architecture.md` Hard Rule 5 ("No real Cisco API credentials in code or fixtures") and Hard Rule 6 ("No real Splunk credentials")**, this doc documents NAMES + SOURCES only — never values. The §14 grep is enforced in the BDD; any 32+ hex-char string or JWT-shape string in secrets.md is a hard fail.
 - **Per `docs/architecture.md` § "submission checklist gates"** > "No real API keys committed; `gitleaks scan` returns clean" — this story's secrets.md MUST itself be gitleaks-clean.
@@ -186,7 +186,7 @@ All blocks must exit 0 before opening the PR (block 11 is conditional + best-eff
   2. ADR-002 — Multi-package monorepo via uv workspaces
   3. ADR-003 — Foundation-Sec as explainer, NOT classifier
   4. ADR-004 — Our own MCP server, NOT registering into Splunk's
-  5. ADR-005 — Aegis events emit to `cisco_ai_defense:aegis_verdict` sourcetype
+  5. ADR-005 — SplunkGate events emit to `cisco_ai_defense:splunkgate_verdict` sourcetype
   6. ADR-006 — Default to AI Defense mock client; live calls gated on env var
   7. ADR-007 — Luna-2 ships as `NotImplementedError`-raising stub
   8. ADR-008 — Splunk app uses Classic Simple XML wrapper around Dashboard Studio v2 JSON-in-XML
@@ -198,7 +198,7 @@ All blocks must exit 0 before opening the PR (block 11 is conditional + best-eff
   - Splunk HEC token: long-lived, rotate on leak only (revoke via `splunk-cli` or web UI)
   - Splunk REST API token: 1 year default for service tokens
   - Codecov / gitleaks: managed by the third-party UIs
-- **Per `docs/cicd-spec.md` § "Secrets to configure in GitHub"**, `AEGIS_SPLUNK_HEC_URL` value is `https://prd-p-t9irr.splunkcloud.com:8088/services/collector/event` — document this as the default-but-overridable value for Abu's instance. Future deployments swap the hostname.
+- **Per `docs/cicd-spec.md` § "Secrets to configure in GitHub"**, `SPLUNKGATE_SPLUNK_HEC_URL` value is `https://prd-p-t9irr.splunkcloud.com:8088/services/collector/event` — document this as the default-but-overridable value for Abu's instance. Future deployments swap the hostname.
 - **`PYPI_API_TOKEN` is documented as "deferred to v0.2"** — list it in the table but mark as "Required for: release.yml (v0.2+), unused in v0.1". This prevents future contributors from being surprised.
-- **`docs/ops/secrets.md` should NEVER show how to obtain `AEGIS_AI_DEFENSE_API_KEY` via cisco.com console** — operational detail belongs in operator runbooks (not in this repo). Link out to Cisco Security Cloud Control docs.
+- **`docs/ops/secrets.md` should NEVER show how to obtain `SPLUNKGATE_AI_DEFENSE_API_KEY` via cisco.com console** — operational detail belongs in operator runbooks (not in this repo). Link out to Cisco Security Cloud Control docs.
 - Estimate breakdown: ~30 min secrets table + per-secret prose, ~30 min ADR template + README index, ~30 min check_required_secrets.sh + stub harness, ~15 min `docs/ops/README.md` merge + final polish.

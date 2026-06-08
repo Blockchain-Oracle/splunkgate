@@ -1,0 +1,2 @@
+agent_id,reason
+ci-smoke-agent,Used by SplunkGate CI for smoke tests; safe to ignore in production RBA

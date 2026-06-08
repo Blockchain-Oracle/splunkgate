@@ -1,8 +1,8 @@
-project: aegis
+project: splunkgate
 hackathon: splunk-agentic-ops-2026
 deadline: 2026-06-15T09:00:00-07:00
 license: Apache-2.0
-codename: Aegis
+codename: SplunkGate
 status: SPEC_DRAFT
 repo: ""                        # filled by orchestrator Phase 1 after gh repo create
 thread_surface: ""              # telegram or discord — filled by orchestrator Phase 1
@@ -16,26 +16,26 @@ stories:
     epic: "EPIC-01 — CI/CD foundation"
     status: COMPLETE
     depends_on: [story-skel-01-uv-workspace-pyproject]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/68"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/68"
     merged_at: "2026-06-03T09:00:00Z"
   - id: story-cicd-02-test-pipeline-pytest-respx
     epic: "EPIC-01 — CI/CD foundation"
     status: COMPLETE
     depends_on: [story-skel-01-uv-workspace-pyproject, story-cicd-01-build-pipeline-python-wheels]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/69"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/69"
     merged_at: "2026-06-03T09:30:00Z"
     notes: "Coverage gate becomes load-bearing the moment EPIC-03 lands non-trivial source. Plan tests-first."
   - id: story-cicd-03-loc-cap-enforcement
     epic: "EPIC-01 — CI/CD foundation"
     status: COMPLETE
     depends_on: [story-cicd-01-build-pipeline-python-wheels]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/70"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/70"
     merged_at: "2026-06-03T09:50:00Z"
   - id: story-cicd-04-pre-commit-hooks
     epic: "EPIC-01 — CI/CD foundation"
     status: COMPLETE
     depends_on: [story-cicd-03-loc-cap-enforcement]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/71"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/71"
     merged_at: "2026-06-03T10:15:00Z"
   - id: story-cicd-05-appinspect-gate
     epic: "EPIC-01 — CI/CD foundation"
@@ -49,7 +49,7 @@ stories:
     epic: "EPIC-01 — CI/CD foundation"
     status: COMPLETE
     depends_on: []
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/72"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/72"
     merged_at: "2026-06-03T10:45:00Z"
   - id: story-cicd-08-release-pipeline-signed
     epic: "EPIC-01 — CI/CD foundation"
@@ -61,13 +61,13 @@ stories:
     epic: "EPIC-02 — Repo skeleton + coding standards"
     status: COMPLETE
     depends_on: []
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/67"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/67"
     merged_at: "2026-06-03T08:30:00Z"
   - id: story-skel-02-ruff-mypy-config
     epic: "EPIC-02 — Repo skeleton + coding standards"
     status: COMPLETE
     depends_on: [story-skel-01-uv-workspace-pyproject]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/73"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/73"
     merged_at: "2026-06-03T11:10:00Z"
   - id: story-skel-03-claude-md-and-contribution-conventions
     epic: "EPIC-02 — Repo skeleton + coding standards"
@@ -83,26 +83,26 @@ stories:
     epic: "EPIC-03 — Core domain types"
     status: COMPLETE
     depends_on: [story-skel-02-ruff-mypy-config]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/74"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/74"
     merged_at: "2026-06-03T11:50:00Z"
     notes: "First product-code PR. 33 tests, 100% coverage on verdict.py + verdict_context.py."
   - id: story-core-02-otel-evaluation-event-emitter
     epic: "EPIC-03 — Core domain types"
     status: COMPLETE
     depends_on: [story-core-01-verdict-pydantic-types]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/76"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/76"
     merged_at: "2026-06-03T12:40:00Z"
   - id: story-core-03-error-model-and-trace-propagation
     epic: "EPIC-03 — Core domain types"
     status: COMPLETE
     depends_on: [story-core-01-verdict-pydantic-types]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/75"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/75"
     merged_at: "2026-06-03T12:15:00Z"
   - id: story-core-04-structlog-config-and-conventions
     epic: "EPIC-03 — Core domain types"
     status: COMPLETE
     depends_on: [story-skel-02-ruff-mypy-config]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/77"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/77"
     merged_at: "2026-06-03T13:05:00Z"
 
   # EPIC-04 — Cisco AI Defense client
@@ -110,14 +110,14 @@ stories:
     epic: "EPIC-04 — Cisco AI Defense client"
     status: COMPLETE
     depends_on: [story-core-01-verdict-pydantic-types]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/78"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/78"
     merged_at: "2026-06-03T13:30:00Z"
     notes: "First EPIC-04 PR. Pivot to demo-critical path. Models locked; HTTP client in judges-02."
   - id: story-judges-02-ai-defense-httpx-client-with-retries
     epic: "EPIC-04 — Cisco AI Defense client"
     status: COMPLETE
     depends_on: [story-judges-01-ai-defense-request-response-models]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/80"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/80"
     merged_at: "2026-06-03T14:45:00Z"
     notes: "Mock-first (api_key constructor arg). Live mode env-toggle deferred to judges-04 from_env() factory."
   - id: story-judges-03-ai-defense-circuit-breaker-tenacity
@@ -128,7 +128,7 @@ stories:
     epic: "EPIC-04 — Cisco AI Defense client"
     status: COMPLETE
     depends_on: [story-judges-01-ai-defense-request-response-models]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/81"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/81"
     merged_at: "2026-06-03T15:30:00Z"
     notes: "44-row matrix, from_env() closes judges-02 contract drift. Demo-without-API-key unblocked."
   - id: story-judges-05-ai-defense-end-to-end-integration-test
@@ -153,7 +153,7 @@ stories:
     epic: "EPIC-05 — Verdict explainer (template v1, Foundation-Sec future)"
     status: COMPLETE
     depends_on: [story-core-01-verdict-pydantic-types]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/85"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/85"
     merged_at: "2026-06-05T22:00:00Z"
     notes: "v1 explainer landed. explain_verdict(Verdict, VerdictContext | None) returns deterministic WHY-string. 8 BDD tests + ctx forward-compat regression guard. Unblocks story-mw-04 (dep swap from foundsec-03 already recorded)."
 
@@ -162,7 +162,7 @@ stories:
     epic: "EPIC-06 — Surface 1 middleware"
     status: COMPLETE
     depends_on: [story-core-01-verdict-pydantic-types]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/82"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/82"
     merged_at: "2026-06-03T16:00:00Z"
     notes: "First EPIC-06 PR. 4 middleware stubs verified against splunklib.ai 3.0.0 contract."
   - id: story-mw-02-tool-middleware-with-defenseclaw-args
@@ -173,16 +173,16 @@ stories:
     epic: "EPIC-06 — Surface 1 middleware"
     status: COMPLETE
     depends_on: [story-mw-01-package-skeleton-and-public-api, story-judges-05-ai-defense-end-to-end-integration-test]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/83"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/83"
     merged_at: "2026-06-03T16:30:00Z"
-    notes: "Demo wow-moment: Aegis blocks prompt injection BEFORE the model is called. 39 mw tests pass. judges-05 dep relaxed (functional dep satisfied by judges-02 + judges-04)."
+    notes: "Demo wow-moment: SplunkGate blocks prompt injection BEFORE the model is called. 39 mw tests pass. judges-05 dep relaxed (functional dep satisfied by judges-02 + judges-04)."
   - id: story-mw-04-model-middleware-post-inference-pii-check
     epic: "EPIC-06 — Surface 1 middleware"
     status: COMPLETE
     depends_on: [story-mw-03-model-middleware-pre-inference-scan, story-explainer-01-template-based-verdict-explainer]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/86"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/86"
     merged_at: "2026-06-05T22:30:00Z"
-    notes: "Wires both POST-INFERENCE SCAN anchors. ModelOutputBlockedByAegis added. _post_inference helper module (136 LOC). 14 BDD tests + meta tests (file ≤400 LOC, anchors still present). 205/205 package tests pass."
+    notes: "Wires both POST-INFERENCE SCAN anchors. ModelOutputBlockedBySplunkGate added. _post_inference helper module (136 LOC). 14 BDD tests + meta tests (file ≤400 LOC, anchors still present). 205/205 package tests pass."
   - id: story-mw-05-subagent-middleware
     epic: "EPIC-06 — Surface 1 middleware"
     status: PENDING
@@ -199,11 +199,11 @@ stories:
     epic: "EPIC-06 — Surface 1 middleware"
     status: COMPLETE
     depends_on: [story-mw-04-model-middleware-post-inference-pii-check]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/98"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/98"
     merged_at: "2026-06-06T03:00:00Z"
-    notes: "F1 finding from PR #86 retroactive review. Threads aegis_pre_trace_id + aegis_post_trace_id into AIMessage.extras. Closes issue #94. 12 new tests; 220/220 package tests pass."
+    notes: "F1 finding from PR #86 retroactive review. Threads splunkgate_pre_trace_id + splunkgate_post_trace_id into AIMessage.extras. Closes issue #94. 12 new tests; 220/220 package tests pass."
 
-  # EPIC-07 — Surface 2 (Aegis MCP Server)
+  # EPIC-07 — Surface 2 (SplunkGate MCP Server)
   - id: story-mcp-01-server-skeleton-with-mcp-python-sdk
     epic: "EPIC-07 — Surface 2 MCP Server"
     status: PENDING
@@ -228,7 +228,7 @@ stories:
     epic: "EPIC-07 — Surface 2 MCP Server"
     status: PENDING
     depends_on: [story-mcp-02-tool-score-prompt-injection, story-mcp-03-tool-judge-tool-call]
-    notes: "2026-06-05 — depends_on trimmed to drop deferred mcp-04 + mcp-05 per ADR-013. Example MCP-client config now references the live Splunk MCP Server (Splunkbase app 7931) alongside aegis_* tools — the concrete MCP coexistence story for judges."
+    notes: "2026-06-05 — depends_on trimmed to drop deferred mcp-04 + mcp-05 per ADR-013. Example MCP-client config now references the live Splunk MCP Server (Splunkbase app 7931) alongside splunkgate_* tools — the concrete MCP coexistence story for judges."
 
   # EPIC-08 — Surface 3 (DefenseClaw integration)
   - id: story-dc-01-config-delta-docs-and-example
@@ -249,48 +249,48 @@ stories:
     epic: "EPIC-09 — Surface 4 Splunk app"
     status: COMPLETE
     depends_on: []
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/87"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/87"
     merged_at: "2026-06-05T23:00:00Z"
     notes: "Splunk app skeleton landed: app.conf (5 stanzas) + default.meta (system-wide exports) + extension-less README + nav/default.xml. Mirrors DNS Guard pattern. Unblocks every other EPIC-09 story."
-  - id: story-app-02-props-transforms-for-aegis-verdict-sourcetype
+  - id: story-app-02-props-transforms-for-splunkgate-verdict-sourcetype
     epic: "EPIC-09 — Surface 4 Splunk app"
     status: COMPLETE
     depends_on: [story-app-01-app-conf-and-metadata-skeleton, story-core-02-otel-evaluation-event-emitter]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/88"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/88"
     merged_at: "2026-06-05T23:20:00Z"
     notes: "Sourcetype schema locked: props.conf (8 FIELDALIAS + 4 EVAL), transforms.conf (2 stanzas), eventtypes.conf (3), tags.conf (CIM bindings with cisco_ai_defense_family for ADR-005 colocation). All 7 BDD blocks pass."
   - id: story-app-03-savedsearches-and-mltk-macros
     epic: "EPIC-09 — Surface 4 Splunk app"
     status: COMPLETE
-    depends_on: [story-app-02-props-transforms-for-aegis-verdict-sourcetype]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/90"
+    depends_on: [story-app-02-props-transforms-for-splunkgate-verdict-sourcetype]
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/90"
     merged_at: "2026-06-06T00:15:00Z"
     notes: "8 MLTK macros + 10 saved searches + setup XML. Mirrors DNS Guard 2025 1st-place AI/ML winner shape verbatim. 5 ML pipeline searches disabled-by-default on cron 15 */6 * * *. Unblocks app-05/06/07 dashboards + app-08 ES RBA."
   - id: story-app-04-collections-conf-kvstore-verdict-history
     epic: "EPIC-09 — Surface 4 Splunk app"
     status: COMPLETE
     depends_on: [story-app-01-app-conf-and-metadata-skeleton]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/89"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/89"
     merged_at: "2026-06-05T23:55:00Z"
-    notes: "KV-store schema landed. aegis_verdict_history (16 fields, accelerated on trace_id+timestamp) + aegis_profile_index (4 profile rows: FSI/HIPAA/PUBSEC/PCI). Lookups wired in transforms.conf. Seed CSV ships 4 profile rows. Bootstrap saved search ([Aegis - Bootstrap profile index]) owned by story-app-03."
+    notes: "KV-store schema landed. splunkgate_verdict_history (16 fields, accelerated on trace_id+timestamp) + splunkgate_profile_index (4 profile rows: FSI/HIPAA/PUBSEC/PCI). Lookups wired in transforms.conf. Seed CSV ships 4 profile rows. Bootstrap saved search ([SplunkGate - Bootstrap profile index]) owned by story-app-03."
   - id: story-app-05-dashboard-agent-risk-overview
     epic: "EPIC-09 — Surface 4 Splunk app"
     status: COMPLETE
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/96"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/96"
     merged_at: "2026-06-06T01:30:00Z"
     notes: "Dashboard Studio v2, dark theme, 8 visualizations (4 KPI + area + column heatmap + table + MSJ line), 8 dataSources token-bound to input_time, drilldowns to verdict_inspector via $click.x.value$ + $click.name2$ + $row.agent_id$ tokens. Reviewer caught 4 bugs pre-merge: version=2 not 2.0 (silent-render), ds_msj override clobber, $row._time$ on charts, rowNumbers string."
     depends_on: [story-app-03-savedsearches-and-mltk-macros]
   - id: story-app-06-dashboard-verdict-inspector
     epic: "EPIC-09 — Surface 4 Splunk app"
     status: COMPLETE
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/97"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/97"
     merged_at: "2026-06-06T02:15:00Z"
     notes: "Dashboard Studio v2, 5 inputs matching the token contract from app-05's drilldowns, 4 visualizations (filter bar / verdict table / detail panel / related events). Row click sets row_trace_id + row_agent_id tokens. Open-in-ES button drills into Investigation Workbench via form.search=trace_id pattern. Reviewer caught 3 silent-render bugs pre-merge: unquoted trace_id substitution, broken rule-filter OR clause, wrong ES URL form."
     depends_on: [story-app-03-savedsearches-and-mltk-macros, story-app-04-collections-conf-kvstore-verdict-history]
   - id: story-app-07-dashboard-regulator-evidence-pack
     epic: "EPIC-09 — Surface 4 Splunk app"
     status: COMPLETE
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/99"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/99"
     merged_at: "2026-06-06T03:30:00Z"
     notes: "Examiner-grade audit dashboard. 8 visualizations including verbatim SR 26-2 footnote 3 + NIST RMF mapping + EU AI Act Article 6. Profile-gated HIPAA + PCI panels with showNoData empty-state explanation. Browser-print PDF export (pdfgen doesn't render DS-v2 universally). First PR to run the full multi-reviewer pattern (code-reviewer + comment-analyzer + silent-failure-hunter) — caught 6 bugs that would have shipped silently broken."
     depends_on: [story-app-03-savedsearches-and-mltk-macros, story-app-04-collections-conf-kvstore-verdict-history]
@@ -298,14 +298,14 @@ stories:
     epic: "EPIC-09 — Surface 4 Splunk app"
     status: COMPLETE
     depends_on: [story-app-03-savedsearches-and-mltk-macros]
-    pr_url: "https://github.com/Blockchain-Oracle/aegis/pull/100"
+    pr_url: "https://github.com/Blockchain-Oracle/splunkgate/pull/100"
     merged_at: "2026-06-05T12:14:12Z"
     notes: "ES Risk-Based Alerting integration. 11 per-rule scoring stanzas (40-70) verbatim Cisco AI Defense rule names + HIGH multiplier (×2) + whitelist exclusion (×0) + correlation alert wiring. Multi-reviewer pass (code-reviewer + comment-analyzer + silent-failure-hunter) caught CRITICAL S1: agent_id was never emitted on Verdict OTel events, silently breaking dashboards in app-05/06 AND RBA in app-08. Fixed in-PR via Verdict.agent_id field + otel.py emission + FIELDALIAS-agent_id. Middleware-side population (request.thread_id → Verdict.agent_id) tracked as story-mw-09 (issue #101). Also closed S10 (fillnull UNMAPPED on atlas lookup miss) + comment-analyzer ATLAS asymmetry nit. S2-S9 hardening backlog tracked as issue #102."
   - id: story-app-09-static-icons-and-app-assets
     epic: "EPIC-09 — Surface 4 Splunk app"
     status: COMPLETE
     depends_on: [story-app-01-app-conf-and-metadata-skeleton]
-    pr_url: "https://github.com/Blockchain-Oracle/aegis/pull/103"
+    pr_url: "https://github.com/Blockchain-Oracle/splunkgate/pull/103"
     merged_at: "2026-06-05T12:30:00Z"
     notes: "Deterministic PIL icon generator + 5 PNG artifacts (appIcon/_2x/Alt/Alt_2x + 1280×720 screenshot placeholder). Multi-reviewer pass (code-reviewer + silent-failure-hunter + simplification-reviewer) converged on two HIGH blockers — both fixed in-PR: (a) font lookup walked Mac/Linux candidate paths, would silently drift md5 on cross-OS regen; replaced with ImageFont.load_default (Pillow-bundled bytes, OS-independent); (b) pillow>=12.2.0 floor would let minor bumps shift PNG bytes; pinned to ==12.2.0. AppInspect block 6 deferred to story-app-11."
   - id: story-app-10-app-vision-loop-validation
@@ -340,16 +340,16 @@ stories:
     epic: "EPIC-12 — AppInspect hardening"
     status: COMPLETE
     depends_on: []  # spec said app-10 but path-B reorders (2026-06-05); app-10 needs deployed app, which needs app-11/12
-    pr_url: "https://github.com/Blockchain-Oracle/aegis/pull/104"
+    pr_url: "https://github.com/Blockchain-Oracle/splunkgate/pull/104"
     merged_at: "2026-06-05T12:50:00Z"
     notes: "AppInspect submission-ready scaffold: 25-check manualcheck.yaml verbatim mirror of CIMplicity AI 2025, empty expect.yaml (zero binaries per ADR-008), warnings.md template, version-gated run_appinspect.sh runner, JSON-walking postprocessor with allow-list semantics (anything not in PASS_RESULTS blocks — defensive against future severities), 21 behavioral tests. Multi-reviewer pass (code-reviewer + comment-analyzer + silent-failure-hunter) caught and closed: S1 cryptic --version parse failure, S2 warnings.md lying about being parsed + 3 hallucinated check names, S3 deny-list bypass on future severities, S4 lax suppression validation, and code-reviewer Q3 bash-into-Python heredoc interpolation. Added 4 regression-guard tests for S3/S4 paths. Pending caveat: real AppInspect may emit 'na' shorthand for not_applicable; verify on first live run."
   - id: story-app-12-splunkbase-submission-package-and-checklist
     epic: "EPIC-12 — AppInspect hardening"
     status: COMPLETE
     depends_on: [story-app-11-appinspect-expect-yaml-and-manual-checks]
-    pr_url: "https://github.com/Blockchain-Oracle/aegis/pull/106"
+    pr_url: "https://github.com/Blockchain-Oracle/splunkgate/pull/106"
     merged_at: "2026-06-05T14:00:00Z"
-    notes: "Deterministic Splunkbase tarball pipeline. dist/aegis_app-1.0.0.tgz, 40114 bytes, sha256 7e39ab753c0106f65bfb75de47c8375391b7acf7b7c2413f584f32a3800d00c3. Python tarfile helper (BSD-tar-on-macOS lacked GNU determinism flags) + manifest.json schemaVersion 2.0.0 + LICENSE + RELEASE_NOTES.md + 88-line submission checklist + 18 behavioral tests. Multi-reviewer pass (code-reviewer + silent-failure-hunter + simplification-reviewer) caught and closed in-PR: S3 SKIP_APPINSPECT silent skip, S5 RELEASE_NOTES.md declared-but-missing, S6 operations tooling shipped inside tarball (created circular dep in verify script), version-gate regression in inlined verifier. Deleted dead-code _strip_dev_cruft.sh per simplification-reviewer. 3 follow-ups tracked as issue #107 (templatize releaseDate, pin Python patch, consolidate cruft+version-gate duplication). Path-B handoff: artifact is ready for Splunk Web > Manage Apps > Install from file upload to prd-p-t9irr.splunkcloud.com; after deploy + synthetic events, story-app-10 anchor capture unblocks."
+    notes: "Deterministic Splunkbase tarball pipeline. dist/splunkgate_app-1.0.0.tgz, 40114 bytes, sha256 7e39ab753c0106f65bfb75de47c8375391b7acf7b7c2413f584f32a3800d00c3. Python tarfile helper (BSD-tar-on-macOS lacked GNU determinism flags) + manifest.json schemaVersion 2.0.0 + LICENSE + RELEASE_NOTES.md + 88-line submission checklist + 18 behavioral tests. Multi-reviewer pass (code-reviewer + silent-failure-hunter + simplification-reviewer) caught and closed in-PR: S3 SKIP_APPINSPECT silent skip, S5 RELEASE_NOTES.md declared-but-missing, S6 operations tooling shipped inside tarball (created circular dep in verify script), version-gate regression in inlined verifier. Deleted dead-code _strip_dev_cruft.sh per simplification-reviewer. 3 follow-ups tracked as issue #107 (templatize releaseDate, pin Python patch, consolidate cruft+version-gate duplication). Path-B handoff: artifact is ready for Splunk Web > Manage Apps > Install from file upload to prd-p-t9irr.splunkcloud.com; after deploy + synthetic events, story-app-10 anchor capture unblocks."
 
   # EPIC-11 — README + demo (LAST)
   - id: story-readme-01-headline-and-banner-and-credits
@@ -368,7 +368,7 @@ stories:
     epic: "EPIC-11 — README + demo"
     status: PENDING
     depends_on: [story-app-05-dashboard-agent-risk-overview, story-app-13-synthetic-verdict-emitter-script, story-demo-01-screencast-and-script]
-    notes: "Added 2026-06-05 per ADR-013 — Scene 4 of demo video shows SOC analyst → SAIA → NL→SPL → Aegis dashboard live update. Uses SAIA app 7245 installed in tenant 2026-06-05."
+    notes: "Added 2026-06-05 per ADR-013 — Scene 4 of demo video shows SOC analyst → SAIA → NL→SPL → SplunkGate dashboard live update. Uses SAIA app 7245 installed in tenant 2026-06-05."
 
   # ---- BLOCK D additions (audit-driven new stories) ----
 
@@ -377,7 +377,7 @@ stories:
     epic: "EPIC-03 — Core domain types"
     status: COMPLETE
     depends_on: [story-core-02-otel-evaluation-event-emitter]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/79"
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/79"
     merged_at: "2026-06-03T14:15:00Z"
     notes: "Demo wire CLOSED. HEC URL+token verified live (HTTP 200) before merge. EPIC-03 100% complete."
 
@@ -391,14 +391,14 @@ stories:
   - id: story-app-13-synthetic-verdict-emitter-script
     epic: "EPIC-09 — Surface 4 Splunk app"
     status: PENDING
-    depends_on: [story-app-02-props-transforms-for-aegis-verdict-sourcetype, story-eval-01-synthetic-data-generator-dns-guard-pattern]
+    depends_on: [story-app-02-props-transforms-for-splunkgate-verdict-sourcetype, story-eval-01-synthetic-data-generator-dns-guard-pattern]
 
   # EPIC-09 addition (2026-06-05) — MITRE ATLAS technique-ID lookup mapping for SOC pivots
   - id: story-app-14-mitre-atlas-technique-mapping
     epic: "EPIC-09 — Surface 4 Splunk app"
     status: COMPLETE
-    depends_on: [story-app-02-props-transforms-for-aegis-verdict-sourcetype]
-    pr: "https://github.com/Blockchain-Oracle/aegis/pull/91"
+    depends_on: [story-app-02-props-transforms-for-splunkgate-verdict-sourcetype]
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/91"
     merged_at: "2026-06-06T00:30:00Z"
     notes: "11 rules → 4 ATLAS techniques (T0051 / T0057 / T0050 / T0048). Lookup wired in transforms.conf + invoked in HIGH severity correlation alert so ES notable events carry ATLAS IDs. ADR-005 updated."
 

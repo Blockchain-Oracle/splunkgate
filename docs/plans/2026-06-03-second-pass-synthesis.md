@@ -18,9 +18,9 @@
 |---|---|---|---|
 | Auditor B R-C-01 | `story-core-01:171` still has `"foundation_sec_classifier"` in `RuleHit.source` Literal (A-5 fix landed in architecture.md but missed the story) | `grep -n` confirmed | ✅ FIXED — removed; added explanatory comment matching architecture.md |
 | Auditor B R-C-02 | `story-foundsec-02:24` declares `build_explanation_spl(ctx, provider, model)` but BDD/shell call it as `(ctx, verdict, provider, model)` | Read line 24 + 36 + 120 + 146; declaration was 3-arg, callers were 4-arg | ✅ FIXED — declaration now 4-arg matching callers; rationale included |
-| Auditor B R-C-03 | `story-ops-01:36, 44` use `grep -cF` with `\|` alternation (literal under `-F`, silently matches nothing) + stray template-copy `cisco_ai_defense:aegis_verdict` text | Read lines 32–48; both findings real | ✅ FIXED — removed `-F` flag, switched to per-key grep; dropped template-copy residue |
+| Auditor B R-C-03 | `story-ops-01:36, 44` use `grep -cF` with `\|` alternation (literal under `-F`, silently matches nothing) + stray template-copy `cisco_ai_defense:splunkgate_verdict` text | Read lines 32–48; both findings real | ✅ FIXED — removed `-F` flag, switched to per-key grep; dropped template-copy residue |
 | Auditor B R-C-04 | `story-eval-06:28` lists `docs/sprint-status.yaml` in file modification map then says "not edited here directly" — violates template contract (file map must be exact) | Read line 28 | ✅ FIXED — line moved to an HTML comment for orchestrator awareness; not part of file map |
-| Auditor A #3 | `story-judges-06:23` declares `tool_args: dict[str, Any]` — architecture.md § "Banned patterns" forbids `Any` in `aegis_judges` | Read line 23, 196, 204; story already acknowledged conflict at 196/204 saying "prefer `dict[str, object]`" | ✅ FIXED — line 23 changed to `dict[str, object]` to align with own Notes |
+| Auditor A #3 | `story-judges-06:23` declares `tool_args: dict[str, Any]` — architecture.md § "Banned patterns" forbids `Any` in `splunkgate_judges` | Read line 23, 196, 204; story already acknowledged conflict at 196/204 saying "prefer `dict[str, object]`" | ✅ FIXED — line 23 changed to `dict[str, object]` to align with own Notes |
 
 ### PUSHED BACK (Auditor was wrong)
 

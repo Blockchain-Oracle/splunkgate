@@ -11,16 +11,16 @@ repos:
       - id: ruff-format
 
   # Local mypy hook (NOT mirrors-mypy) so it runs in the uv venv where
-  # workspace packages (aegis_core, aegis_judges) are editable-installed.
+  # workspace packages (splunkgate_core, splunkgate_judges) are editable-installed.
   # mirrors-mypy's hermetic env can't resolve workspace deps.
   - repo: local
     hooks:
       - id: mypy
-        name: mypy --strict (aegis_core + aegis_judges)
-        entry: uv run mypy --strict -p aegis_core -p aegis_judges
+        name: mypy --strict (splunkgate_core + splunkgate_judges)
+        entry: uv run mypy --strict -p splunkgate_core -p splunkgate_judges
         language: system
         pass_filenames: false
-        files: ^packages/(aegis_core|aegis_judges)/src/.*\.py$
+        files: ^packages/(splunkgate_core|splunkgate_judges)/src/.*\.py$
 
   - repo: local
     hooks:
@@ -33,7 +33,7 @@ repos:
 
       - id: no-print
         name: No print() in production
-        entry: bash -c 'if grep -rn "print(" packages/aegis_*/src/ --include="*.py" | grep -v "structlog\|test\|_mock\.py"; then echo "Use structlog, not print()"; exit 1; fi'
+        entry: bash -c 'if grep -rn "print(" packages/splunkgate_*/src/ --include="*.py" | grep -v "structlog\|test\|_mock\.py"; then echo "Use structlog, not print()"; exit 1; fi'
         language: system
         pass_filenames: false
 

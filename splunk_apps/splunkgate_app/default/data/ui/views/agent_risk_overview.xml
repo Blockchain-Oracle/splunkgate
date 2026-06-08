@@ -1,0 +1,195 @@
+<dashboard version="2" theme="dark">
+  <label>SplunkGate — Agent Risk Overview</label>
+  <description>Real-time CISO view of AI agent safety verdicts. SplunkGate events land in the same cisco_ai_defense:* sourcetype family as the Cisco Security Cloud add-on (Splunkbase 7404), so SOC analysts get unified search.</description>
+  <definition><![CDATA[
+{
+  "title": "SplunkGate — Agent Risk Overview",
+  "description": "4 KPI tiles + verdicts-by-label time series + rules-by-hour heatmap + top-agents table + MSJ scaling indicator.",
+  "inputs": {
+    "input_time": {
+      "type": "input.timerange",
+      "title": "Time range",
+      "options": {"defaultValue": "-24h@h,now", "token": "input_time"}
+    }
+  },
+  "dataSources": {
+    "ds_total": {
+      "type": "ds.search",
+      "options": {
+        "query": "`splunkgate_data` | stats count",
+        "queryParameters": {"earliest": "$input_time.earliest$", "latest": "$input_time.latest$"}
+      },
+      "name": "ds_total"
+    },
+    "ds_block": {
+      "type": "ds.search",
+      "options": {
+        "query": "`splunkgate_data` verdict_label=block | stats count",
+        "queryParameters": {"earliest": "$input_time.earliest$", "latest": "$input_time.latest$"}
+      },
+      "name": "ds_block"
+    },
+    "ds_high": {
+      "type": "ds.search",
+      "options": {
+        "query": "`splunkgate_data` severity=HIGH | stats count",
+        "queryParameters": {"earliest": "$input_time.earliest$", "latest": "$input_time.latest$"}
+      },
+      "name": "ds_high"
+    },
+    "ds_agents": {
+      "type": "ds.search",
+      "options": {
+        "query": "`splunkgate_data` | stats dc(agent_id) as agents",
+        "queryParameters": {"earliest": "$input_time.earliest$", "latest": "$input_time.latest$"}
+      },
+      "name": "ds_agents"
+    },
+    "ds_ts": {
+      "type": "ds.search",
+      "options": {
+        "query": "`splunkgate_data` | timechart span=1h count by verdict_label",
+        "queryParameters": {"earliest": "$input_time.earliest$", "latest": "$input_time.latest$"}
+      },
+      "name": "ds_ts"
+    },
+    "ds_heatmap": {
+      "type": "ds.search",
+      "options": {
+        "query": "`splunkgate_data` | mvexpand rule | bin _time span=1h | stats sum(severity_score) as score by _time, rule",
+        "queryParameters": {"earliest": "$input_time.earliest$", "latest": "$input_time.latest$"}
+      },
+      "name": "ds_heatmap"
+    },
+    "ds_top_agents": {
+      "type": "ds.search",
+      "options": {
+        "query": "`splunkgate_data` verdict_label=block | stats count by agent_id | sort -count | head 10",
+        "queryParameters": {"earliest": "$input_time.earliest$", "latest": "$input_time.latest$"}
+      },
+      "name": "ds_top_agents"
+    },
+    "ds_msj": {
+      "type": "ds.search",
+      "options": {
+        "query": "`splunkgate_data` | stats count(eval(severity!=\"NONE_SEVERITY\")) as detections count as total_msgs by agent_id | eval detection_rate=round(detections/total_msgs,4) | sort -total_msgs",
+        "queryParameters": {"earliest": "-7d", "latest": "now"}
+      },
+      "name": "ds_msj"
+    }
+  },
+  "visualizations": {
+    "kpi_total_verdicts": {
+      "type": "splunk.singlevalue",
+      "title": "Total verdicts",
+      "dataSources": {"primary": "ds_total"},
+      "options": {"sparklineDisplay": "off", "unit": ""}
+    },
+    "kpi_block_verdicts": {
+      "type": "splunk.singlevalue",
+      "title": "BLOCK verdicts",
+      "dataSources": {"primary": "ds_block"},
+      "options": {
+        "majorColor": "#D9534F",
+        "sparklineDisplay": "off"
+      }
+    },
+    "kpi_high_severity": {
+      "type": "splunk.singlevalue",
+      "title": "HIGH severity",
+      "dataSources": {"primary": "ds_high"},
+      "options": {
+        "majorColor": "#FF9900",
+        "sparklineDisplay": "off"
+      }
+    },
+    "kpi_distinct_agents": {
+      "type": "splunk.singlevalue",
+      "title": "Distinct agents",
+      "dataSources": {"primary": "ds_agents"},
+      "options": {"sparklineDisplay": "off"}
+    },
+    "ts_verdicts_24h": {
+      "type": "splunk.area",
+      "title": "Verdicts by label",
+      "description": "Stacked verdict counts per hour over the selected window. Click any series point to drill into the Verdict Inspector for that hour.",
+      "dataSources": {"primary": "ds_ts"},
+      "options": {
+        "stackMode": "stacked",
+        "legendDisplay": "right",
+        "seriesColors": ["#5CB85C", "#D9534F", "#F0AD4E", "#5BC0DE"]
+      },
+      "eventHandlers": [
+        {
+          "type": "drilldown.event.click",
+          "options": {
+            "valid": true,
+            "uri": "/app/splunkgate_app/verdict_inspector?form.input_time.earliest=$click.x.value$&form.input_time.latest=$click.x.value$"
+          }
+        }
+      ]
+    },
+    "heatmap_rules_by_hour": {
+      "type": "splunk.column",
+      "title": "Rules-by-hour heatmap",
+      "description": "Per-hour severity-weighted score for each of the 11 Cisco AI Defense rule names: Code Detection, Harassment, Hate Speech, PCI, PHI, PII, Prompt Injection, Profanity, Sexual Content & Exploitation, Social Division & Polarization, Violence & Public Safety Threats.",
+      "dataSources": {"primary": "ds_heatmap"},
+      "options": {
+        "stackMode": "stacked",
+        "legendDisplay": "right"
+      },
+      "eventHandlers": [
+        {
+          "type": "drilldown.event.click",
+          "options": {
+            "valid": true,
+            "uri": "/app/splunkgate_app/verdict_inspector?form.input_time.earliest=$click.x.value$&form.input_rule=$click.name2$"
+          }
+        }
+      ]
+    },
+    "table_top_agents": {
+      "type": "splunk.table",
+      "title": "Top agents by BLOCK count",
+      "dataSources": {"primary": "ds_top_agents"},
+      "options": {"rowNumbers": true},
+      "eventHandlers": [
+        {
+          "type": "drilldown.event.click",
+          "options": {
+            "valid": true,
+            "uri": "/app/splunkgate_app/verdict_inspector?form.input_agent_id=$row.agent_id$"
+          }
+        }
+      ]
+    },
+    "msj_scaling_chart": {
+      "type": "splunk.line",
+      "title": "MSJ scaling indicator",
+      "description": "Detection rate degrades as in-context message count grows (Many-Shot Jailbreaking — Anthropic 2024). SplunkGate shows the live floor — be honest about the probabilistic ceiling. Higher detection_rate at high total_msgs = healthier agent.",
+      "dataSources": {"primary": "ds_msj"},
+      "options": {"legendDisplay": "off"}
+    }
+  },
+  "layout": {
+    "type": "absolute",
+    "options": {"width": 1440, "height": 960, "backgroundColor": "#0e1a2b"},
+    "structure": [
+      {"item": "kpi_total_verdicts", "type": "block", "position": {"x": 0, "y": 0, "w": 360, "h": 140}},
+      {"item": "kpi_block_verdicts", "type": "block", "position": {"x": 360, "y": 0, "w": 360, "h": 140}},
+      {"item": "kpi_high_severity", "type": "block", "position": {"x": 720, "y": 0, "w": 360, "h": 140}},
+      {"item": "kpi_distinct_agents", "type": "block", "position": {"x": 1080, "y": 0, "w": 360, "h": 140}},
+      {"item": "ts_verdicts_24h", "type": "block", "position": {"x": 0, "y": 160, "w": 1440, "h": 280}},
+      {"item": "heatmap_rules_by_hour", "type": "block", "position": {"x": 0, "y": 460, "w": 960, "h": 320}},
+      {"item": "table_top_agents", "type": "block", "position": {"x": 980, "y": 460, "w": 460, "h": 320}},
+      {"item": "msj_scaling_chart", "type": "block", "position": {"x": 0, "y": 800, "w": 1440, "h": 140}}
+    ]
+  },
+  "defaults": {
+    "dataSources": {
+      "ds.search": {"options": {"queryParameters": {"earliest": "$input_time.earliest$", "latest": "$input_time.latest$"}}}
+    }
+  }
+}
+]]></definition>
+</dashboard>

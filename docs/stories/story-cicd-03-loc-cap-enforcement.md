@@ -11,7 +11,7 @@
 ## User story
 
 **As a** coding agent who might write a 600-line file in a moment of weakness
-**I want to** the CI pipeline + a future pre-commit hook reject any `*.py` file in `packages/`, `eval/`, or `splunk_apps/aegis_app/bin/` exceeding 400 LOC (excluding blank + pure-comment lines)
+**I want to** the CI pipeline + a future pre-commit hook reject any `*.py` file in `packages/`, `eval/`, or `splunk_apps/splunkgate_app/bin/` exceeding 400 LOC (excluding blank + pure-comment lines)
 **So that** the codebase stays in the agent-friendly composition-over-monolith shape Abu's ADR-009 mandates, and `sahil-pr-audit` can rely on file-size as a first-pass complexity signal
 
 ---
@@ -20,7 +20,7 @@
 
 Exact files the coding agent creates or modifies for this story:
 
-- `.github/scripts/check_loc.py` — NEW — **canonical Python script per audit synthesis Block C** (cicd-03 ships only the `.py` form; there is no `.sh` form). Walks the file paths passed on argv (or all `*.py` under `packages/`, `eval/`, `splunk_apps/aegis_app/bin/` when no argv given), counts non-blank non-pure-comment lines per file using the rule "after `lstrip()`, line counts if non-empty AND does not start with `#`". Skips `.venv/` and `__pycache__/`. Threshold constant `THRESHOLD = 400`. Exits 1 on any violation; emits `::error file=$f::File has $n LOC (cap: 400). Split via composition or extraction.` annotation per violation so GitHub renders inline in PR diff view. Reused by the pre-commit hook in story-cicd-04 (which calls it via the `check-loc-400` hook id) AND by the CI `loc-cap` job in this story.
+- `.github/scripts/check_loc.py` — NEW — **canonical Python script per audit synthesis Block C** (cicd-03 ships only the `.py` form; there is no `.sh` form). Walks the file paths passed on argv (or all `*.py` under `packages/`, `eval/`, `splunk_apps/splunkgate_app/bin/` when no argv given), counts non-blank non-pure-comment lines per file using the rule "after `lstrip()`, line counts if non-empty AND does not start with `#`". Skips `.venv/` and `__pycache__/`. Threshold constant `THRESHOLD = 400`. Exits 1 on any violation; emits `::error file=$f::File has $n LOC (cap: 400). Split via composition or extraction.` annotation per violation so GitHub renders inline in PR diff view. Reused by the pre-commit hook in story-cicd-04 (which calls it via the `check-loc-400` hook id) AND by the CI `loc-cap` job in this story.
 - `.github/workflows/ci.yml` — UPDATE — append the `loc-cap` job (independent, no `needs:`), copy verbatim from `docs/cicd-spec.md` § "Concrete YAML skeleton" lines 94-101. `runs-on: ubuntu-latest`, `timeout-minutes: 2`. The job invokes `uv run python .github/scripts/check_loc.py`.
 - `.github/scripts/check_loc.py` permissions — UPDATE — `chmod +x` (committed via `git update-index --chmod=+x`); shebang `#!/usr/bin/env python3` so pre-commit can call it directly.
 - `tests/fixtures/loc_oversized.py.fixture` — NEW — a deliberately oversized file (425 non-blank-non-comment lines, content is `x = 1\n` repeated) used by the verification script to prove the gate actually rejects oversized files. Stored with `.fixture` extension so it does NOT get scanned by `check_loc.py` itself (the recursive walk only matches `*.py`).
@@ -38,13 +38,13 @@ When  `uv run python .github/scripts/check_loc.py` runs on a clean repo (only pl
 Then  exit code is 0
 And   stdout contains `All files within 400 LOC cap.`
 
-Given `tests/fixtures/loc_oversized.py.fixture` is renamed to `packages/aegis_core/src/aegis_core/_oversized_test.py` for the test
+Given `tests/fixtures/loc_oversized.py.fixture` is renamed to `packages/splunkgate_core/src/splunkgate_core/_oversized_test.py` for the test
 When  `uv run python .github/scripts/check_loc.py` runs
 Then  exit code is 1
-And   stderr or stdout contains `::error file=packages/aegis_core/src/aegis_core/_oversized_test.py::File has 425 LOC (cap: 400)`
+And   stderr or stdout contains `::error file=packages/splunkgate_core/src/splunkgate_core/_oversized_test.py::File has 425 LOC (cap: 400)`
 And   the file is renamed back to `.fixture` after the test
 
-Given `tests/fixtures/loc_at_threshold.py.fixture` is renamed to `packages/aegis_core/src/aegis_core/_threshold_test.py`
+Given `tests/fixtures/loc_at_threshold.py.fixture` is renamed to `packages/splunkgate_core/src/splunkgate_core/_threshold_test.py`
 When  `uv run python .github/scripts/check_loc.py` runs
 Then  exit code is 0 (exactly 400 LOC passes — strict greater-than per spec line 202)
 And   the file is renamed back
@@ -81,16 +81,16 @@ test -x .github/scripts/check_loc.py
 uv run python .github/scripts/check_loc.py | grep -q "All files within 400 LOC cap."
 
 # 2. Oversized fixture is rejected
-cp tests/fixtures/loc_oversized.py.fixture packages/aegis_core/src/aegis_core/_oversized_test.py
+cp tests/fixtures/loc_oversized.py.fixture packages/splunkgate_core/src/splunkgate_core/_oversized_test.py
 if uv run python .github/scripts/check_loc.py; then
   echo "FAIL: oversized file slipped past the gate"; exit 1
 fi
-rm packages/aegis_core/src/aegis_core/_oversized_test.py
+rm packages/splunkgate_core/src/splunkgate_core/_oversized_test.py
 
 # 3. Exactly-400 LOC fixture passes (boundary)
-cp tests/fixtures/loc_at_threshold.py.fixture packages/aegis_core/src/aegis_core/_threshold_test.py
+cp tests/fixtures/loc_at_threshold.py.fixture packages/splunkgate_core/src/splunkgate_core/_threshold_test.py
 uv run python .github/scripts/check_loc.py
-rm packages/aegis_core/src/aegis_core/_threshold_test.py
+rm packages/splunkgate_core/src/splunkgate_core/_threshold_test.py
 
 # 4. CI YAML wires the job
 grep -q 'loc-cap' .github/workflows/ci.yml

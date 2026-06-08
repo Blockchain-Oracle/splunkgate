@@ -1,4 +1,4 @@
-"""Deterministic generator for aegis_app's Splunk icon set + Splunkbase screenshot.
+"""Deterministic generator for splunkgate_app's Splunk icon set + Splunkbase screenshot.
 
 Renders 5 PNGs via Pillow:
 - appIcon.png         (36x36)  dark navy + Splunk-blue shield
@@ -16,14 +16,14 @@ Brand tokens (must match docs/ux-spec.md § "Design tokens"):
 - LIGHT   #F8F9FA  alt-icon background
 - BLUE    #1A8FFF  primary action / shield fill
 
-Glyph: an Aegis is a shield in Greek mythology — apt for an agent safety
+Glyph: an SplunkGate is a shield in Greek mythology — apt for an agent safety
 shield. The glyph is a shield outline + an inner notch, simple enough to
 render legibly at 36x36.
 
 Usage:
     python scripts/generate_app_icons.py [--output-dir DIR]
 
-Default output dir is splunk_apps/aegis_app/static/. CI invokes with a
+Default output dir is splunk_apps/splunkgate_app/static/. CI invokes with a
 tmp dir to verify md5 determinism.
 """
 
@@ -40,7 +40,7 @@ LIGHT = "#F8F9FA"
 BLUE = "#1A8FFF"
 
 # Splunkbase listing placeholder gets the brand wordmark + tagline.
-WORDMARK = "AEGIS"
+WORDMARK = "SPLUNKGATE"
 TAGLINE = "Real-time AI agent safety verdicts"
 
 # Pillow's bundled bitmap font: identical bytes across every install of the
@@ -140,11 +140,11 @@ def generate_all(output_dir: Path) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Generate aegis_app icon set.")
+    parser = argparse.ArgumentParser(description="Generate splunkgate_app icon set.")
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("splunk_apps/aegis_app/static"),
+        default=Path("splunk_apps/splunkgate_app/static"),
         help="Directory to write the 5 PNGs into.",
     )
     args = parser.parse_args(argv)

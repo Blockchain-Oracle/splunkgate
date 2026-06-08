@@ -39,8 +39,8 @@ jobs:
           version: ${{ env.UV_VERSION }}
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: uv sync --all-packages --frozen
-      - run: uv run mypy --strict -p aegis_core -p aegis_judges
-      - run: uv run mypy -p aegis_mw -p aegis_mcp -p aegis_eval
+      - run: uv run mypy --strict -p splunkgate_core -p splunkgate_judges
+      - run: uv run mypy -p splunkgate_mw -p splunkgate_mcp -p splunkgate_eval
 
   loc-cap:
     name: 400-LOC cap
@@ -61,7 +61,7 @@ jobs:
     needs: [lint, typecheck]
     strategy:
       matrix:
-        package: [aegis_core, aegis_judges, aegis_mw, aegis_mcp]
+        package: [splunkgate_core, splunkgate_judges, splunkgate_mw, splunkgate_mcp]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
@@ -71,7 +71,7 @@ jobs:
       - run: uv sync --all-packages --frozen
       - run: uv run pytest packages/${{ matrix.package }} --cov=${{ matrix.package }} --cov-report=xml --cov-fail-under=70
       - uses: codecov/codecov-action@v4
-        if: ${{ matrix.package == 'aegis_core' || matrix.package == 'aegis_judges' }}
+        if: ${{ matrix.package == 'splunkgate_core' || matrix.package == 'splunkgate_judges' }}
         with:
           files: coverage.xml
           flags: ${{ matrix.package }}
@@ -84,7 +84,7 @@ jobs:
     needs: [test]
     strategy:
       matrix:
-        package: [aegis_core, aegis_judges, aegis_mw, aegis_mcp]
+        package: [splunkgate_core, splunkgate_judges, splunkgate_mw, splunkgate_mcp]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
@@ -103,15 +103,15 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Build .tgz (guarded — splunk_apps/aegis_app/ lands in EPIC-09)
+      - name: Build .tgz (guarded — splunk_apps/splunkgate_app/ lands in EPIC-09)
         run: |
           mkdir -p dist/
-          if [ -d splunk_apps/aegis_app ]; then
+          if [ -d splunk_apps/splunkgate_app ]; then
             tar --exclude='__pycache__' --exclude='*.pyc' --exclude='.appinspect.expect.yaml' \
-                -czf dist/aegis_app-$(git rev-parse --short HEAD).tgz -C splunk_apps aegis_app
+                -czf dist/splunkgate_app-$(git rev-parse --short HEAD).tgz -C splunk_apps splunkgate_app
             ls -la dist/
           else
-            echo "splunk_apps/aegis_app/ not present yet (lands in EPIC-09); build-app exits clean as a placeholder."
+            echo "splunk_apps/splunkgate_app/ not present yet (lands in EPIC-09); build-app exits clean as a placeholder."
           fi
       - uses: actions/upload-artifact@v4
         if: hashFiles('dist/*.tgz') != ''

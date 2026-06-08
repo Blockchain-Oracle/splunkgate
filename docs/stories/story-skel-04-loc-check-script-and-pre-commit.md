@@ -52,8 +52,8 @@ Given the canonical check-loc-400 hook calls the .py script from cicd-03
 When  `grep -c '.github/scripts/check_loc.py' .pre-commit-config.yaml` runs
 Then  stdout is ≥ "1"
 
-Given a 401-LOC file is staged at /tmp/aegis_loc_bad.py
-When  `pre-commit run check-loc-400 --files /tmp/aegis_loc_bad.py` runs
+Given a 401-LOC file is staged at /tmp/splunkgate_loc_bad.py
+When  `pre-commit run check-loc-400 --files /tmp/splunkgate_loc_bad.py` runs
 Then  exit code is non-zero
 
 Given the test suite for pre-commit install verification
@@ -86,11 +86,11 @@ grep -c 'check-loc-400' .pre-commit-config.yaml
 grep -c '.github/scripts/check_loc.py' .pre-commit-config.yaml
 
 # 5. Real pre-commit invocation rejects an oversized file
-uv run python -c "open('/tmp/aegis_loc_bad.py','w').write('x = 1\n'*401)"
-pre-commit run check-loc-400 --files /tmp/aegis_loc_bad.py
+uv run python -c "open('/tmp/splunkgate_loc_bad.py','w').write('x = 1\n'*401)"
+pre-commit run check-loc-400 --files /tmp/splunkgate_loc_bad.py
 RC=$?
 test "$RC" -ne 0 && echo "pre-commit reject exit (expected non-zero): $RC"
-rm -f /tmp/aegis_loc_bad.py
+rm -f /tmp/splunkgate_loc_bad.py
 
 # 6. Pre-commit install verification tests pass
 uv run pytest tests/test_pre_commit_install.py -q

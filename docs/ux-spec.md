@@ -1,15 +1,15 @@
-# UX Spec — Aegis (Splunk Dashboard Studio v2)
+# UX Spec — SplunkGate (Splunk Dashboard Studio v2)
 
 **Status:** DRAFT
 **Last updated:** 2026-06-02
-**Anchors EPIC-09 (Surface 4).** Aegis has no external web UI in v1 — Dashboard Studio v2 inside Splunk IS the UI. Three dashboards land here. Anchor source: DNS Guard AI 2025 1st-place winner (`context/11-prior-art/01-build-a-thon-2025-deep-read.md`).
+**Anchors EPIC-09 (Surface 4).** SplunkGate has no external web UI in v1 — Dashboard Studio v2 inside Splunk IS the UI. Three dashboards land here. Anchor source: DNS Guard AI 2025 1st-place winner (`context/11-prior-art/01-build-a-thon-2025-deep-read.md`).
 
 ---
 
 ## Anchor product (visual reference)
 
 **Product:** Splunk DNS Guard AI (Splunkbase app 7922), 1st-place AI/ML track at Splunk Build-a-thon 2025
-**Why chosen:** This is the proven winning pattern with THE judge pool. DNS Guard shipped ZERO Python, ZERO `bin/`, ZERO LLM in the Splunk app dir — pure SPL + MLTK + Dashboard Studio v2 (JSON-in-XML). Judges rewarded it. Aegis mirrors the visual + architectural pattern explicitly: three Dashboard Studio v2 dashboards, 8 SPL macros using `fit DensityFunction` + `fit KMeans k=2` + `anomalydetection` for ML, dark-mode-friendly Splunk-native styling.
+**Why chosen:** This is the proven winning pattern with THE judge pool. DNS Guard shipped ZERO Python, ZERO `bin/`, ZERO LLM in the Splunk app dir — pure SPL + MLTK + Dashboard Studio v2 (JSON-in-XML). Judges rewarded it. SplunkGate mirrors the visual + architectural pattern explicitly: three Dashboard Studio v2 dashboards, 8 SPL macros using `fit DensityFunction` + `fit KMeans k=2` + `anomalydetection` for ML, dark-mode-friendly Splunk-native styling.
 
 **Cloned for reference at:** `../inspiration/Splunk-DNS-Guard-AI/`
 
@@ -53,7 +53,7 @@ Splunk Dashboard Studio v2 uses Splunk's design system tokens by default. We use
 
 ## Three dashboards
 
-All three live at `splunk_apps/aegis_app/default/data/ui/views/`.
+All three live at `splunk_apps/splunkgate_app/default/data/ui/views/`.
 
 ### Dashboard 1 — Agent Risk Overview (`agent_risk_overview.xml`)
 
@@ -79,11 +79,11 @@ All three live at `splunk_apps/aegis_app/default/data/ui/views/`.
 
 ```xml
 <dashboard version="2.0" theme="dark">
-  <label>Aegis — Agent Risk Overview</label>
-  <description>Real-time CISO view of AI agent safety verdicts. Aegis events land in the same cisco_ai_defense:* sourcetype family as the Cisco Security Cloud add-on (Splunkbase 7404).</description>
+  <label>SplunkGate — Agent Risk Overview</label>
+  <description>Real-time CISO view of AI agent safety verdicts. SplunkGate events land in the same cisco_ai_defense:* sourcetype family as the Cisco Security Cloud add-on (Splunkbase 7404).</description>
   <definition><![CDATA[
 {
-  "title": "Aegis — Agent Risk Overview",
+  "title": "SplunkGate — Agent Risk Overview",
   "visualizations": {
     "kpi_total_verdicts": { ... },
     "kpi_block_verdicts": { ... },
@@ -98,7 +98,7 @@ All three live at `splunk_apps/aegis_app/default/data/ui/views/`.
     "ds_verdicts_24h": {
       "type": "ds.search",
       "options": {
-        "query": "search index=main sourcetype=cisco_ai_defense:aegis_verdict earliest=-24h | timechart span=1h count by verdict_label"
+        "query": "search index=main sourcetype=cisco_ai_defense:splunkgate_verdict earliest=-24h | timechart span=1h count by verdict_label"
       }
     },
     ...
@@ -146,17 +146,17 @@ The full JSON content gets fleshed out by `story-app-05`. The story file contain
    - "Total agent decisions logged" (the audit-trail volume claim)
    - "Decisions with examiner-grade attestation" (= total — explicit subset is misleading; this confirms 100% have full provenance)
 
-2. **NIST AI RMF function alignment table:** 4 rows (GOVERN / MAP / MEASURE / MANAGE — verbatim function names per `context/03-regulatory/01-nist-ai-rmf.md`). Each row shows which Aegis components contribute to that function + a count of evidence artifacts (saved searches, KV-store entries, OTel events).
+2. **NIST AI RMF function alignment table:** 4 rows (GOVERN / MAP / MEASURE / MANAGE — verbatim function names per `context/03-regulatory/01-nist-ai-rmf.md`). Each row shows which SplunkGate components contribute to that function + a count of evidence artifacts (saved searches, KV-store entries, OTel events).
 
-3. **SR 26-2 quote panel** (text only): displays the verbatim footnote 3 from SR 26-2 (`context/03-regulatory/03-ffiec-occ-fed-banking.md`) that excludes GenAI/agentic AI from named scope but says banks should apply existing risk-management practices. Aegis positions itself within that frame.
+3. **SR 26-2 quote panel** (text only): displays the verbatim footnote 3 from SR 26-2 (`context/03-regulatory/03-ffiec-occ-fed-banking.md`) that excludes GenAI/agentic AI from named scope but says banks should apply existing risk-management practices. SplunkGate positions itself within that frame.
 
-4. **EU AI Act Article 6 mapping** (table): high-risk AI system requirements + which Aegis surface satisfies each (with cross-references to specific saved searches).
+4. **EU AI Act Article 6 mapping** (table): high-risk AI system requirements + which SplunkGate surface satisfies each (with cross-references to specific saved searches).
 
 5. **HIPAA Safe Harbor 18-identifier dashboard** (only visible if `risk_profile=HIPAA` lookup loaded): count of PHI detection events by identifier type (1 row per identifier) over coverage period.
 
 6. **PCI DSS sub-requirement 11.x detection event count** (only visible if `risk_profile=PCI`): rolling count of PCI-classified verdicts.
 
-7. **"Export PDF" action:** Splunk's built-in dashboard PDF export, with a custom CSS that styles the PDF for examiner presentation — header with CISO contact, footer with "Aegis vX.Y.Z generated YYYY-MM-DD," embedded NIST/SR/EU citations.
+7. **"Export PDF" action:** Splunk's built-in dashboard PDF export, with a custom CSS that styles the PDF for examiner presentation — header with CISO contact, footer with "SplunkGate vX.Y.Z generated YYYY-MM-DD," embedded NIST/SR/EU citations.
 
 ---
 
@@ -178,7 +178,7 @@ That's the full demo flow. Coding agent for `story-demo-01-script` writes this v
 ## Required structural elements (per Splunk Dashboard Studio v2 conventions)
 
 **Every dashboard:**
-- `<label>` set to "Aegis — <name>"
+- `<label>` set to "SplunkGate — <name>"
 - `<description>` set with a one-liner pointing back to the data source sourcetype
 - `theme="dark"` set on `<dashboard>` (matches DNS Guard winner)
 - `version="2.0"` (Dashboard Studio v2)
@@ -204,7 +204,7 @@ That's the full demo flow. Coding agent for `story-demo-01-script` writes this v
 
 After any `*.xml` (Dashboard Studio JSON-in-XML) edit, the PostToolUse hook (drops via `sahil-visual-loop`):
 
-1. Spins up a Splunk Docker locally (or hits a CI-managed instance) loaded with synthetic Aegis verdict events
+1. Spins up a Splunk Docker locally (or hits a CI-managed instance) loaded with synthetic SplunkGate verdict events
 2. Playwright loads each dashboard
 3. Captures screenshot at `screenshots/current/<dashboard>--desktop.png`
 4. `odiff` compares vs `screenshots/anchor/<dashboard>--desktop.png`

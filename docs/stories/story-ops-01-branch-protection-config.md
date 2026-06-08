@@ -10,7 +10,7 @@
 
 ## User story
 
-**As a** repo maintainer (or Abu, after `gh repo create` lands the public Aegis repo)
+**As a** repo maintainer (or Abu, after `gh repo create` lands the public SplunkGate repo)
 **I want to** run a single `bash scripts/configure_branch_protection.sh` command and have GitHub's `main` branch protection configured exactly as specified in `docs/cicd-spec.md` § "Branch protection" — required status checks, no force pushes, no deletions, up-to-date-before-merge
 **So that** no PR (including agent-authored ones) lands on `main` without a green CI matrix, and the build's submission-checklist gates ("CI green on main") cannot be bypassed during the demo crunch
 
@@ -20,7 +20,7 @@
 
 Exact files the coding agent creates or modifies for this story:
 
-- `docs/ops/branch-protection.md` — NEW — operator-facing doc. Sections: (1) one-paragraph purpose citing `docs/cicd-spec.md` § "Branch protection"; (2) verbatim list of the 14 required status checks (`lint`, `typecheck`, `loc-cap`, `test (aegis_core)`, `test (aegis_judges)`, `test (aegis_mw)`, `test (aegis_mcp)`, `appinspect`, `eval-smoke`, `build-wheels`, `build-app`, `pip-audit`, `gitleaks`, `trivy`); (3) the non-check rules (`required_pull_request_reviews.required_approving_review_count: 1`, `enforce_admins: true`, `restrictions: null`, `allow_force_pushes: false`, `allow_deletions: false`, `required_linear_history: false`, `required_conversation_resolution: true`); (4) "How to apply" — recommended path is `bash scripts/configure_branch_protection.sh` (idempotent); manual fallback via `gh api` documented for read-only auditors; (5) "How to verify" — `gh api /repos/$OWNER/$REPO/branches/main/protection | jq .` and grep for each required check name; (6) post-submission relaxation guidance (e.g., post-hackathon, allow admin self-merge on docs-only PRs); (7) citation to `docs/cicd-spec.md` § "Branch protection" and `docs/architecture.md` § "submission checklist gates".
+- `docs/ops/branch-protection.md` — NEW — operator-facing doc. Sections: (1) one-paragraph purpose citing `docs/cicd-spec.md` § "Branch protection"; (2) verbatim list of the 14 required status checks (`lint`, `typecheck`, `loc-cap`, `test (splunkgate_core)`, `test (splunkgate_judges)`, `test (splunkgate_mw)`, `test (splunkgate_mcp)`, `appinspect`, `eval-smoke`, `build-wheels`, `build-app`, `pip-audit`, `gitleaks`, `trivy`); (3) the non-check rules (`required_pull_request_reviews.required_approving_review_count: 1`, `enforce_admins: true`, `restrictions: null`, `allow_force_pushes: false`, `allow_deletions: false`, `required_linear_history: false`, `required_conversation_resolution: true`); (4) "How to apply" — recommended path is `bash scripts/configure_branch_protection.sh` (idempotent); manual fallback via `gh api` documented for read-only auditors; (5) "How to verify" — `gh api /repos/$OWNER/$REPO/branches/main/protection | jq .` and grep for each required check name; (6) post-submission relaxation guidance (e.g., post-hackathon, allow admin self-merge on docs-only PRs); (7) citation to `docs/cicd-spec.md` § "Branch protection" and `docs/architecture.md` § "submission checklist gates".
 - `scripts/configure_branch_protection.sh` — NEW — ~120 LOC bash script. Reads `GH_OWNER` + `GH_REPO` env vars (fail fast with exit 2 if either missing); calls `gh api -X PUT /repos/$GH_OWNER/$GH_REPO/branches/main/protection` with a heredoc'd JSON body matching the spec exactly. Idempotent — re-running on an already-configured repo updates in place without error. Verbose mode (`-v` or `VERBOSE=1`) prints the JSON body before sending. Dry-run mode (`-n` or `DRY_RUN=1`) prints what would be sent and exits 0. Exit codes: 0 success, 1 `gh` CLI not authenticated / API call failed, 2 missing env var. Includes a post-call verification step: re-reads via `gh api` + greps for each of the 14 required check names; if any missing, exit 3.
 - `scripts/tests/test_configure_branch_protection.sh` — NEW — ~80 LOC bats-or-shell test. Covers: dry-run prints the JSON body containing all 14 status check names; missing env vars exits 2; invalid `gh` auth exits 1; the JSON body contains `enforce_admins: true`, `allow_force_pushes: false`, `allow_deletions: false`, `required_linear_history: false`. Uses `gh` stub (PATH-overridden mock) so no real API call fires.
 - `docs/ops/README.md` — NEW — short index pointing at `branch-protection.md` and `secrets.md` (the latter ships in `story-ops-02`); one-paragraph description of the `docs/ops/` directory's purpose ("GitHub-side operational configuration documentation; mirrors what `docs/architecture.md` says about CI gates but at the org/repo configuration layer").
@@ -38,7 +38,7 @@ Then  the count is ≥ 1 (the doc references "status check" by name)
 
 Given docs/ops/branch-protection.md exists
 When  the file is grepped for each of the 14 required status check names
-Then  every name (lint, typecheck, loc-cap, test (aegis_core), test (aegis_judges), test (aegis_mw), test (aegis_mcp), appinspect, eval-smoke, build-wheels, build-app, pip-audit, gitleaks, trivy) appears at least once
+Then  every name (lint, typecheck, loc-cap, test (splunkgate_core), test (splunkgate_judges), test (splunkgate_mw), test (splunkgate_mcp), appinspect, eval-smoke, build-wheels, build-app, pip-audit, gitleaks, trivy) appears at least once
 
 Given docs/ops/branch-protection.md exists
 When  the file is grepped for each setting key in turn
@@ -52,7 +52,7 @@ Then  exit code is 2
 Given GH_OWNER=test GH_REPO=test
 When  `GH_OWNER=test GH_REPO=test bash scripts/configure_branch_protection.sh -n` runs
 Then  exit code is 0
-And   stdout contains all 14 required status check names (lint, typecheck, loc-cap, test (aegis_core), test (aegis_judges), test (aegis_mw), test (aegis_mcp), appinspect, eval-smoke, build-wheels, build-app, pip-audit, gitleaks, trivy)
+And   stdout contains all 14 required status check names (lint, typecheck, loc-cap, test (splunkgate_core), test (splunkgate_judges), test (splunkgate_mw), test (splunkgate_mcp), appinspect, eval-smoke, build-wheels, build-app, pip-audit, gitleaks, trivy)
 And   stdout contains '"enforce_admins": true'
 And   stdout contains '"allow_force_pushes": false'
 And   stdout contains '"allow_deletions": false'
@@ -87,7 +87,7 @@ test -x scripts/configure_branch_protection.sh
 test -f scripts/tests/test_configure_branch_protection.sh
 
 # 2. Branch-protection doc references all 14 required status checks
-for check in 'lint' 'typecheck' 'loc-cap' 'test (aegis_core)' 'test (aegis_judges)' 'test (aegis_mw)' 'test (aegis_mcp)' 'appinspect' 'eval-smoke' 'build-wheels' 'build-app' 'pip-audit' 'gitleaks' 'trivy'; do
+for check in 'lint' 'typecheck' 'loc-cap' 'test (splunkgate_core)' 'test (splunkgate_judges)' 'test (splunkgate_mw)' 'test (splunkgate_mcp)' 'appinspect' 'eval-smoke' 'build-wheels' 'build-app' 'pip-audit' 'gitleaks' 'trivy'; do
   grep -qF "$check" docs/ops/branch-protection.md || { echo "MISSING check name in doc: $check"; exit 1; }
 done
 
@@ -106,7 +106,7 @@ set -e
 
 # 5. Dry-run with env vars prints all 14 check names + the three rule flags
 out=$(GH_OWNER=test GH_REPO=test bash scripts/configure_branch_protection.sh -n)
-for check in 'lint' 'typecheck' 'loc-cap' 'test (aegis_core)' 'test (aegis_judges)' 'test (aegis_mw)' 'test (aegis_mcp)' 'appinspect' 'eval-smoke' 'build-wheels' 'build-app' 'pip-audit' 'gitleaks' 'trivy'; do
+for check in 'lint' 'typecheck' 'loc-cap' 'test (splunkgate_core)' 'test (splunkgate_judges)' 'test (splunkgate_mw)' 'test (splunkgate_mcp)' 'appinspect' 'eval-smoke' 'build-wheels' 'build-app' 'pip-audit' 'gitleaks' 'trivy'; do
   echo "$out" | grep -qF "$check" || { echo "MISSING from dry-run: $check"; exit 1; }
 done
 echo "$out" | grep -q '"enforce_admins": true'
@@ -122,8 +122,8 @@ bash scripts/tests/test_configure_branch_protection.sh
 # 8. §14 clean
 ! grep -E "(mock|fake|dummy|hardcoded|simulated)" docs/ops/branch-protection.md scripts/configure_branch_protection.sh
 
-# 9. Live apply (gated on env vars + explicit AEGIS_APPLY_BRANCH_PROTECTION=1)
-if [ -n "${GH_OWNER:-}" ] && [ -n "${GH_REPO:-}" ] && [ "${AEGIS_APPLY_BRANCH_PROTECTION:-0}" = "1" ]; then
+# 9. Live apply (gated on env vars + explicit SPLUNKGATE_APPLY_BRANCH_PROTECTION=1)
+if [ -n "${GH_OWNER:-}" ] && [ -n "${GH_REPO:-}" ] && [ "${SPLUNKGATE_APPLY_BRANCH_PROTECTION:-0}" = "1" ]; then
   bash scripts/configure_branch_protection.sh
   # Re-read + verify
   gh api "/repos/${GH_OWNER}/${GH_REPO}/branches/main/protection" | jq -e '.required_status_checks.contexts | length >= 14'
@@ -137,7 +137,7 @@ All blocks must exit 0 before opening the PR (block 9 is conditional on env var 
 
 ## Notes for coding agent
 
-- **Per `docs/cicd-spec.md` § "Branch protection"**, the 14 required status checks are: `lint`, `typecheck`, `loc-cap`, `test (aegis_core)`, `test (aegis_judges)`, `test (aegis_mw)`, `test (aegis_mcp)`, `appinspect`, `eval-smoke`, `build-wheels`, `build-app`, `pip-audit`, `gitleaks`, `trivy`. These map 1:1 to the job names in the CI workflows from EPIC-01 stories. The matrix-job names use the format `test (aegis_core)` — preserve the space + parens exactly (GitHub Actions reports matrix jobs with this exact display name).
+- **Per `docs/cicd-spec.md` § "Branch protection"**, the 14 required status checks are: `lint`, `typecheck`, `loc-cap`, `test (splunkgate_core)`, `test (splunkgate_judges)`, `test (splunkgate_mw)`, `test (splunkgate_mcp)`, `appinspect`, `eval-smoke`, `build-wheels`, `build-app`, `pip-audit`, `gitleaks`, `trivy`. These map 1:1 to the job names in the CI workflows from EPIC-01 stories. The matrix-job names use the format `test (splunkgate_core)` — preserve the space + parens exactly (GitHub Actions reports matrix jobs with this exact display name).
 - **Per `docs/cicd-spec.md` § "Acceptance for the CI/CD epic as a whole"** checklist item "Branch protection documented in `docs/ops/branch-protection.md`" — this story owns that line item. Without it, EPIC-01 cannot mark itself done.
 - **Per `docs/architecture.md` § "submission checklist gates"** > "CI" > "`.github/workflows/{ci,eval,release,security}.yml` exist and pass on main branch" — branch protection is the GitHub-side guarantee that the gates can't be bypassed.
 - **GitHub branch-protection API payload shape** (canonical reference: https://docs.github.com/en/rest/branches/branch-protection):
@@ -145,7 +145,7 @@ All blocks must exit 0 before opening the PR (block 9 is conditional on env var 
   {
     "required_status_checks": {
       "strict": true,
-      "contexts": ["lint", "typecheck", "loc-cap", "test (aegis_core)", ...]
+      "contexts": ["lint", "typecheck", "loc-cap", "test (splunkgate_core)", ...]
     },
     "enforce_admins": true,
     "required_pull_request_reviews": {

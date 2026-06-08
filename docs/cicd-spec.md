@@ -1,4 +1,4 @@
-# CI/CD Spec — Aegis
+# CI/CD Spec — SplunkGate
 
 **Status:** DRAFT
 **Last updated:** 2026-06-02
@@ -30,13 +30,13 @@ Four GitHub Actions workflows. Each lives in `.github/workflows/`.
 ### Jobs
 
 1. **`lint`** — ruff check, ruff format --check, markdown-lint on docs/
-2. **`typecheck`** — `mypy --strict packages/aegis_core packages/aegis_judges` + `mypy packages/aegis_mw packages/aegis_mcp eval`
+2. **`typecheck`** — `mypy --strict packages/splunkgate_core packages/splunkgate_judges` + `mypy packages/splunkgate_mw packages/splunkgate_mcp eval`
 3. **`loc-cap`** — fail if any `*.py` file exceeds 400 LOC (excluding blank + pure-comment lines)
-4. **`test`** — `uv run pytest packages/aegis_core packages/aegis_judges packages/aegis_mw packages/aegis_mcp eval`
-5. **`appinspect`** — `splunk-appinspect inspect splunk_apps/aegis_app/` with zero `error`-severity findings
+4. **`test`** — `uv run pytest packages/splunkgate_core packages/splunkgate_judges packages/splunkgate_mw packages/splunkgate_mcp eval`
+5. **`appinspect`** — `splunk-appinspect inspect splunk_apps/splunkgate_app/` with zero `error`-severity findings
 6. **`eval-smoke`** — fast subset (~20 prompts) of the eval harness; verifies the judgment layer wires end-to-end
-7. **`build-wheels`** — `uv build` for each of `aegis_core`, `aegis_judges`, `aegis_mw`, `aegis_mcp`
-8. **`build-app`** — packages `splunk_apps/aegis_app/` into a `.tgz` with hashed name
+7. **`build-wheels`** — `uv build` for each of `splunkgate_core`, `splunkgate_judges`, `splunkgate_mw`, `splunkgate_mcp`
+8. **`build-app`** — packages `splunk_apps/splunkgate_app/` into a `.tgz` with hashed name
 
 ### Trigger rules
 
@@ -88,8 +88,8 @@ jobs:
       - uses: astral-sh/setup-uv@v3
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: uv sync --all-packages --frozen
-      - run: uv run mypy --strict packages/aegis_core packages/aegis_judges
-      - run: uv run mypy packages/aegis_mw packages/aegis_mcp eval
+      - run: uv run mypy --strict packages/splunkgate_core packages/splunkgate_judges
+      - run: uv run mypy packages/splunkgate_mw packages/splunkgate_mcp eval
 
   loc-cap:
     name: 400-LOC cap
@@ -107,7 +107,7 @@ jobs:
     needs: [lint, typecheck]
     strategy:
       matrix:
-        package: [aegis_core, aegis_judges, aegis_mw, aegis_mcp]
+        package: [splunkgate_core, splunkgate_judges, splunkgate_mw, splunkgate_mcp]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
@@ -115,7 +115,7 @@ jobs:
       - run: uv sync --all-packages --frozen
       - run: uv run pytest packages/${{ matrix.package }} --cov=src/${{ matrix.package }} --cov-report=xml --cov-fail-under=70
       - uses: codecov/codecov-action@v4
-        if: ${{ matrix.package == 'aegis_core' || matrix.package == 'aegis_judges' }}
+        if: ${{ matrix.package == 'splunkgate_core' || matrix.package == 'splunkgate_judges' }}
 
   appinspect:
     name: Splunk AppInspect
@@ -126,7 +126,7 @@ jobs:
       - uses: astral-sh/setup-uv@v3
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: uv sync --frozen
-      - run: uv run splunk-appinspect inspect splunk_apps/aegis_app/ --output-file appinspect-report.json --mode test --included-tags cloud --included-tags self-service --included-tags appapproval
+      - run: uv run splunk-appinspect inspect splunk_apps/splunkgate_app/ --output-file appinspect-report.json --mode test --included-tags cloud --included-tags self-service --included-tags appapproval
       - uses: actions/upload-artifact@v4
         with:
           name: appinspect-report
@@ -148,7 +148,7 @@ jobs:
       - uses: astral-sh/setup-uv@v3
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: uv sync --frozen
-      - run: AEGIS_AI_DEFENSE_MOCK=true uv run python eval/scripts/smoke.py
+      - run: SPLUNKGATE_AI_DEFENSE_MOCK=true uv run python eval/scripts/smoke.py
 
   build-wheels:
     name: Build wheels
@@ -157,7 +157,7 @@ jobs:
     needs: [test, typecheck]
     strategy:
       matrix:
-        package: [aegis_core, aegis_judges, aegis_mw, aegis_mcp]
+        package: [splunkgate_core, splunkgate_judges, splunkgate_mw, splunkgate_mcp]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
@@ -178,7 +178,7 @@ jobs:
       - run: |
           mkdir -p dist/
           tar --exclude='__pycache__' --exclude='*.pyc' --exclude='.appinspect.expect.yaml' \
-              -czf dist/aegis_app-$(git rev-parse --short HEAD).tgz -C splunk_apps aegis_app
+              -czf dist/splunkgate_app-$(git rev-parse --short HEAD).tgz -C splunk_apps splunkgate_app
           ls -la dist/
       - uses: actions/upload-artifact@v4
         with:
@@ -203,7 +203,7 @@ while IFS= read -r -d '' f; do
         echo "::error file=$f::File has $LOC LOC (cap: $THRESHOLD). Split it via composition or extraction."
         VIOLATIONS=$((VIOLATIONS + 1))
     fi
-done < <(find packages eval splunk_apps/aegis_app/bin -name '*.py' \
+done < <(find packages eval splunk_apps/splunkgate_app/bin -name '*.py' \
             -not -path '*/.venv/*' -not -path '*/__pycache__/*' -print0 2>/dev/null)
 
 if (( VIOLATIONS > 0 )); then
@@ -256,10 +256,10 @@ jobs:
       - run: uv sync --frozen
       - run: uv run python eval/scripts/run_full.py
         env:
-          AEGIS_AI_DEFENSE_API_KEY: ${{ secrets.AEGIS_AI_DEFENSE_API_KEY }}
-          AEGIS_AI_DEFENSE_MOCK: false
-          AEGIS_SPLUNK_HEC_TOKEN: ${{ secrets.AEGIS_SPLUNK_HEC_TOKEN }}
-          AEGIS_SPLUNK_HEC_URL: ${{ secrets.AEGIS_SPLUNK_HEC_URL }}
+          SPLUNKGATE_AI_DEFENSE_API_KEY: ${{ secrets.SPLUNKGATE_AI_DEFENSE_API_KEY }}
+          SPLUNKGATE_AI_DEFENSE_MOCK: false
+          SPLUNKGATE_SPLUNK_HEC_TOKEN: ${{ secrets.SPLUNKGATE_SPLUNK_HEC_TOKEN }}
+          SPLUNKGATE_SPLUNK_HEC_URL: ${{ secrets.SPLUNKGATE_SPLUNK_HEC_URL }}
       - uses: actions/upload-artifact@v4
         with:
           name: eval-results-${{ github.sha }}
@@ -303,7 +303,7 @@ jobs:
       - run: uv python install 3.13
       - run: uv sync --all-packages --frozen
       - run: uv build --all-packages --out-dir dist/
-      - run: tar --exclude='__pycache__' -czf dist/aegis_app-${{ github.ref_name }}.tgz -C splunk_apps aegis_app
+      - run: tar --exclude='__pycache__' -czf dist/splunkgate_app-${{ github.ref_name }}.tgz -C splunk_apps splunkgate_app
       - uses: sigstore/gh-action-sigstore-python@v3.0.0
         with:
           inputs: dist/*.whl dist/*.tgz
@@ -344,7 +344,7 @@ jobs:
 1. `pip-audit` — known CVEs in deps
 2. `gitleaks` — credential scan
 3. `trivy-fs` — filesystem scan (catches secrets in committed files + OS deps in Docker images)
-4. `bandit` — Python static security scan on `aegis_judges` (touches credentials)
+4. `bandit` — Python static security scan on `splunkgate_judges` (touches credentials)
 5. **`splunk-mcp-ta-style-check`** — verbatim regex patterns the Rod-Soto-authored Splunk MCP TA (Splunkbase 8377) flags (`context/06-splunk-ai-stack/`). We run them against our own MCP traffic logs to dog-food our own audit framing.
 
 ### Concrete YAML skeleton
@@ -394,7 +394,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v3
-      - run: uv run --with bandit bandit -r packages/aegis_judges/src/
+      - run: uv run --with bandit bandit -r packages/splunkgate_judges/src/
 ```
 
 ---
@@ -417,7 +417,7 @@ repos:
     rev: v1.13.0
     hooks:
       - id: mypy
-        files: ^packages/(aegis_core|aegis_judges)/src/
+        files: ^packages/(splunkgate_core|splunkgate_judges)/src/
         args: [--strict]
         additional_dependencies: [pydantic, httpx, structlog]
 
@@ -431,7 +431,7 @@ repos:
 
       - id: no-print
         name: No print() in production
-        entry: bash -c 'if grep -rn "print(" packages/aegis_*/src/ --include="*.py" | grep -v "structlog\|test\|_mock\.py"; then echo "Use structlog, not print()"; exit 1; fi'
+        entry: bash -c 'if grep -rn "print(" packages/splunkgate_*/src/ --include="*.py" | grep -v "structlog\|test\|_mock\.py"; then echo "Use structlog, not print()"; exit 1; fi'
         language: system
         pass_filenames: false
 
@@ -449,7 +449,7 @@ Required after `gh repo create`:
 
 - `main` branch:
   - Require pull request review (1 approval) — for solo project, "Require status checks" is the gate
-  - Required status checks: `lint`, `typecheck`, `loc-cap`, `test (aegis_core)`, `test (aegis_judges)`, `test (aegis_mw)`, `test (aegis_mcp)`, `appinspect`, `eval-smoke`, `build-wheels`, `build-app`, `pip-audit`, `gitleaks`, `trivy`
+  - Required status checks: `lint`, `typecheck`, `loc-cap`, `test (splunkgate_core)`, `test (splunkgate_judges)`, `test (splunkgate_mw)`, `test (splunkgate_mcp)`, `appinspect`, `eval-smoke`, `build-wheels`, `build-app`, `pip-audit`, `gitleaks`, `trivy`
   - Require branches up to date before merging
   - Restrict who can push to matching branches: only `main` PR-only
   - Allow force pushes: no
@@ -461,9 +461,9 @@ Required after `gh repo create`:
 
 | Secret | Source | Used by |
 |---|---|---|
-| `AEGIS_AI_DEFENSE_API_KEY` | Cisco Security Cloud Control tenant (Abu sets up) | `eval-full` job |
-| `AEGIS_SPLUNK_HEC_TOKEN` | Abu's Splunk Cloud instance HEC config | `eval-full` job (writes verdicts to live Splunk for the demo) |
-| `AEGIS_SPLUNK_HEC_URL` | `https://prd-p-t9irr.splunkcloud.com:8088/services/collector/event` | `eval-full` job |
+| `SPLUNKGATE_AI_DEFENSE_API_KEY` | Cisco Security Cloud Control tenant (Abu sets up) | `eval-full` job |
+| `SPLUNKGATE_SPLUNK_HEC_TOKEN` | Abu's Splunk Cloud instance HEC config | `eval-full` job (writes verdicts to live Splunk for the demo) |
+| `SPLUNKGATE_SPLUNK_HEC_URL` | `https://prd-p-t9irr.splunkcloud.com:8088/services/collector/event` | `eval-full` job |
 | `PYPI_API_TOKEN` | PyPI publish (only if Abu wants public packages) | `release.yml` — currently NOT wired (deferred to v0.2) |
 | `GITLEAKS_LICENSE` | gitleaks.io (free for OSS) | `gitleaks` job |
 | `CODECOV_TOKEN` | codecov.io | `test` job |

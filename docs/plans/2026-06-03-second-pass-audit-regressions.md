@@ -53,11 +53,11 @@ Overall: **NEEDS CLEANUP** (one critical type-system contradiction that will bre
 - **What broke:** Newly-authored BDD criteria use `grep -cF` (fixed-string) with `\|` alternation — the backslash-pipe is treated literally under `-F`, so the grep matches nothing. This makes the criterion non-verifiable (always returns 0; the assertion `Then the file is non-empty` doesn't even type-match the `When ... grep -c` action).
 - **Before (pre-fix):** Story did not exist (NEW file).
 - **After (post-fix):**
-  - `story-ops-01:36` — `grep -cF 'cisco_ai_defense:aegis_verdict\|status check'` → always returns 0; "non-empty" assertion is non-sequitur. The reference to `cisco_ai_defense:aegis_verdict` is also irrelevant to a branch-protection doc (likely template-copy residue from app-02).
+  - `story-ops-01:36` — `grep -cF 'cisco_ai_defense:splunkgate_verdict\|status check'` → always returns 0; "non-empty" assertion is non-sequitur. The reference to `cisco_ai_defense:splunkgate_verdict` is also irrelevant to a branch-protection doc (likely template-copy residue from app-02).
   - `story-ops-01:44` — `grep -c 'allow_force_pushes\|allow_deletions\|enforce_admins\|required_conversation_resolution'` → same issue: without `-E`, the `\|` is a literal 2-char sequence that won't appear in the doc.
 - **Impact:** Both criteria silently pass (count is 0 in both, and the "non-empty" / "≥ 4" assertions are misaligned with what's actually being measured). The Notes intent — verify the doc names the four non-check rules — is unmet.
 - **Suggested fix:** In `story-ops-01-branch-protection-config.md`:
-  - Line 36: drop the dangling `cisco_ai_defense:aegis_verdict` artifact and change to `grep -cE "branch protection|status check"` (Then count ≥ 1).
+  - Line 36: drop the dangling `cisco_ai_defense:splunkgate_verdict` artifact and change to `grep -cE "branch protection|status check"` (Then count ≥ 1).
   - Line 44: change `grep -c` to `grep -cE`.
 
 ### R-C-04 — story-eval-06 — File modification map lists `docs/sprint-status.yaml` then says it's NOT edited
@@ -133,10 +133,10 @@ These dimensions were checked across the 6 new stories, 4 most-edited stories (m
 5. **`check_loc.py` canonical path:** `.github/scripts/check_loc.py` used consistently in story-cicd-03 (owner), story-cicd-04 (pre-commit hook), story-skel-04 (verifier), architecture.md:182, cicd-spec.md:101/193/428. No `.sh` orphan references.
 6. **`Synthetic-Data/scripts/emit_sample_verdict.py` path:** Identical across story-app-13 (owner), story-app-02 (consumer), story-app-10 (consumer), story-demo-01 (indirect via generate_agent_verdicts.py). Path conflict resolved.
 7. **`docs/adrs/` directory ownership:** story-ops-02 creates `docs/adrs/_template.md` + `docs/adrs/README.md` (architecture.md:68 reference now backed by a real story).
-8. **`defenseclaw_backend.py` ownership:** story-judges-06 file modification map at line 23 explicitly NEW-marks `packages/aegis_judges/src/aegis_judges/defenseclaw_backend.py`. Three downstream consumers (mw-02, mw-05, mcp-03) no longer reference an orphan.
+8. **`defenseclaw_backend.py` ownership:** story-judges-06 file modification map at line 23 explicitly NEW-marks `packages/splunkgate_judges/src/splunkgate_judges/defenseclaw_backend.py`. Three downstream consumers (mw-02, mw-05, mcp-03) no longer reference an orphan.
 9. **`.tgz` artifact extension:** Consistent across story-app-12, story-cicd-08, cicd-spec.md. No surviving `.tar.gz` references.
 10. **A-12 awk → Python regex swap (story-dc-02):** Quadruple-backtick awk pattern eliminated at line 39+92; replaced with `uv run python -c "import re, pathlib; ..."` that handles the fenced-block parsing safely under zsh.
-11. **A-13 splunklib invented module fix (story-mcp-02):** Line 24 now uses `splunklib.ai.security.detect_injection` (the real symbol) instead of the invented `aegis_judges.splunklib_security_fallback` module.
+11. **A-13 splunklib invented module fix (story-mcp-02):** Line 24 now uses `splunklib.ai.security.detect_injection` (the real symbol) instead of the invented `splunkgate_judges.splunklib_security_fallback` module.
 
 Also confirmed clean (single-dim spot checks):
 - `Synthetic-Data/` corrected spelling per ADR-011 — consistent in eval-spec.md, story-eval-01, architecture.md.
@@ -146,7 +146,7 @@ Also confirmed clean (single-dim spot checks):
 - model_middleware.py 200/200/400 LOC split between mw-03 + mw-04 is now coherent (anchor comments documented in both branches; mw-04's combined wc -l ≤ 400 BDD owns the file-level check).
 - `mypy.ini` parsing now uses `configparser.RawConfigParser` (A-11 fix in story-skel-02:48/52).
 - FoundationSec contract: `FoundationSecExplainer.explain(ctx: VerdictContext) -> str` consistent across foundsec-02 (owner), mw-04, mcp-05 (callers).
-- `VerdictContext` Pydantic model — story-core-01 ships it at `packages/aegis_core/src/aegis_core/verdict_context.py` with the 6 expected fields; all three downstream consumers (mw-04:24, mcp-05:150, foundsec-02:24) import from the same location.
+- `VerdictContext` Pydantic model — story-core-01 ships it at `packages/splunkgate_core/src/splunkgate_core/verdict_context.py` with the 6 expected fields; all three downstream consumers (mw-04:24, mcp-05:150, foundsec-02:24) import from the same location.
 
 ---
 

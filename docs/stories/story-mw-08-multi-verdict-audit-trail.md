@@ -1,7 +1,7 @@
 # Story — Multi-verdict audit chain via AIMessage.extras (F1 from PR #86 retroactive review)
 
 **ID:** story-mw-08-multi-verdict-audit-trail
-**Epic:** EPIC-06 — Surface 1 (aegis-mw middleware library for splunklib.ai)
+**Epic:** EPIC-06 — Surface 1 (splunkgate-mw middleware library for splunklib.ai)
 **Depends on:** story-mw-04-model-middleware-post-inference-pii-check
 **Estimate:** ~1.5h
 **Status:** COMPLETE (PR #98, merged 2026-06-06)
@@ -23,34 +23,34 @@
 
 ## File modification map (as shipped)
 
-- `packages/aegis_mw/src/aegis_mw/model_middleware.py` — UPDATE — added `pre_verdict` parameter to `_apply_post_scan`, added two module-level helpers `_build_audit_extras` and `_with_extras`. 292 LOC after change (cap 400).
-- `packages/aegis_mw/tests/test_audit_chain_extras.py` — NEW — 12 tests (8 pure-function unit + 4 integration via monkey-patched `pre_inference_scan`).
+- `packages/splunkgate_mw/src/splunkgate_mw/model_middleware.py` — UPDATE — added `pre_verdict` parameter to `_apply_post_scan`, added two module-level helpers `_build_audit_extras` and `_with_extras`. 292 LOC after change (cap 400).
+- `packages/splunkgate_mw/tests/test_audit_chain_extras.py` — NEW — 12 tests (8 pure-function unit + 4 integration via monkey-patched `pre_inference_scan`).
 
 ## Behavior matrix
 
 | Pre | Post | Returned `extras` |
 |---|---|---|
 | ALLOW | ALLOW | unchanged (None) |
-| ALLOW | MODIFY | `{aegis_post_trace_id}` |
-| MODIFY | ALLOW | `{aegis_pre_trace_id}` |
-| MODIFY | MODIFY | `{aegis_pre_trace_id, aegis_post_trace_id}` |
-| BLOCK pre | — | raise `ModelInputBlockedByAegis` (verdict carries trace_id) |
-| * | BLOCK post | raise `ModelOutputBlockedByAegis` (logger captures pre_trace_id when applicable) |
+| ALLOW | MODIFY | `{splunkgate_post_trace_id}` |
+| MODIFY | ALLOW | `{splunkgate_pre_trace_id}` |
+| MODIFY | MODIFY | `{splunkgate_pre_trace_id, splunkgate_post_trace_id}` |
+| BLOCK pre | — | raise `ModelInputBlockedBySplunkGate` (verdict carries trace_id) |
+| * | BLOCK post | raise `ModelOutputBlockedBySplunkGate` (logger captures pre_trace_id when applicable) |
 
 ## Acceptance criteria (BDD — machine-verifiable, all passing)
 
 ```
 Given a non-ALLOW pre_verdict and a MODIFY post_verdict
 When  SafetyModelMiddleware.model_middleware completes
-Then  result.message.extras["aegis_pre_trace_id"] equals str(pre_verdict.trace_id)
-And   result.message.extras["aegis_post_trace_id"] equals str(post_verdict.trace_id)
+Then  result.message.extras["splunkgate_pre_trace_id"] equals str(pre_verdict.trace_id)
+And   result.message.extras["splunkgate_post_trace_id"] equals str(post_verdict.trace_id)
 
 Given _with_extras is called on an AIMessage with existing extras
 When  the result is inspected
-Then  upstream agent extras coexist with aegis_* keys; aegis_* wins on collision
+Then  upstream agent extras coexist with splunkgate_* keys; splunkgate_* wins on collision
 
 Given the 12 new tests
-When  `uv run pytest packages/aegis_mw/tests/test_audit_chain_extras.py` runs
+When  `uv run pytest packages/splunkgate_mw/tests/test_audit_chain_extras.py` runs
 Then  all 12 pass
 ```
 
@@ -60,6 +60,6 @@ Then  all 12 pass
 
 ## Notes
 
-- Keys are namespaced `aegis_*` so they don't collide with splunklib.ai's own LLM-provider extras.
+- Keys are namespaced `splunkgate_*` so they don't collide with splunklib.ai's own LLM-provider extras.
 - `_with_extras` uses `dataclasses.replace` on the frozen AIMessage — verified safe by reviewer pass on PR #98.
-- Closes [issue #94](https://github.com/Blockchain-Oracle/aegis/issues/94).
+- Closes [issue #94](https://github.com/Blockchain-Oracle/splunkgate/issues/94).

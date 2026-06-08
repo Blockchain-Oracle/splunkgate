@@ -20,17 +20,17 @@
 
 Exact files the coding agent creates or modifies for this story:
 
-- `playwright.config.ts` — NEW — minimal Playwright config (no TypeScript app exists yet — config is pure JS-as-TS, ~50 LOC); declares `chromium` + `webkit` projects, viewport 1440x900, `ignoreHTTPSErrors: true`, `baseURL: process.env.AEGIS_SPLUNK_URL || "https://localhost:8000"`, screenshot path `screenshots/current/`, test directory `tests/visual/`.
-- `tests/visual/dashboards.spec.ts` — NEW — Playwright test file (~120 LOC). 3 tests (one per dashboard): each navigates to `${baseURL}/en-US/app/aegis_app/<dashboard_name>`, waits for `[data-test="visualization"]` selector with 15s timeout, scrolls to bottom + back to top to ensure full render, captures `screenshots/current/<dashboard>--desktop.png` full-page screenshot. Tests fail on any browser console error.
+- `playwright.config.ts` — NEW — minimal Playwright config (no TypeScript app exists yet — config is pure JS-as-TS, ~50 LOC); declares `chromium` + `webkit` projects, viewport 1440x900, `ignoreHTTPSErrors: true`, `baseURL: process.env.SPLUNKGATE_SPLUNK_URL || "https://localhost:8000"`, screenshot path `screenshots/current/`, test directory `tests/visual/`.
+- `tests/visual/dashboards.spec.ts` — NEW — Playwright test file (~120 LOC). 3 tests (one per dashboard): each navigates to `${baseURL}/en-US/app/splunkgate_app/<dashboard_name>`, waits for `[data-test="visualization"]` selector with 15s timeout, scrolls to bottom + back to top to ensure full render, captures `screenshots/current/<dashboard>--desktop.png` full-page screenshot. Tests fail on any browser console error.
 - `scripts/visual_loop.sh` — NEW — bash orchestrator (~80 LOC). Steps: (1) ensure Splunk Docker is running (`docker compose -f infra/splunk-docker-compose.yml up -d` if not running), (2) emit synthetic verdict events via `Synthetic-Data/scripts/emit_sample_verdict.py` (loop ~500 events covering all 4 surfaces + 11 rules + all severities + jurisdictional_tags), (3) wait 30s for indexing, (4) `uv run playwright test`, (5) run `odiff` per dashboard comparing `screenshots/current/<name>.png` vs `screenshots/anchor/<name>.png` with threshold 0.05, output diff PNGs to `screenshots/diff/`, (6) call `scripts/vision_review.py` for each dashboard, (7) parse the structured JSON output, (8) exit 0 only if all 3 dashboards have `slop_score <= 2 AND blocking_count == 0`.
 - `scripts/vision_review.py` — NEW — Python script (~150 LOC, ≤ 400). CLI: `--anchor <path> --current <path> --diff <path> --dashboard-name <name> --output <json>`. Loads the 3 images, posts them to Claude API (Opus 4.7) with a fresh-context reviewer prompt (no project history), receives back a JSON verdict: `{ "dashboard": "<name>", "slop_score": int 0-10, "blocking_count": int, "blocking_issues": [str], "minor_issues": [str], "verdict": "ok" | "block" }`. Saves verdict to `.claude/visual-reviews/<dashboard>--<timestamp>.json` and prints summary.
-- `.claude/hooks/post_dashboard_edit.sh` — NEW — PostToolUse hook (~30 LOC). Triggers on any Write/Edit to `splunk_apps/aegis_app/default/data/ui/views/*.xml`. Body: spawns `scripts/visual_loop.sh` in background, posts result to the build thread. Wired via `.claude/settings.json` PostToolUse matcher (this story owns hook script + matcher addition).
-- `.claude/settings.json` — UPDATE — append a PostToolUse matcher entry: `{ "matcher": "Write|Edit", "filePathPattern": "splunk_apps/aegis_app/default/data/ui/views/.*\\.xml$", "command": ".claude/hooks/post_dashboard_edit.sh" }`.
+- `.claude/hooks/post_dashboard_edit.sh` — NEW — PostToolUse hook (~30 LOC). Triggers on any Write/Edit to `splunk_apps/splunkgate_app/default/data/ui/views/*.xml`. Body: spawns `scripts/visual_loop.sh` in background, posts result to the build thread. Wired via `.claude/settings.json` PostToolUse matcher (this story owns hook script + matcher addition).
+- `.claude/settings.json` — UPDATE — append a PostToolUse matcher entry: `{ "matcher": "Write|Edit", "filePathPattern": "splunk_apps/splunkgate_app/default/data/ui/views/.*\\.xml$", "command": ".claude/hooks/post_dashboard_edit.sh" }`.
 - `screenshots/anchor/agent_risk_overview--desktop.png` — NEW — captured one-time from the first clean build of dashboard 1 (story app-05). Committed as the visual anchor.
 - `screenshots/anchor/verdict_inspector--desktop.png` — NEW — captured from story app-06.
 - `screenshots/anchor/regulator_evidence_pack--desktop.png` — NEW — captured from story app-07 (default profile).
 - `screenshots/anchor/regulator_evidence_pack--fsi.png` — NEW — captured from story app-07 (FSI profile, profile-gated panels hidden).
-- `infra/splunk-docker-compose.yml` — NEW — minimal Docker Compose (~40 LOC) for local Splunk Enterprise dev instance (image `splunk/splunk:9.4.0`, HEC enabled, `SPLUNK_PASSWORD` from env, port 8000 + 8088 + 8089 exposed, volume mount for `splunk_apps/aegis_app/` into `/opt/splunk/etc/apps/aegis_app/`).
+- `infra/splunk-docker-compose.yml` — NEW — minimal Docker Compose (~40 LOC) for local Splunk Enterprise dev instance (image `splunk/splunk:9.4.0`, HEC enabled, `SPLUNK_PASSWORD` from env, port 8000 + 8088 + 8089 exposed, volume mount for `splunk_apps/splunkgate_app/` into `/opt/splunk/etc/apps/splunkgate_app/`).
 
 The coding agent must NOT modify files outside this map without re-checking CLAUDE.md.
 
@@ -76,10 +76,10 @@ When  `bash -n .claude/hooks/post_dashboard_edit.sh` runs (syntax check)
 Then  exit code is 0
 
 Given .claude/settings.json is updated
-When  `jq '.hooks.PostToolUse[] | select(.filePathPattern | contains("aegis_app"))' .claude/settings.json` runs
+When  `jq '.hooks.PostToolUse[] | select(.filePathPattern | contains("splunkgate_app"))' .claude/settings.json` runs
 Then  the matcher entry is present
 
-Given a coding agent edits splunk_apps/aegis_app/default/data/ui/views/agent_risk_overview.xml
+Given a coding agent edits splunk_apps/splunkgate_app/default/data/ui/views/agent_risk_overview.xml
 When  the file is saved
 Then  the PostToolUse hook fires .claude/hooks/post_dashboard_edit.sh
 And   scripts/visual_loop.sh runs in the background
@@ -139,8 +139,8 @@ test "$(wc -l < .claude/hooks/post_dashboard_edit.sh)" -le 400
 # 5. settings.json hook matcher present
 jq -e '.hooks.PostToolUse[] | select(.command | contains("post_dashboard_edit"))' .claude/settings.json >/dev/null
 
-# 6. Full loop dry-run (gated on AEGIS_SPLUNK_HOST + ANTHROPIC_API_KEY)
-if [ -n "${AEGIS_SPLUNK_HOST:-}" ] && [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+# 6. Full loop dry-run (gated on SPLUNKGATE_SPLUNK_HOST + ANTHROPIC_API_KEY)
+if [ -n "${SPLUNKGATE_SPLUNK_HOST:-}" ] && [ -n "${ANTHROPIC_API_KEY:-}" ]; then
   bash scripts/visual_loop.sh
   # Verify outputs
   for d in agent_risk_overview verdict_inspector regulator_evidence_pack; do
@@ -157,9 +157,9 @@ if [ -n "${AEGIS_SPLUNK_HOST:-}" ] && [ -n "${ANTHROPIC_API_KEY:-}" ]; then
 fi
 
 # 7. Hook triggers on file write (integration test, gated on env)
-if [ -n "${AEGIS_SPLUNK_HOST:-}" ]; then
+if [ -n "${SPLUNKGATE_SPLUNK_HOST:-}" ]; then
   # Simulate a Write tool call by touching the file
-  touch splunk_apps/aegis_app/default/data/ui/views/agent_risk_overview.xml
+  touch splunk_apps/splunkgate_app/default/data/ui/views/agent_risk_overview.xml
   # The hook runs in background; just verify the script is executable
   test -x .claude/hooks/post_dashboard_edit.sh
 fi
@@ -192,5 +192,5 @@ All eight blocks must exit 0 before opening the PR (blocks 6 and 7 gated on env 
 - `screenshots/diff/` is .gitignored — diffs are ephemeral CI artifacts, not committed. Add the .gitignore entry as part of this story's PR if not already present.
 - `.claude/visual-reviews/` is also .gitignored — vision review JSONs are CI artifacts. But uploaded to the build thread for human review.
 - The Playwright tests in `tests/visual/dashboards.spec.ts` are NOT part of the Python pytest suite — they run via `npx playwright test` (or `uv run playwright test` if playwright-python is used). Stick with the Node Playwright runner; it's faster for screenshot capture and is what the `sahil-visual-loop` skill standardizes on.
-- If `infra/splunk-docker-compose.yml` proves heavy to spin up in CI, the loop can hit a long-lived shared Splunk Cloud dev instance instead (gated on `AEGIS_SPLUNK_URL`). Document both modes in the script's `--help`.
+- If `infra/splunk-docker-compose.yml` proves heavy to spin up in CI, the loop can hit a long-lived shared Splunk Cloud dev instance instead (gated on `SPLUNKGATE_SPLUNK_URL`). Document both modes in the script's `--help`.
 - This is the last EPIC-09 story. After this lands, EPIC-12 (AppInspect hardening + Splunkbase submission) is unblocked.

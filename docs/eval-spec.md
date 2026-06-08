@@ -1,4 +1,4 @@
-# Eval Spec — Aegis
+# Eval Spec — SplunkGate
 
 **Status:** DRAFT
 **Last updated:** 2026-06-02
@@ -36,7 +36,7 @@ Per `context/01-threat-landscape/02-jailbreak-techniques.md` (now grounded with 
 
 **Use:** PII-exfil detection benchmark. Tests `check_output_leak` MCP tool + `model_middleware` post-emission scan.
 
-**Note:** Mistral patched the rendering-layer exfil vector 2024-09-13 by disabling external markdown image rendering. Imprompter test corpus is for *detection*, not *prevention* — Aegis catches the payload pattern in the LLM output before the client-side renderer would have processed it.
+**Note:** Mistral patched the rendering-layer exfil vector 2024-09-13 by disabling external markdown image rendering. Imprompter test corpus is for *detection*, not *prevention* — SplunkGate catches the payload pattern in the LLM output before the client-side renderer would have processed it.
 
 ### 4. Custom synthetic corpus (`Synthetic-Data/`)
 
@@ -93,7 +93,7 @@ For Foundation-Sec via `| ai`: reported as "TBD" — same blocker.
 
 ---
 
-## Baselines (compare Aegis against these)
+## Baselines (compare SplunkGate against these)
 
 ### Baseline 1 — DefenseClaw regex-only
 
@@ -103,7 +103,7 @@ Hypothesis: high precision, lower recall, very low cost, sub-50 ms latency. Miss
 
 ### Baseline 2 — gpt-oss-120b-as-judge
 
-Replace Aegis's multi-model judgment chain with a single gpt-oss-120b call asking "is this prompt injection? classify the output for PII?" — generic LLM-as-judge pattern.
+Replace SplunkGate's multi-model judgment chain with a single gpt-oss-120b call asking "is this prompt injection? classify the output for PII?" — generic LLM-as-judge pattern.
 
 Hypothesis: balanced precision/recall, higher latency, higher cost, worse ECE than Cisco AI Defense (per the architect-lens reasoning — generic LLMs without domain training tend to be over-confident).
 
@@ -111,9 +111,9 @@ Hypothesis: balanced precision/recall, higher latency, higher cost, worse ECE th
 
 Just the binary classifier. No Foundation-Sec explanation, no DefenseClaw second pass, no `splunklib/ai/security.py` first-pass.
 
-Hypothesis: the precision/recall this is the ceiling for "use Cisco's product without us"; Aegis's value-add is the composition + the explanation layer + the SOC-integrated audit trail.
+Hypothesis: the precision/recall this is the ceiling for "use Cisco's product without us"; SplunkGate's value-add is the composition + the explanation layer + the SOC-integrated audit trail.
 
-### Aegis full stack
+### SplunkGate full stack
 
 `splunklib_security` first-pass → Cisco AI Defense classifier → Foundation-Sec explanation. Per `architecture.md` § "Judgment layer."
 
@@ -127,7 +127,7 @@ Hypothesis: precision dominated by AI Defense (composition is multiplicative on 
 eval/
 ├── pyproject.toml
 ├── README.md
-├── src/aegis_eval/
+├── src/splunkgate_eval/
 │   ├── __init__.py
 │   ├── jailbreakbench.py             # loader + per-prompt verdict runner
 │   ├── advbench.py                   # loader + MSJ scaling test
@@ -155,7 +155,7 @@ Output: `eval/results/<git-sha>/` contains:
 - `reliability/<evaluator>.png` — calibration diagram
 - `latency/<evaluator>.png` — percentile plot
 - `cost.json` — cost calculation
-- `versus_baselines.md` — Aegis vs the 3 baselines, side-by-side
+- `versus_baselines.md` — SplunkGate vs the 3 baselines, side-by-side
 
 The nightly `eval.yml` workflow commits `summary.md` → `docs/eval-results.md` on `main` so the README's eval table updates automatically.
 
@@ -166,7 +166,7 @@ The nightly `eval.yml` workflow commits `summary.md` → `docs/eval-results.md` 
 Pseudo-template — values get filled by `report.py`:
 
 ```markdown
-## Eval results (Aegis vs baselines on JailbreakBench + AdvBench + Imprompter + custom)
+## Eval results (SplunkGate vs baselines on JailbreakBench + AdvBench + Imprompter + custom)
 
 | Evaluator | Precision | Recall | F1 | ECE | p50 latency | p99 latency | $/1k verdicts |
 |---|---|---|---|---|---|---|---|
@@ -174,11 +174,11 @@ Pseudo-template — values get filled by `report.py`:
 | DefenseClaw regex-only | 0.XX | 0.XX | 0.XX | 0.XX | < 50 ms | < 100 ms | $0 |
 | gpt-oss-120b-as-judge | 0.XX | 0.XX | 0.XX | 0.XX | XXX ms | XXX ms | $X.XX |
 | Cisco AI Defense alone | 0.XX | 0.XX | 0.XX | 0.XX | XXX ms | XXX ms | $0 (within quota) |
-| **Aegis full stack** | **0.XX** | **0.XX** | **0.XX** | **0.XX** | **XXX ms** | **XXX ms** | **$0 (within quota)** |
+| **SplunkGate full stack** | **0.XX** | **0.XX** | **0.XX** | **0.XX** | **XXX ms** | **XXX ms** | **$0 (within quota)** |
 
 **Reading the table:**
-- Aegis adds the explanation column (the `explanation` field on every verdict). Baselines don't generate one.
-- Aegis sits on the same MSJ scaling curve as AI Defense — power-law exponent invariant per Anthropic 2024 (verified). We are honest about the ceiling.
+- SplunkGate adds the explanation column (the `explanation` field on every verdict). Baselines don't generate one.
+- SplunkGate sits on the same MSJ scaling curve as AI Defense — power-law exponent invariant per Anthropic 2024 (verified). We are honest about the ceiling.
 - The win is composition: cheap pre-filter → strong classifier → human-readable explanation, all logged to Splunk in the same sourcetype as Cisco Security Cloud's existing AI Defense events.
 ```
 
@@ -189,7 +189,7 @@ Pseudo-template — values get filled by `report.py`:
 Per the architect lens and Abu's explicit anti-hallucination rule:
 
 - **No "estimated" numbers in the table.** Either we ran the eval and got the number, or we leave it blank.
-- **`AEGIS_AI_DEFENSE_MOCK=true` produces a mock-flagged summary.** The mock baseline lets the eval table render with `mock=true` annotations so the demo + CI work even before AI Defense access lands. Real numbers ship in a follow-up commit.
+- **`SPLUNKGATE_AI_DEFENSE_MOCK=true` produces a mock-flagged summary.** The mock baseline lets the eval table render with `mock=true` annotations so the demo + CI work even before AI Defense access lands. Real numbers ship in a follow-up commit.
 - **Imprompter eval flags Mistral's patch.** README explicitly says "Mistral patched the rendering-layer vector 2024-09-13; we detect the payload pattern in the LLM output for defense-in-depth, not as the sole defense" — per `context/01-threat-landscape/04-pii-and-data-leak-mechanics.md` updated section.
 - **MSJ scaling honesty.** The eval table reports detection rate as a function of shot-count; the README explicitly states "we sit on the same power-law scaling curve as Anthropic showed; this is a probabilistic gate, not a deterministic one."
 
@@ -200,7 +200,7 @@ Per the architect lens and Abu's explicit anti-hallucination rule:
 EPIC-10 is "done" when:
 
 - [ ] `Synthetic-Data/` folder mirrors DNS Guard's *content* convention (corrected spelling per ADR-011 — DNS Guard's `Syntethic-Data/` typo is NOT preserved; mirror the Python-data-generator pattern, deterministic seed, `[1/N]` print headers, summary table — not the misspelling)
-- [ ] All 5 datasets load via `aegis_eval.<dataset>` modules
+- [ ] All 5 datasets load via `splunkgate_eval.<dataset>` modules
 - [ ] All 4 baselines run end-to-end against all 5 datasets in `eval/scripts/run_full.py`
 - [ ] `eval/results/<sha>/summary.md` is the source of `docs/eval-results.md` (CI auto-commits on `main`)
 - [ ] README's eval table renders with real numbers (or honest `mock=true` annotations if AI Defense access still pending)

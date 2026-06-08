@@ -1,11 +1,11 @@
 [project]
-name = "aegis-monorepo"
+name = "splunkgate-monorepo"
 version = "0.0.1"
-description = "Aegis — runtime AI agent safety net for Splunk/Cisco enterprises"
+description = "SplunkGate — runtime AI agent safety net for Splunk/Cisco enterprises"
 readme = "README.md"
 requires-python = ">=3.13"
 license = { text = "Apache-2.0" }
-authors = [{ name = "Aegis contributors" }]
+authors = [{ name = "SplunkGate contributors" }]
 
 [dependency-groups]
 dev = [
@@ -17,11 +17,11 @@ dev = [
     "ruff>=0.6",
     "mypy>=1.11",
     "pre-commit>=4.0",
-    "aegis-core",
-    "aegis-judges",
-    "aegis-mw",
-    "aegis-mcp",
-    "aegis-eval",
+    "splunkgate-core",
+    "splunkgate-judges",
+    "splunkgate-mw",
+    "splunkgate-mcp",
+    "splunkgate-eval",
     # Pinned exact: scripts/generate_app_icons.py promises md5-deterministic
     # PNG output, and Pillow can ship encoder/font-metric tweaks in minor
     # bumps that silently break the BDD block-4 determinism assertion.
@@ -34,17 +34,17 @@ testpaths = ["packages", "eval"]
 addopts = "--import-mode=importlib"
 
 [tool.uv.sources]
-aegis-core = { workspace = true }
-aegis-judges = { workspace = true }
-aegis-mw = { workspace = true }
-aegis-mcp = { workspace = true }
-aegis-eval = { workspace = true }
+splunkgate-core = { workspace = true }
+splunkgate-judges = { workspace = true }
+splunkgate-mw = { workspace = true }
+splunkgate-mcp = { workspace = true }
+splunkgate-eval = { workspace = true }
 
 [tool.uv.workspace]
 members = [
-    "packages/aegis_core",
-    "packages/aegis_judges",
-    "packages/aegis_mw",
-    "packages/aegis_mcp",
+    "packages/splunkgate_core",
+    "packages/splunkgate_judges",
+    "packages/splunkgate_mw",
+    "packages/splunkgate_mcp",
     "eval",
 ]

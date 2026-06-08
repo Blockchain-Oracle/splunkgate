@@ -10,7 +10,7 @@
 
 ## User story
 
-**As a** SOC analyst investigating a specific Aegis verdict
+**As a** SOC analyst investigating a specific SplunkGate verdict
 **I want to** land on the Verdict Inspector from any drill-down (Dashboard 1 heatmap cell, ES notable, or direct URL), see the matching verdicts as a sortable table, click a row to slide in a full detail panel (input text, full evaluator chain, rules with confidence, Foundation-Sec explanation, OTel trace_id, "Open in Splunk ES" button), and view related events from the same trace_id across all four surfaces
 **So that** I can move from "this verdict tripped" to "here's the full agent session context" in one click without context-switching between Splunk Search, ES Investigation, and external tools
 
@@ -20,7 +20,7 @@
 
 Exact files the coding agent creates or modifies for this story:
 
-- `splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml` — NEW — Dashboard Studio v2 dashboard. Wrapper: `<dashboard version="2" theme="dark"><label>Aegis — Verdict Inspector</label><description>SOC + AI platform engineer drill-down. Slide-in detail panel + related-events trace view. Sourced from cisco_ai_defense:aegis_verdict + aegis_verdict_history KV-store.</description><definition><![CDATA[ {JSON} ]]></definition></dashboard>`. JSON declares: 5 inputs (`input_time` timerange, `input_agent_id` dropdown — populated by `| stats values(agent_id)`, `input_rule` dropdown — populated by `| mvexpand rule | stats values(rule)`, `input_severity` dropdown — fixed values, `input_verdict_label` dropdown — fixed values). 4 visualizations: `verdict_filter_bar` (markdown showing active filters), `verdict_table` (the main table — columns timestamp/agent_id/surface/verdict_label/severity/rules/explanation_truncated/latency_ms/trace_id, click → opens detail panel via drilldown action), `detail_panel` (slide-in single-event viz showing full Verdict object, only renders when `$row.trace_id$` token is set), `related_events_panel` (related events from same trace_id across all four surfaces, columns timestamp/surface/verdict_label/severity). 4 dataSources (one per non-input viz), all using `aegis_data` macro + per-panel filters bound to inputs via `$input_*$` tokens. Layout: filter bar at top (full width), verdict_table (12-wide, h:400) below filters, detail_panel (8-wide, h:600, conditionally visible) + related_events_panel (4-wide, h:600) below table. Drill-down on detail_panel includes an "Open in Splunk ES" link (`/app/SplunkEnterpriseSecuritySuite/investigation_workbench?form.trace_id=$row.trace_id$`). File total: target ≤ 380 LOC.
+- `splunk_apps/splunkgate_app/default/data/ui/views/verdict_inspector.xml` — NEW — Dashboard Studio v2 dashboard. Wrapper: `<dashboard version="2" theme="dark"><label>SplunkGate — Verdict Inspector</label><description>SOC + AI platform engineer drill-down. Slide-in detail panel + related-events trace view. Sourced from cisco_ai_defense:splunkgate_verdict + splunkgate_verdict_history KV-store.</description><definition><![CDATA[ {JSON} ]]></definition></dashboard>`. JSON declares: 5 inputs (`input_time` timerange, `input_agent_id` dropdown — populated by `| stats values(agent_id)`, `input_rule` dropdown — populated by `| mvexpand rule | stats values(rule)`, `input_severity` dropdown — fixed values, `input_verdict_label` dropdown — fixed values). 4 visualizations: `verdict_filter_bar` (markdown showing active filters), `verdict_table` (the main table — columns timestamp/agent_id/surface/verdict_label/severity/rules/explanation_truncated/latency_ms/trace_id, click → opens detail panel via drilldown action), `detail_panel` (slide-in single-event viz showing full Verdict object, only renders when `$row.trace_id$` token is set), `related_events_panel` (related events from same trace_id across all four surfaces, columns timestamp/surface/verdict_label/severity). 4 dataSources (one per non-input viz), all using `splunkgate_data` macro + per-panel filters bound to inputs via `$input_*$` tokens. Layout: filter bar at top (full width), verdict_table (12-wide, h:400) below filters, detail_panel (8-wide, h:600, conditionally visible) + related_events_panel (4-wide, h:600) below table. Drill-down on detail_panel includes an "Open in Splunk ES" link (`/app/SplunkEnterpriseSecuritySuite/investigation_workbench?form.trace_id=$row.trace_id$`). File total: target ≤ 380 LOC.
 
 The coding agent must NOT modify files outside this map without re-checking CLAUDE.md.
 
@@ -29,7 +29,7 @@ The coding agent must NOT modify files outside this map without re-checking CLAU
 ## Acceptance criteria (BDD — machine-verifiable)
 
 ```
-Given splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml exists
+Given splunk_apps/splunkgate_app/default/data/ui/views/verdict_inspector.xml exists
 When  python -c "import xml.etree.ElementTree as ET; ET.parse(...)" runs
 Then  exit code is 0 (well-formed XML)
 
@@ -55,7 +55,7 @@ Then  the set is exactly {"verdict_filter_bar","verdict_table","detail_panel","r
 
 Given the parsed JSON dataSources
 When  each query string is inspected
-Then  every query contains "`aegis_data`" or "sourcetype=cisco_ai_defense:aegis_verdict"
+Then  every query contains "`splunkgate_data`" or "sourcetype=cisco_ai_defense:splunkgate_verdict"
 
 Given the parsed JSON visualizations.verdict_table
 When  its drilldown config is inspected
@@ -78,12 +78,12 @@ When  the dashboard loads
 Then  the input_time and input_rule values reflect the URL params (Splunk Dashboard Studio v2 default URL-binding)
 
 Given a Splunk Cloud instance with the app installed and synthetic events loaded
-When  the dashboard loads via Playwright at /en-US/app/aegis_app/verdict_inspector
+When  the dashboard loads via Playwright at /en-US/app/splunkgate_app/verdict_inspector
 Then  the verdict_table renders ≥ 1 row within 5s
 And   clicking a row sets the row_trace_id token and the detail_panel becomes visible within 1s
 And   browser console errors == 0
 
-Given splunk-appinspect runs against splunk_apps/aegis_app/
+Given splunk-appinspect runs against splunk_apps/splunkgate_app/
 When  the output is parsed
 Then  zero "error"-severity findings against tags dashboard_studio_v2_valid, simple_xml_valid_views
 ```
@@ -96,18 +96,18 @@ Then  zero "error"-severity findings against tags dashboard_studio_v2_valid, sim
 set -euo pipefail
 
 # 1. File exists, XML well-formed
-test -f splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml
-python -c "import xml.etree.ElementTree as ET; ET.parse('splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml')"
+test -f splunk_apps/splunkgate_app/default/data/ui/views/verdict_inspector.xml
+python -c "import xml.etree.ElementTree as ET; ET.parse('splunk_apps/splunkgate_app/default/data/ui/views/verdict_inspector.xml')"
 
 # 2. Dashboard Studio v2 + dark theme
-grep -q '<dashboard version="2"' splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml
-grep -q 'theme="dark"' splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml
-grep -q '<label>Aegis — Verdict Inspector</label>' splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml
+grep -q '<dashboard version="2"' splunk_apps/splunkgate_app/default/data/ui/views/verdict_inspector.xml
+grep -q 'theme="dark"' splunk_apps/splunkgate_app/default/data/ui/views/verdict_inspector.xml
+grep -q '<label>SplunkGate — Verdict Inspector</label>' splunk_apps/splunkgate_app/default/data/ui/views/verdict_inspector.xml
 
 # 3. JSON structural checks
 python - <<'PY'
 import xml.etree.ElementTree as ET, json, sys
-root = ET.parse("splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml").getroot()
+root = ET.parse("splunk_apps/splunkgate_app/default/data/ui/views/verdict_inspector.xml").getroot()
 defn = root.find(".//definition")
 j = json.loads(defn.text)
 
@@ -120,7 +120,7 @@ assert set(j["visualizations"].keys()) == expected_viz, f"Viz mismatch: {set(j['
 # Every dataSource references our sourcetype/macro
 for name, ds in j["dataSources"].items():
     q = ds.get("options",{}).get("query","")
-    assert "cisco_ai_defense:aegis_verdict" in q or "`aegis_data`" in q, f"{name} missing canonical search: {q}"
+    assert "cisco_ai_defense:splunkgate_verdict" in q or "`splunkgate_data`" in q, f"{name} missing canonical search: {q}"
 
 # Drilldown on verdict_table -> detail_panel via token
 table = j["visualizations"]["verdict_table"]
@@ -139,14 +139,14 @@ print("All structural checks passed.")
 PY
 
 # 4. LOC cap
-test "$(wc -l < splunk_apps/aegis_app/default/data/ui/views/verdict_inspector.xml)" -le 400
+test "$(wc -l < splunk_apps/splunkgate_app/default/data/ui/views/verdict_inspector.xml)" -le 400
 
-# 5. Playwright deep-link test (gated on AEGIS_SPLUNK_HOST)
-if [ -n "${AEGIS_SPLUNK_HOST:-}" ]; then
+# 5. Playwright deep-link test (gated on SPLUNKGATE_SPLUNK_HOST)
+if [ -n "${SPLUNKGATE_SPLUNK_HOST:-}" ]; then
   uv run python - <<'PY'
 from playwright.sync_api import sync_playwright
 import os
-base = f"https://{os.environ['AEGIS_SPLUNK_HOST']}:8000/en-US/app/aegis_app/verdict_inspector"
+base = f"https://{os.environ['SPLUNKGATE_SPLUNK_HOST']}:8000/en-US/app/splunkgate_app/verdict_inspector"
 url = f"{base}?form.input_time.earliest=-24h&form.input_rule=PII"
 with sync_playwright() as p:
     b = p.chromium.launch(); ctx = b.new_context(ignore_https_errors=True); page = ctx.new_page()
@@ -167,7 +167,7 @@ PY
 fi
 
 # 6. AppInspect
-uv run splunk-appinspect inspect splunk_apps/aegis_app/ --mode test --included-tags cloud \
+uv run splunk-appinspect inspect splunk_apps/splunkgate_app/ --mode test --included-tags cloud \
   --output-file appinspect-report.json --data-format json
 python - <<'PY'
 import json, sys
@@ -192,8 +192,8 @@ All six blocks must exit 0 before opening the PR (block 5 gated on env var).
 - Per `../../../context/07-cisco-stack/01-ai-defense-deep.md`, the rules array contains up to 11 named Cisco rule classifications (Prompt Injection, PII, etc.). Use `mvjoin(rule, ", ")` to flatten for table display; keep the underlying multi-value field intact for drill-down filtering by individual rule.
 - Per `docs/architecture.md` § "API schemas > Verdict", the detail panel should show: trace_id, timestamp, verdict, severity, rules (with confidence per rule), explanation (full, not truncated), classifications, modifications, surface, latency_ms. Use a key/value markdown viz or a single-event detail viz.
 - The "Open in Splunk ES" button URL pattern is documented in `../../../context/05-splunk-core/01-enterprise-security-architecture.md`: `/app/SplunkEnterpriseSecuritySuite/investigation_workbench?form.search=trace_id%3D<value>`. Verify the URL pattern works against Abu's Splunk Cloud instance with ES installed before finalizing.
-- Related-events query: `` `aegis_data` trace_id="$row_trace_id$" | sort _time | table _time, surface, verdict_label, severity, rules ``. This shows the agent's session timeline across all four surfaces — middleware, MCP, DefenseClaw — that share the same trace_id (via OTel trace propagation per story-core-03).
-- Filter inputs bind to the verdict_table query via tokens: `` `aegis_data` $input_severity$ $input_verdict_label$ $input_agent_id$ $input_rule$ ``. Each input emits a fragment (e.g., `input_severity` emits `severity=HIGH` or `` (empty) ``); the table query interpolates them. Dashboard Studio v2 supports this via the `defaults` block and per-input `prefix`/`suffix` formatting.
+- Related-events query: `` `splunkgate_data` trace_id="$row_trace_id$" | sort _time | table _time, surface, verdict_label, severity, rules ``. This shows the agent's session timeline across all four surfaces — middleware, MCP, DefenseClaw — that share the same trace_id (via OTel trace propagation per story-core-03).
+- Filter inputs bind to the verdict_table query via tokens: `` `splunkgate_data` $input_severity$ $input_verdict_label$ $input_agent_id$ $input_rule$ ``. Each input emits a fragment (e.g., `input_severity` emits `severity=HIGH` or `` (empty) ``); the table query interpolates them. Dashboard Studio v2 supports this via the `defaults` block and per-input `prefix`/`suffix` formatting.
 - URL deep-link binding: Splunk Dashboard Studio v2 reads `?form.<input_name>=<value>` from URL automatically when input names match. The contract with story-app-05's Dashboard 1 drill-down is: app-05 emits `?form.input_time.earliest=$row._time$&form.input_rule=$row.rule$` (using the verbatim destination input NAMES `input_time` and `input_rule`); this dashboard's inputs are declared with those exact names. Resolved as of the audit fix on 2026-06-03 — both stories use the canonical `input_<name>` URL key.
 - Do NOT use Classic Simple XML `<form>` syntax — this dashboard is fully Dashboard Studio v2. Mixing the two breaks the JSON parser.
 - Per `docs/ux-spec.md` § "Banned patterns", do NOT add custom CSS for "slide-in animation polish" — Splunk's default transition is good enough and custom CSS triggers the AppInspect "design-system fighting" flag.

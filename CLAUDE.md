@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Aegis — runtime AI agent safety net for Splunk/Cisco enterprises. 4 surfaces: middleware library, MCP server, DefenseClaw integration, Splunk app. Spec set lives in `docs/`. Verified domain corpus at `../context/`. Hackathon research at `../research/splunk-agentic-ops-2026/`.
+SplunkGate — runtime AI agent safety net for Splunk/Cisco enterprises. 4 surfaces: middleware library, MCP server, DefenseClaw integration, Splunk app. Spec set lives in `docs/`. Verified domain corpus at `../context/`. Hackathon research at `../research/splunk-agentic-ops-2026/`.
 
 ## How to work
 
@@ -33,11 +33,11 @@ Use them as *research assistants* while you implement — not as parallel implem
 
 - Every source file ≤ 400 LOC (non-blank, non-comment).
 - `ruff` clean monorepo-wide.
-- `mypy --strict` clean for `packages/aegis_core/` and `packages/aegis_judges/`.
-- No `Any` in `aegis_core` or `aegis_judges` — use `object` + `repr()`.
+- `mypy --strict` clean for `packages/splunkgate_core/` and `packages/splunkgate_judges/`.
+- No `Any` in `splunkgate_core` or `splunkgate_judges` — use `object` + `repr()`.
 - No real credentials in code or fixtures. AI Defense mocks default to `mock=True`.
 - No `verify=False` in production HTTP.
-- Verdict shape lives in `packages/aegis_core/src/aegis_core/verdict.py`. `RuleHit.source` is `Literal["ai_defense", "defenseclaw_regex", "splunklib_security"]` — Foundation-Sec NEVER classifies (ADR-003).
+- Verdict shape lives in `packages/splunkgate_core/src/splunkgate_core/verdict.py`. `RuleHit.source` is `Literal["ai_defense", "defenseclaw_regex", "splunklib_security"]` — Foundation-Sec NEVER classifies (ADR-003).
 - Cisco AI Defense rule names verbatim per `../context/07-cisco-stack/01-ai-defense-deep.md`. Response field is `rules`, not `triggered_rules`.
-- Sourcetype `cisco_ai_defense:aegis_verdict` (colocates with Splunkbase 7404).
+- Sourcetype `cisco_ai_defense:splunkgate_verdict` (colocates with Splunkbase 7404).
 - MCP spec `2025-11-25` (Stable).

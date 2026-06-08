@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Splunkbase artifact builder.
 #
-# Produces dist/aegis_app-<version>.tgz from splunk_apps/aegis_app/.
+# Produces dist/splunkgate_app-<version>.tgz from splunk_apps/splunkgate_app/.
 # Version is read from default/app.conf so the manifest, tarball name,
 # and shell output all reference the same source of truth.
 #
@@ -27,7 +27,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="${REPO_ROOT:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
 DIST_DIR="${DIST_DIR:-${REPO_ROOT}/dist}"
-APP_SRC="${REPO_ROOT}/splunk_apps/aegis_app"
+APP_SRC="${REPO_ROOT}/splunk_apps/splunkgate_app"
 APP_CONF="${APP_SRC}/default/app.conf"
 SKIP_APPINSPECT="${SKIP_APPINSPECT:-0}"
 
@@ -71,11 +71,11 @@ if [ "${SKIP_APPINSPECT}" != "1" ]; then
 fi
 
 mkdir -p "${DIST_DIR}"
-ARTIFACT="${DIST_DIR}/aegis_app-${VERSION}.tgz"
+ARTIFACT="${DIST_DIR}/splunkgate_app-${VERSION}.tgz"
 echo "packing ${APP_SRC} -> ${ARTIFACT}"
 uv run python "${SCRIPT_DIR}/_pack_tarball.py" \
   --source "${APP_SRC}" \
-  --top-level aegis_app \
+  --top-level splunkgate_app \
   --output "${ARTIFACT}"
 
 # sha256 + size — both feed the Splunkbase upload + the verify script.

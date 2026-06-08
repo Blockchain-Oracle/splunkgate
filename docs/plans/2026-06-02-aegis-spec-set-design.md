@@ -1,4 +1,4 @@
-# 2026-06-02 — Aegis Spec Set Design (Brainstorm Output)
+# 2026-06-02 — SplunkGate Spec Set Design (Brainstorm Output)
 
 > Output of the brainstorming-skill Phase 1–3 pass. Approved by Abu on 2026-06-02. Input to `sahil-spec-writer`.
 
@@ -6,9 +6,9 @@
 
 | Decision | Value | Rationale |
 |---|---|---|
-| **Project name** | **Aegis** | Mythological shield (Athena/Zeus). Clean PyPI + Splunk app ID availability. Maps cleanly to "shield in front of the agent." Approved by Abu over `Argus` and `Bastion` candidates. |
+| **Project name** | **SplunkGate** | Mythological shield (Athena/Zeus). Clean PyPI + Splunk app ID availability. Maps cleanly to "shield in front of the agent." Approved by Abu over `Argus` and `Bastion` candidates. |
 | **License** | **Apache-2.0** | Permissive + patent grant. Plays with DefenseClaw (also Apache-2.0). Auto-detectable per Hackathon submission rule. |
-| **Repo location** | `workspace/aegis/` (local) | Local skeleton now; `gh repo create` after specs approved. |
+| **Repo location** | `workspace/splunkgate/` (local) | Local skeleton now; `gh repo create` after specs approved. |
 | **Build sequence** | **End-to-end one-pass** — every spec ships in one pass. CI/CD is Epic 01 (FIRST in execution order) but the spec set does not "leave anything behind for later." | Abu's explicit instruction: "We should write everything end-to-end. Why are we leaving some specs behind and coming back to write it again?" |
 | **Architecture source of truth** | `../research/splunk-agentic-ops-2026/13-architecture-recommendation-v2.md` | Verified-grounded. Supersedes `11-` (which has a warning header pointing here). |
 | **Domain knowledge source of truth** | `../context/` (12 folders + audit + sources/) | All claims flagged ✅/🟡/❓/❌. Spec writer references back to specific context files for every load-bearing fact. |
@@ -23,7 +23,7 @@
 |---|---|---|---|
 | 1 | `docs/PRD.md` | Product vision, audience, success criteria, scope, out-of-scope, regulatory framing | 4–6 pages |
 | 2 | `docs/architecture.md` | Formalized 13-recommendation-v2: 4 surfaces, monorepo file/folder structure, library choices with verified justification, API schemas (Verdict / OTel GenAI / MCP `outputSchema` / AI Defense client), coding standards (400 LOC enforcement, typing strictness, testing, security hygiene) | 12–18 pages |
-| 3 | `docs/cicd-spec.md` | **First execution epic.** Build pipeline (sentinel-mw wheel + Aegis MCP server + Splunk app `.tgz`) · Test pipeline (unit + integration + contract + eval) · AppInspect gate on every PR · Security scans (pip-audit, gitleaks, trivy) · Release pipeline (signed artifacts, version tags, changelog generation) · 400-LOC enforcement (pre-commit + CI fail-on-exceed) | 6–8 pages |
+| 3 | `docs/cicd-spec.md` | **First execution epic.** Build pipeline (sentinel-mw wheel + SplunkGate MCP server + Splunk app `.tgz`) · Test pipeline (unit + integration + contract + eval) · AppInspect gate on every PR · Security scans (pip-audit, gitleaks, trivy) · Release pipeline (signed artifacts, version tags, changelog generation) · 400-LOC enforcement (pre-commit + CI fail-on-exceed) | 6–8 pages |
 | 4 | `docs/eval-spec.md` | Datasets (JailbreakBench, AdvBench, custom synthetic per Imprompter findings); Metrics (precision, recall, F1, ECE, p50/p99 latency, cost-per-1k); Baselines (DefenseClaw regex-only · gpt-oss-120b-as-judge · AI Defense alone) | 4 pages |
 | 5 | `docs/ux-spec.md` | Three Dashboard Studio v2 dashboards for Surface 4 — Agent Risk Overview, Verdict Inspector, Regulator Evidence Pack (PDF export). Wireframes + Dashboard Studio JSON skeletons | 4–6 pages |
 | 6 | `docs/epics.md` | Ordered epic list (12 epics, CI/CD first, foundation-first within scope) | 2 pages |
@@ -40,8 +40,8 @@ Numbering = execution priority. Spec writes ALL epics' stories in one pass; agen
 | EPIC-03 | Core domain types — `Verdict`, `Severity`, OTel emission helpers, error model | Cross-cutting | 3–4 |
 | EPIC-04 | Cisco AI Defense Inspection API client (typed, mockable, retries, circuit breaker) | Judgment layer | 4–5 |
 | EPIC-05 | Foundation-Sec invocation client via `\| ai` SPL (explainer, not judge) | Judgment layer | 3 |
-| EPIC-06 | **Surface 1** — `aegis-mw` middleware library for `splunklib.ai` (uses real 4-middleware API) | S1 | 6–8 |
-| EPIC-07 | **Surface 2** — Aegis MCP Server (own, parallel to Splunk's official server) | S2 | 5–7 |
+| EPIC-06 | **Surface 1** — `splunkgate-mw` middleware library for `splunklib.ai` (uses real 4-middleware API) | S1 | 6–8 |
+| EPIC-07 | **Surface 2** — SplunkGate MCP Server (own, parallel to Splunk's official server) | S2 | 5–7 |
 | EPIC-08 | **Surface 3** — DefenseClaw integration (config delta + upstream PR adding AI Defense backend) | S3 | 3–4 |
 | EPIC-09 | **Surface 4** — Splunk app (SPL searches, MLTK macros mirroring DNS Guard's `fit DensityFunction` + `fit KMeans` pattern, 3 Dashboard Studio v2 dashboards, KV-store schema, RBA integration) | S4 | 8–10 |
 | EPIC-10 | Eval harness + synthetic data generator (mirrors DNS Guard's `Syntethic-Data/` sibling-folder convention) | Cross-cutting | 4–5 |
@@ -55,7 +55,7 @@ Numbering = execution priority. Spec writes ALL epics' stories in one pass; agen
 Target after first code lands. Specs describe this; spec-writer encodes it; agents implement against it.
 
 ```
-aegis/
+splunkgate/
 ├── README.md
 ├── LICENSE                                  # Apache-2.0
 ├── .gitignore
@@ -77,37 +77,37 @@ aegis/
 │   ├── ux-spec.md
 │   ├── epics.md
 │   ├── stories/
-│   └── plans/2026-06-02-aegis-spec-set-design.md
+│   └── plans/2026-06-02-splunkgate-spec-set-design.md
 ├── packages/
-│   ├── aegis_core/                          # shared domain types — used by everything
+│   ├── splunkgate_core/                          # shared domain types — used by everything
 │   │   ├── pyproject.toml
-│   │   ├── src/aegis_core/
+│   │   ├── src/splunkgate_core/
 │   │   │   ├── verdict.py                   # Verdict, Severity, etc.
 │   │   │   ├── otel.py                      # gen_ai.evaluation.result emitter
 │   │   │   ├── errors.py
 │   │   │   └── ...
 │   │   └── tests/
-│   ├── aegis_judges/                        # judgment-layer clients
+│   ├── splunkgate_judges/                        # judgment-layer clients
 │   │   ├── pyproject.toml
-│   │   ├── src/aegis_judges/
+│   │   ├── src/splunkgate_judges/
 │   │   │   ├── ai_defense.py                # Cisco AI Defense Inspection API client
 │   │   │   ├── foundation_sec.py            # |ai SPL invocation client (explainer)
 │   │   │   ├── defenseclaw_backend.py       # fallback regex backend via DefenseClaw
 │   │   │   ├── luna2_client.py              # future plug-in (stub)
 │   │   │   └── ...
 │   │   └── tests/
-│   ├── aegis_mw/                            # Surface 1 — middleware library
+│   ├── splunkgate_mw/                            # Surface 1 — middleware library
 │   │   ├── pyproject.toml
-│   │   ├── src/aegis_mw/
+│   │   ├── src/splunkgate_mw/
 │   │   │   ├── tool_middleware.py
 │   │   │   ├── model_middleware.py
 │   │   │   ├── subagent_middleware.py
 │   │   │   ├── agent_middleware.py
 │   │   │   └── ...
 │   │   └── tests/
-│   └── aegis_mcp/                           # Surface 2 — own MCP server
+│   └── splunkgate_mcp/                           # Surface 2 — own MCP server
 │       ├── pyproject.toml
-│       ├── src/aegis_mcp/
+│       ├── src/splunkgate_mcp/
 │       │   ├── server.py                    # FastMCP / mcp-python registration
 │       │   ├── tools/
 │       │   │   ├── score_prompt_injection.py
@@ -117,7 +117,7 @@ aegis/
 │       │   └── schemas.py                   # MCP outputSchema definitions
 │       └── tests/
 ├── splunk_apps/
-│   └── aegis_app/                           # Surface 4 — Splunk app
+│   └── splunkgate_app/                           # Surface 4 — Splunk app
 │       ├── README                           # required for Splunkbase
 │       ├── default/
 │       │   ├── app.conf
@@ -149,7 +149,7 @@ aegis/
 │   └── pii_leak_corpus/
 └── eval/
     ├── pyproject.toml
-    ├── src/aegis_eval/
+    ├── src/splunkgate_eval/
     │   ├── jailbreakbench.py
     │   ├── advbench.py
     │   ├── synthetic.py
@@ -175,7 +175,7 @@ Every choice grounded in the verified domain knowledge. Justifications live in `
 - **Official `mcp` Python SDK** (`pip install mcp`) — Anthropic's reference implementation. MCP spec 2025-11-25 stable per `context/10-standards/01-mcp-spec-deep.md`.
 
 ### LLM tool framework dependency surface
-- **LangChain v1** — `splunklib.ai` runs entirely on LangChain v1 (verified at `splunklib/ai/core/backend_registry.py:18-24`). Aegis-MW transitively requires it; pinned in Surface 1's `pyproject.toml`.
+- **LangChain v1** — `splunklib.ai` runs entirely on LangChain v1 (verified at `splunklib/ai/core/backend_registry.py:18-24`). SplunkGate-MW transitively requires it; pinned in Surface 1's `pyproject.toml`.
 
 ### HTTP client
 - **httpx** — async + sync, used by `splunklib.ai` itself. Note: `splunklib/ai/tools.py:308` has `verify=False` for Splunk MCP Server connections; document but don't replicate that.
@@ -191,7 +191,7 @@ Every choice grounded in the verified domain knowledge. Justifications live in `
 
 ### Linting / formatting / typing
 - **ruff** (replaces black + isort + flake8 + pyupgrade)
-- **mypy --strict** for `aegis_core` and `aegis_judges` (highest invariant load)
+- **mypy --strict** for `splunkgate_core` and `splunkgate_judges` (highest invariant load)
 - **pre-commit** for hooks including 400-LOC enforcement
 
 ### Splunk app build / validation
@@ -206,7 +206,7 @@ Every choice grounded in the verified domain knowledge. Justifications live in `
 - **Custom synthetic corpus** in `Synthetic-Data/` (per DNS Guard pattern)
 
 ### Dependencies on Cisco tools
-- **Cisco AI Defense Inspection API** — typed Python client built in `aegis_judges/ai_defense.py`. Mockable for tests via `respx`. Live API access gated to Cisco Security Cloud Control tenants per `context/sources/docs-saved/abu-followup-2026-06-02.md`.
+- **Cisco AI Defense Inspection API** — typed Python client built in `splunkgate_judges/ai_defense.py`. Mockable for tests via `respx`. Live API access gated to Cisco Security Cloud Control tenants per `context/sources/docs-saved/abu-followup-2026-06-02.md`.
 - **DefenseClaw** (Apache-2.0) — depend, don't rebuild. Config delta in `integrations/defenseclaw/`. Upstream PR plans tracked.
 
 ## What's deliberately NOT in v1
@@ -219,7 +219,7 @@ These are explicit non-goals captured here so future agents don't widen scope mi
 4. **No replacement of `splunklib/ai/security.py`'s 9-regex baseline.** We call into it as a cheap first-pass classifier and escalate ambiguous cases.
 5. **No FastMCP-vs-mcp-Python-SDK debate** in spec phase — locked to official `mcp` Python SDK. Re-evaluation deferred to first refactor.
 6. **No multi-tenant deployment in v1.** Single-tenant per Splunk instance; multi-tenant is future work.
-7. **No SOAR playbook generation in v1.** Aegis emits HEC events; ES correlation searches + existing SOAR custom functions consume them. Aegis does not author playbooks.
+7. **No SOAR playbook generation in v1.** SplunkGate emits HEC events; ES correlation searches + existing SOAR custom functions consume them. SplunkGate does not author playbooks.
 
 ## Sanity-check on the 5 known blockers from prior research
 
@@ -227,10 +227,10 @@ For each, the spec set's resolution:
 
 | Blocker | Resolution in spec |
 |---|---|
-| Exact `\| ai` SPL provider/model values for Foundation-Sec | `aegis_judges/foundation_sec.py` ships with a configurable provider/model interface; first integration test sets it via env var; documented in `docs/cicd-spec.md` as a Day-0 install step against Abu's Splunk Cloud trial. |
+| Exact `\| ai` SPL provider/model values for Foundation-Sec | `splunkgate_judges/foundation_sec.py` ships with a configurable provider/model interface; first integration test sets it via env var; documented in `docs/cicd-spec.md` as a Day-0 install step against Abu's Splunk Cloud trial. |
 | Hosted-models dev-license access confirmation | Spec ships with **mock-first** Foundation-Sec client. Real-vs-mock toggled by env var. Story `EPIC-05` includes "verify against live Cloud trial" gate. |
-| Splunk MCP Server v1.2.0 TGZ actual contents | **Not a blocker for us** — Aegis MCP Server is parallel, not into Splunk's. Documented in `docs/architecture.md`. |
-| AI Agent Monitoring platform-side judge LLM name | **Not a blocker** — Aegis emits OTel GenAI events that AI Agent Monitoring auto-ingests; the platform-side judge runs in parallel, not in our path. |
+| Splunk MCP Server v1.2.0 TGZ actual contents | **Not a blocker for us** — SplunkGate MCP Server is parallel, not into Splunk's. Documented in `docs/architecture.md`. |
+| AI Agent Monitoring platform-side judge LLM name | **Not a blocker** — SplunkGate emits OTel GenAI events that AI Agent Monitoring auto-ingests; the platform-side judge runs in parallel, not in our path. |
 | Cisco AI Defense free dev trial | Spec ships with DefenseClaw-regex-backend as fallback judge. Explorer Edition (`https://explorer.aidefense.cisco.com/`) for demo recordings. Live Inspection API integration story (`EPIC-04-S-04`) is gated on credentials and has a `mock=true` default. |
 
 Net: **zero hard blockers.** All spec writing can proceed.
@@ -245,4 +245,4 @@ Net: **zero hard blockers.** All spec writing can proceed.
 
 ## Approval
 
-Approved by Abu on 2026-06-02 via AskUserQuestion. License: Apache-2.0. Project name: Aegis. Scope: full one-pass. Location: `workspace/aegis/`.
+Approved by Abu on 2026-06-02 via AskUserQuestion. License: Apache-2.0. Project name: SplunkGate. Scope: full one-pass. Location: `workspace/splunkgate/`.

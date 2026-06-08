@@ -1,7 +1,7 @@
 """Meta-test: bandit catches MEDIUM+ findings on a known violator.
 
 Story-cicd-07 BDD asserts both:
-  (a) bandit on aegis_judges placeholder code exits 0
+  (a) bandit on splunkgate_judges placeholder code exits 0
   (b) bandit on a deliberately-crafted violator exits non-zero
 """
 
@@ -26,9 +26,9 @@ def _run_bandit(target: Path, config: Path | None = None) -> subprocess.Complete
     )
 
 
-def test_bandit_clean_on_aegis_judges_placeholder() -> None:
-    """bandit -r packages/aegis_judges/src/ exits 0 on current placeholder code."""
-    target = REPO_ROOT / "packages" / "aegis_judges" / "src"
+def test_bandit_clean_on_splunkgate_judges_placeholder() -> None:
+    """bandit -r packages/splunkgate_judges/src/ exits 0 on current placeholder code."""
+    target = REPO_ROOT / "packages" / "splunkgate_judges" / "src"
     config = REPO_ROOT / ".bandit"
     result = _run_bandit(target, config)
     assert result.returncode == 0, (

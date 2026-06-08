@@ -1,18 +1,18 @@
 [project]
-name = "aegis-eval"
+name = "splunkgate-eval"
 version = "0.0.1"
-description = "Aegis eval harness — JailbreakBench, AdvBench, synthetic prompt-injection datasets"
+description = "SplunkGate eval harness — JailbreakBench, AdvBench, synthetic prompt-injection datasets"
 requires-python = ">=3.13"
 license = { text = "Apache-2.0" }
-dependencies = ["aegis-core", "aegis-judges"]
+dependencies = ["splunkgate-core", "splunkgate-judges"]
 
 [tool.uv.sources]
-aegis-core = { workspace = true }
-aegis-judges = { workspace = true }
+splunkgate-core = { workspace = true }
+splunkgate-judges = { workspace = true }
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/aegis_eval"]
+packages = ["src/splunkgate_eval"]

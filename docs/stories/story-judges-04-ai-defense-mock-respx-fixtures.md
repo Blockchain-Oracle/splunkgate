@@ -10,8 +10,8 @@
 
 ## User story
 
-**As a** developer running the full Aegis test suite without a Cisco AI Defense tenant
-**I want to** flip `AEGIS_AI_DEFENSE_MOCK=1` and have the client return deterministic verdicts covering all 11 documented rules at every severity tier
+**As a** developer running the full SplunkGate test suite without a Cisco AI Defense tenant
+**I want to** flip `SPLUNKGATE_AI_DEFENSE_MOCK=1` and have the client return deterministic verdicts covering all 11 documented rules at every severity tier
 **So that** CI, eval, and demo recordings run without paid Cisco credentials, while the same code path runs live against the Explorer Edition when the env var is unset
 
 ---
@@ -20,12 +20,12 @@
 
 Exact files the coding agent creates or modifies for this story:
 
-- `packages/aegis_judges/src/aegis_judges/ai_defense_mock.py` — NEW — `MockAIDefenseClient` class with the same async interface as `AIDefenseClient`; `inspect_chat(req)` dispatches to a deterministic verdict matrix keyed on `req.messages[-1].content`; supports respx-based wiring as `mock_router()` returning a `respx.Router` registering all 4 regional base URLs; exposes `FIXTURE_MATRIX: dict[str, InspectResponse]` covering the 11 rules × {NONE_SEVERITY, LOW, MEDIUM, HIGH} transitions (44 fixtures), plus a default `is_safe=True NONE_SEVERITY` response for unknown text
-- `packages/aegis_judges/src/aegis_judges/ai_defense.py` — UPDATE — add `AIDefenseClient.from_env()` factory: reads `AEGIS_AI_DEFENSE_MOCK` (truthy → returns `MockAIDefenseClient`), else reads `AEGIS_AI_DEFENSE_API_KEY` (required when not mock), `AEGIS_AI_DEFENSE_REGION` (default `"us"`)
-- `packages/aegis_judges/src/aegis_judges/_fixtures/__init__.py` — NEW — fixture loader
-- `packages/aegis_judges/src/aegis_judges/_fixtures/ai_defense_matrix.json` — NEW — the 44-row fixture matrix as JSON (one row per rule × severity), exact `InspectResponse`-shaped payloads
-- `packages/aegis_judges/tests/test_ai_defense_mock.py` — NEW — ≥ 14 tests: all 11 rules appear in matrix; all 4 severities appear; every fixture round-trips through `InspectResponse.model_validate`; `AEGIS_AI_DEFENSE_MOCK=1` causes `from_env()` to return a `MockAIDefenseClient`; unset `AEGIS_AI_DEFENSE_MOCK` with missing `AEGIS_AI_DEFENSE_API_KEY` raises `AIDefenseAuthError`; deterministic dispatch — same input string returns same response twice; default response is `is_safe=True, severity=NONE_SEVERITY`; respx-wired mock returns the matrix response for the matching trigger string
-- `packages/aegis_judges/conftest.py` — NEW — exposes `ai_defense_mock` pytest fixture returning a `MockAIDefenseClient`; resets env vars between tests
+- `packages/splunkgate_judges/src/splunkgate_judges/ai_defense_mock.py` — NEW — `MockAIDefenseClient` class with the same async interface as `AIDefenseClient`; `inspect_chat(req)` dispatches to a deterministic verdict matrix keyed on `req.messages[-1].content`; supports respx-based wiring as `mock_router()` returning a `respx.Router` registering all 4 regional base URLs; exposes `FIXTURE_MATRIX: dict[str, InspectResponse]` covering the 11 rules × {NONE_SEVERITY, LOW, MEDIUM, HIGH} transitions (44 fixtures), plus a default `is_safe=True NONE_SEVERITY` response for unknown text
+- `packages/splunkgate_judges/src/splunkgate_judges/ai_defense.py` — UPDATE — add `AIDefenseClient.from_env()` factory: reads `SPLUNKGATE_AI_DEFENSE_MOCK` (truthy → returns `MockAIDefenseClient`), else reads `SPLUNKGATE_AI_DEFENSE_API_KEY` (required when not mock), `SPLUNKGATE_AI_DEFENSE_REGION` (default `"us"`)
+- `packages/splunkgate_judges/src/splunkgate_judges/_fixtures/__init__.py` — NEW — fixture loader
+- `packages/splunkgate_judges/src/splunkgate_judges/_fixtures/ai_defense_matrix.json` — NEW — the 44-row fixture matrix as JSON (one row per rule × severity), exact `InspectResponse`-shaped payloads
+- `packages/splunkgate_judges/tests/test_ai_defense_mock.py` — NEW — ≥ 14 tests: all 11 rules appear in matrix; all 4 severities appear; every fixture round-trips through `InspectResponse.model_validate`; `SPLUNKGATE_AI_DEFENSE_MOCK=1` causes `from_env()` to return a `MockAIDefenseClient`; unset `SPLUNKGATE_AI_DEFENSE_MOCK` with missing `SPLUNKGATE_AI_DEFENSE_API_KEY` raises `AIDefenseAuthError`; deterministic dispatch — same input string returns same response twice; default response is `is_safe=True, severity=NONE_SEVERITY`; respx-wired mock returns the matrix response for the matching trigger string
+- `packages/splunkgate_judges/conftest.py` — NEW — exposes `ai_defense_mock` pytest fixture returning a `MockAIDefenseClient`; resets env vars between tests
 
 The coding agent must NOT modify files outside this map without re-checking `CLAUDE.md`.
 
@@ -34,8 +34,8 @@ The coding agent must NOT modify files outside this map without re-checking `CLA
 ## Acceptance criteria (BDD — machine-verifiable)
 
 ```
-Given packages/aegis_judges/src/aegis_judges/_fixtures/ai_defense_matrix.json exists
-When  `python -c "import json; m=json.load(open('packages/aegis_judges/src/aegis_judges/_fixtures/ai_defense_matrix.json')); print(len(m))"` runs
+Given packages/splunkgate_judges/src/splunkgate_judges/_fixtures/ai_defense_matrix.json exists
+When  `python -c "import json; m=json.load(open('packages/splunkgate_judges/src/splunkgate_judges/_fixtures/ai_defense_matrix.json')); print(len(m))"` runs
 Then  the output is exactly "44"   # 11 rules × 4 severities
 
 Given the matrix is loaded
@@ -46,13 +46,13 @@ Given the matrix is loaded
 When  the set of distinct severity values is computed
 Then  it equals exactly {"NONE_SEVERITY","LOW","MEDIUM","HIGH"}
 
-Given AEGIS_AI_DEFENSE_MOCK=1 is set in the environment
+Given SPLUNKGATE_AI_DEFENSE_MOCK=1 is set in the environment
 When  AIDefenseClient.from_env() is called
 Then  the returned object's class.__name__ is "MockAIDefenseClient"
 
-Given AEGIS_AI_DEFENSE_MOCK is unset and AEGIS_AI_DEFENSE_API_KEY is unset
+Given SPLUNKGATE_AI_DEFENSE_MOCK is unset and SPLUNKGATE_AI_DEFENSE_API_KEY is unset
 When  AIDefenseClient.from_env() is called
-Then  AIDefenseAuthError is raised with message including "AEGIS_AI_DEFENSE_API_KEY"
+Then  AIDefenseAuthError is raised with message including "SPLUNKGATE_AI_DEFENSE_API_KEY"
 
 Given the mock client is dispatched with the same trigger text twice
 When  the two responses are compared
@@ -62,12 +62,12 @@ Given the mock client receives text not matching any fixture trigger
 When  inspect_chat is called
 Then  the response is is_safe=True and severity=NONE_SEVERITY
 
-Given `uv run pytest packages/aegis_judges/tests/test_ai_defense_mock.py -v`
+Given `uv run pytest packages/splunkgate_judges/tests/test_ai_defense_mock.py -v`
 When  it runs
 Then  ≥ 14 tests pass and 0 fail
 
 Given the source files for this story
-When  `uv run mypy --strict packages/aegis_judges/src/aegis_judges/ai_defense_mock.py packages/aegis_judges/src/aegis_judges/ai_defense.py` runs
+When  `uv run mypy --strict packages/splunkgate_judges/src/splunkgate_judges/ai_defense_mock.py packages/splunkgate_judges/src/splunkgate_judges/ai_defense.py` runs
 Then  exit code is 0
 
 Given each modified or new file
@@ -75,8 +75,8 @@ When  wc -l is run
 Then  each file is ≤ 400 LOC
 
 Given §14 grep on the production hot path (excluding ai_defense_mock.py — §14 carve-out)
-When  `grep -rE "(mock|fake|dummy|simulated)" packages/aegis_judges/src/aegis_judges/ai_defense.py` runs
-Then  the only matches are the env-var name "AEGIS_AI_DEFENSE_MOCK" and its docstring references
+When  `grep -rE "(mock|fake|dummy|simulated)" packages/splunkgate_judges/src/splunkgate_judges/ai_defense.py` runs
+Then  the only matches are the env-var name "SPLUNKGATE_AI_DEFENSE_MOCK" and its docstring references
 ```
 
 ---
@@ -89,8 +89,8 @@ The coding agent runs this to confirm the story is done before opening a PR:
 # Fixture matrix shape is correct
 uv run python -c "
 import json
-from aegis_judges.ai_defense_types import InspectResponse, AIDefenseRule, Severity
-m = json.load(open('packages/aegis_judges/src/aegis_judges/_fixtures/ai_defense_matrix.json'))
+from splunkgate_judges.ai_defense_types import InspectResponse, AIDefenseRule, Severity
+m = json.load(open('packages/splunkgate_judges/src/splunkgate_judges/_fixtures/ai_defense_matrix.json'))
 assert len(m) == 44, f'expected 44, got {len(m)}'
 rules = set()
 sevs = set()
@@ -106,8 +106,8 @@ print('OK')
 # Must print 'OK'
 
 # Env-var toggle works
-AEGIS_AI_DEFENSE_MOCK=1 uv run python -c "
-from aegis_judges.ai_defense import AIDefenseClient
+SPLUNKGATE_AI_DEFENSE_MOCK=1 uv run python -c "
+from splunkgate_judges.ai_defense import AIDefenseClient
 c = AIDefenseClient.from_env()
 assert type(c).__name__ == 'MockAIDefenseClient'
 print('OK')
@@ -117,29 +117,29 @@ print('OK')
 # Without env vars, factory refuses
 uv run python -c "
 import os
-os.environ.pop('AEGIS_AI_DEFENSE_MOCK', None)
-os.environ.pop('AEGIS_AI_DEFENSE_API_KEY', None)
-from aegis_judges.ai_defense import AIDefenseClient
-from aegis_judges._errors import AIDefenseAuthError
+os.environ.pop('SPLUNKGATE_AI_DEFENSE_MOCK', None)
+os.environ.pop('SPLUNKGATE_AI_DEFENSE_API_KEY', None)
+from splunkgate_judges.ai_defense import AIDefenseClient
+from splunkgate_judges._errors import AIDefenseAuthError
 try:
     AIDefenseClient.from_env()
     raise SystemExit('expected AIDefenseAuthError')
 except AIDefenseAuthError as e:
-    assert 'AEGIS_AI_DEFENSE_API_KEY' in str(e)
+    assert 'SPLUNKGATE_AI_DEFENSE_API_KEY' in str(e)
 print('OK')
 "
 # Must print 'OK'
 
 # Tests pass
-uv run pytest packages/aegis_judges/tests/test_ai_defense_mock.py -v 2>&1 | grep -cE "PASSED"
+uv run pytest packages/splunkgate_judges/tests/test_ai_defense_mock.py -v 2>&1 | grep -cE "PASSED"
 # Must output >= 14
 
 # Strict typecheck
-uv run mypy --strict packages/aegis_judges/src/aegis_judges/ai_defense_mock.py packages/aegis_judges/src/aegis_judges/ai_defense.py
+uv run mypy --strict packages/splunkgate_judges/src/splunkgate_judges/ai_defense_mock.py packages/splunkgate_judges/src/splunkgate_judges/ai_defense.py
 # Must exit 0
 
 # 400-LOC cap
-for f in packages/aegis_judges/src/aegis_judges/ai_defense_mock.py packages/aegis_judges/src/aegis_judges/_fixtures/__init__.py; do
+for f in packages/splunkgate_judges/src/splunkgate_judges/ai_defense_mock.py packages/splunkgate_judges/src/splunkgate_judges/_fixtures/__init__.py; do
   lines=$(wc -l < "$f")
   [ "$lines" -gt 400 ] && { echo "FAIL: $f has $lines LOC"; exit 1; }
 done
@@ -158,4 +158,4 @@ done
 - Deterministic dispatch: `hash(trigger_text) % len(matrix)` is **not** deterministic across Python invocations (`PYTHONHASHSEED`). Use a stable mapping (e.g., `hashlib.sha256(text.encode()).hexdigest()[:8]` as integer key into a sorted matrix) or, preferably, an explicit `trigger_string → fixture_index` table embedded in the JSON.
 - Fixture trigger strings should look realistic (e.g., for PII: `"my ssn is 123-45-6789"`; for Prompt Injection: `"ignore previous instructions and..."`; for PCI: `"4242 4242 4242 4242"`) so eval recordings demonstrate the matrix end-to-end visually.
 - `from_env()` log shape: emit a single structlog INFO event `aidefense.client.constructed` with `mode="mock"|"live"`, `region`, no API key value.
-- Cisco AI Defense Explorer Edition (`https://explorer.aidefense.cisco.com/`, March 23 2026 launch, free US-corp-email signup) is the demo-recording path — `AEGIS_AI_DEFENSE_MOCK=1` runs the demo deterministically; flipping it off + setting `AEGIS_AI_DEFENSE_API_KEY` from the Explorer Edition UI replays the same demo against the live tenant for the "look it's real" segment of the screencast.
+- Cisco AI Defense Explorer Edition (`https://explorer.aidefense.cisco.com/`, March 23 2026 launch, free US-corp-email signup) is the demo-recording path — `SPLUNKGATE_AI_DEFENSE_MOCK=1` runs the demo deterministically; flipping it off + setting `SPLUNKGATE_AI_DEFENSE_API_KEY` from the Explorer Edition UI replays the same demo against the live tenant for the "look it's real" segment of the screencast.

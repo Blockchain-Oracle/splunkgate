@@ -1,4 +1,4 @@
-# Epics — Aegis
+# Epics — SplunkGate
 
 **Hackathon:** Splunk Agentic Ops Hackathon (Devpost)
 **Status:** DRAFT (scope locked 2026-06-05 via ADR-013)
@@ -17,8 +17,8 @@
 | EPIC-03 | Core domain types (Verdict, OTel emitter, error model) | Cross-cutting | 5 | EPIC-02 |
 | EPIC-04 | Cisco AI Defense Inspection API client (typed, mockable, retries, circuit breaker) | Judgment layer | 6 | EPIC-03 |
 | EPIC-05 | Verdict explainer (template v1, Foundation-Sec future per ADR-013) | Judgment layer | 1 active + 3 DEFERRED | EPIC-03 |
-| EPIC-06 | **Surface 1** — aegis-mw middleware library for splunklib.ai | S1 | 7 | EPIC-03, EPIC-04, EPIC-05 |
-| EPIC-07 | **Surface 2** — Aegis MCP Server (own, parallel to Splunk's app 7931) | S2 | 4 active + 2 DEFERRED | EPIC-03, EPIC-04, EPIC-05 |
+| EPIC-06 | **Surface 1** — splunkgate-mw middleware library for splunklib.ai | S1 | 7 | EPIC-03, EPIC-04, EPIC-05 |
+| EPIC-07 | **Surface 2** — SplunkGate MCP Server (own, parallel to Splunk's app 7931) | S2 | 4 active + 2 DEFERRED | EPIC-03, EPIC-04, EPIC-05 |
 | EPIC-08 | **Surface 3** — DefenseClaw integration (config docs only, ADR-013) | S3 | 1 active + 2 DEFERRED | EPIC-03 |
 | EPIC-09 | **Surface 4** — Splunk app (SPL/MLTK + 3 Dashboard Studio v2 dashboards + MITRE ATLAS lookup) | S4 | 12 | EPIC-03 (events) |
 | EPIC-10 | Eval harness + synthetic data generator | Cross-cutting | 6 | EPIC-04, EPIC-05, EPIC-06 |
@@ -82,7 +82,7 @@
 
 ## EPIC-04 — Cisco AI Defense Inspection API client
 
-**Business value:** This is the binary classifier in the judgment layer. Aegis stands on this. Mockable for dev, typed for safety, resilient under failure.
+**Business value:** This is the binary classifier in the judgment layer. SplunkGate stands on this. Mockable for dev, typed for safety, resilient under failure.
 
 **Anchor doc:** `context/07-cisco-stack/01-ai-defense-deep.md`
 
@@ -100,7 +100,7 @@
 
 ## EPIC-05 — Verdict explainer (template v1, Foundation-Sec future)
 
-**Business value:** The explanation layer — the WHY-string the dashboard, regulator-evidence-pack PDF, and demo video all surface. v1 ships a deterministic template-based explainer that populates `Verdict.explanation` from already-decided verdict fields. Per ADR-013, the Foundation-Sec implementation is deferred until Splunk Slack confirms Trial-tier Hosted Models access; the swap is a one-file change inside `aegis_judges/explainer.py`. ADR-003's "explainer-only, never classifier" invariant holds across both implementations.
+**Business value:** The explanation layer — the WHY-string the dashboard, regulator-evidence-pack PDF, and demo video all surface. v1 ships a deterministic template-based explainer that populates `Verdict.explanation` from already-decided verdict fields. Per ADR-013, the Foundation-Sec implementation is deferred until Splunk Slack confirms Trial-tier Hosted Models access; the swap is a one-file change inside `splunkgate_judges/explainer.py`. ADR-003's "explainer-only, never classifier" invariant holds across both implementations.
 
 **Anchor doc:** `context/07-cisco-stack/03-foundation-sec-models.md`, `context/06-splunk-ai-stack/07-foundation-sec-on-splunk.md`, ADR-003 + ADR-013 in `docs/architecture.md`
 
@@ -114,7 +114,7 @@
 
 ---
 
-## EPIC-06 — Surface 1: aegis-mw middleware library
+## EPIC-06 — Surface 1: splunkgate-mw middleware library
 
 **Business value:** The lowest-friction surface for `splunklib.ai`-built agents. Pre-emit interception in 3 lines of agent code. The Splunk-native pitch.
 
@@ -133,7 +133,7 @@
 
 ---
 
-## EPIC-07 — Surface 2: Aegis MCP Server
+## EPIC-07 — Surface 2: SplunkGate MCP Server
 
 **Business value:** The Splunk-agnostic / framework-agnostic surface. Any MCP client can call us. The MCP bonus prize.
 
@@ -170,13 +170,13 @@
 
 **Business value:** The Splunk-native winning shape (DNS Guard 2025 pattern). The CISO + SOC analyst + examiner UI. Where the audit trail lives.
 
-**Anchor doc:** `docs/architecture.md` § "Repo structure" > `splunk_apps/aegis_app/`, `docs/ux-spec.md`, `docs/eval-spec.md`
+**Anchor doc:** `docs/architecture.md` § "Repo structure" > `splunk_apps/splunkgate_app/`, `docs/ux-spec.md`, `docs/eval-spec.md`
 
 **Dependencies:** EPIC-03 (event shape must be locked before SPL parsing rules are written)
 **Active stories:** 12 (added `story-app-14` per ADR-013 — MITRE ATLAS technique-ID lookup)
 **Files under `docs/stories/`:**
 - `story-app-01-app-conf-and-metadata-skeleton.md`
-- `story-app-02-props-transforms-for-aegis-verdict-sourcetype.md`
+- `story-app-02-props-transforms-for-splunkgate-verdict-sourcetype.md`
 - `story-app-03-savedsearches-and-mltk-macros.md`
 - `story-app-04-collections-conf-kvstore-verdict-history.md`
 - `story-app-05-dashboard-agent-risk-overview.md`
@@ -299,7 +299,7 @@ dispatch_queue:
 
   # ---- EPIC-09 (Surface 4 — Splunk app) — sequential within epic ----
   - story-app-01-app-conf-and-metadata-skeleton
-  - story-app-02-props-transforms-for-aegis-verdict-sourcetype
+  - story-app-02-props-transforms-for-splunkgate-verdict-sourcetype
   - story-app-13-synthetic-verdict-emitter-script   # after app-02 (sourcetype config) + eval-01 (corpora); unblocks app-10 + demo-01
   - story-app-03-savedsearches-and-mltk-macros
   - story-app-04-collections-conf-kvstore-verdict-history

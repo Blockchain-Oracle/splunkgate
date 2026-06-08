@@ -8,7 +8,7 @@
 # Steps:
 #   1. tarball exists and is a valid gzip
 #   2. extracts cleanly into a temp dir
-#   3. top-level dir is aegis_app/ (Splunk convention)
+#   3. top-level dir is splunkgate_app/ (Splunk convention)
 #   4. required files present: default/app.conf, README, LICENSE,
 #      META-INF/manifest.json
 #   5. no dev cruft (no __pycache__, no .pyc, no tests/)
@@ -16,12 +16,12 @@
 #   7. AppInspect (if installed) passes against the extracted tree
 #
 # Usage:
-#   bash scripts/verify_splunkbase_artifact.sh dist/aegis_app-1.0.0.tgz
+#   bash scripts/verify_splunkbase_artifact.sh dist/splunkgate_app-1.0.0.tgz
 set -euo pipefail
 
 ARTIFACT="${1:-}"
 if [ -z "${ARTIFACT}" ] || [ ! -f "${ARTIFACT}" ]; then
-  echo "usage: $0 <path/to/aegis_app-VERSION.tgz>" >&2
+  echo "usage: $0 <path/to/splunkgate_app-VERSION.tgz>" >&2
   exit 2
 fi
 
@@ -37,9 +37,9 @@ trap 'rm -rf "${TMPDIR_EXTRACT}"' EXIT
 tar -xzf "${ARTIFACT}" -C "${TMPDIR_EXTRACT}"
 
 # 3. Top-level dir
-APP_ROOT="${TMPDIR_EXTRACT}/aegis_app"
+APP_ROOT="${TMPDIR_EXTRACT}/splunkgate_app"
 if [ ! -d "${APP_ROOT}" ]; then
-  echo "artifact does not have aegis_app/ as top-level directory" >&2
+  echo "artifact does not have splunkgate_app/ as top-level directory" >&2
   exit 1
 fi
 
@@ -53,7 +53,7 @@ REQUIRED=(
 )
 for path in "${REQUIRED[@]}"; do
   if [ ! -f "${APP_ROOT}/${path}" ]; then
-    echo "missing required file: aegis_app/${path}" >&2
+    echo "missing required file: splunkgate_app/${path}" >&2
     exit 1
   fi
 done
@@ -87,7 +87,7 @@ if command -v splunk-appinspect >/dev/null 2>&1 || uv run splunk-appinspect --ve
   fi
   # Version floor 4.2.1 per docs/architecture.md — older releases miss
   # the cloud-mode tag set and silently skip the strictest checks.
-  # Mirrors the gate in splunk_apps/aegis_app/scripts/run_appinspect.sh
+  # Mirrors the gate in splunk_apps/splunkgate_app/scripts/run_appinspect.sh
   # (re-asserted here because the tarball intentionally omits scripts/).
   INSTALLED=$("${APPINSPECT[@]}" --version 2>&1 | head -n1 | awk '{print $NF}' | tr -d '\r')
   if [ -z "${INSTALLED}" ] || ! [[ "${INSTALLED}" =~ ^[0-9] ]]; then

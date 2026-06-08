@@ -23,28 +23,28 @@ described. Fixes are mostly mechanical.
 
 **Location:** lines 23, 119 of mw-04; cross-check with foundsec-02 line 23 and foundsec-03 line 24.
 
-**Problem.** mw-04 calls `aegis_judges.foundation_sec.explain(verdict, text)` (2-arg
+**Problem.** mw-04 calls `splunkgate_judges.foundation_sec.explain(verdict, text)` (2-arg
 positional: a `Verdict` and the original text). EPIC-05 ships
 `FoundationSecExplainer.explain(ctx: VerdictContext) -> str` — a method on a class
 instance, taking a `VerdictContext` Pydantic model (NOT a Verdict). The contract names
 diverge across stories that are sequenced as dependencies. The coding agent for mw-04
-will write a `from aegis_judges.foundation_sec import explain` import that does not
+will write a `from splunkgate_judges.foundation_sec import explain` import that does not
 resolve, OR will pass a `Verdict` where a `VerdictContext` is expected.
 
-Same bug in mcp-05 line 24 which says `aegis_judges.foundation_sec` "already wraps Splunk
+Same bug in mcp-05 line 24 which says `splunkgate_judges.foundation_sec` "already wraps Splunk
 REST search per EPIC-05" — actually EPIC-05 ships a `SplunkSearchClient` class plus a
 `FoundationSecExplainer` class. There is no module-level `run_search(...)` function
 (asserted in mcp-05 line 149).
 
 **Suggested fix.** Add to mw-04 file modification map:
-- `packages/aegis_mw/src/aegis_mw/_explanation_bridge.py` — NEW — adapter
+- `packages/splunkgate_mw/src/splunkgate_mw/_explanation_bridge.py` — NEW — adapter
   `verdict_to_context(v: Verdict, text: str) -> VerdictContext` that maps the Verdict
   back into the VerdictContext shape (severity, rules, classifications, offending_text,
   trace_id). Then call
   `await self._explainer.explain(verdict_to_context(verdict, text))`.
 
-In mcp-05 line 24 replace `aegis_judges.foundation_sec` with the actual class
-`aegis_judges.foundation_sec.SplunkSearchClient.from_env()`, then call
+In mcp-05 line 24 replace `splunkgate_judges.foundation_sec` with the actual class
+`splunkgate_judges.foundation_sec.SplunkSearchClient.from_env()`, then call
 `.submit_search(spl, ...)` (the method name shipped in foundsec-01). Update line 149
 similarly.
 
@@ -86,8 +86,8 @@ post-scan.
 
 **Location:** mcp-01 lines 25, 30, 88-95 (shell verification).
 
-**Problem.** Story uses `from aegis_mcp.server import server` (a module-level singleton
-`FastMCP("aegis-mcp")`) AND `server.list_tools()` (async). The official `mcp` SDK's
+**Problem.** Story uses `from splunkgate_mcp.server import server` (a module-level singleton
+`FastMCP("splunkgate-mcp")`) AND `server.list_tools()` (async). The official `mcp` SDK's
 FastMCP does not expose `server.list_tools()` as an async coroutine returning Tool
 objects you can iterate with `.name` and `.outputSchema` — its public surface is
 `@server.tool()` decorators and an internal `_tool_manager`. The shell verification
@@ -102,7 +102,7 @@ and `.outputSchema` attrs.
 (a) Pin and cite the exact mcp SDK version in mcp-01 pyproject (e.g. `mcp>=1.5.0`)
 and verify against its actual `FastMCP._mcp_server.list_tools()` shape, OR
 
-(b) Add a thin wrapper `aegis_mcp.server.list_tools_for_test()` to the file mod map
+(b) Add a thin wrapper `splunkgate_mcp.server.list_tools_for_test()` to the file mod map
 that returns `list[ToolRecord]` from a local registry the `register_tool(...)` helper
 populates. Tests use the wrapper; production code stays SDK-native.
 
@@ -114,10 +114,10 @@ for tests, decouples test code from SDK internals, and is verifiable today.
 **Location:** mcp-05 line 23.
 
 **Problem.** `AuditReport.aggregate: dict` (no type parameters). Pydantic with strict
-mypy in `aegis_core` (per architecture.md line 181 — strict required) treats bare `dict`
+mypy in `splunkgate_core` (per architecture.md line 181 — strict required) treats bare `dict`
 as `dict[Any, Any]` and architecture.md line 355 explicitly bans `Any` annotations in
-aegis_core. Also AC at lines 27/150 expects `aegis.audit.event_count` as integer attribute
-on the OTel event, but the architecture.md §"API schemas" doesn't list `aegis.audit.*`
+splunkgate_core. Also AC at lines 27/150 expects `splunkgate.audit.event_count` as integer attribute
+on the OTel event, but the architecture.md §"API schemas" doesn't list `splunkgate.audit.*`
 as a defined attribute — this would be a NEW custom attribute on a load-bearing surface,
 which deserves explicit ADR mention.
 
@@ -126,8 +126,8 @@ which deserves explicit ADR mention.
   count by X return shapes) OR `aggregate: Mapping[str, str | int | float]` with a
   one-line comment justifying the freeform shape.
 - Add a one-line ADR note in the story: "Per architecture.md ADR-004, MCP tools emit
-  via `aegis_core.otel` — this story introduces the `aegis.audit.event_count` span
-  attribute as a one-off; future ADR may codify it as `aegis.audit.*` namespace."
+  via `splunkgate_core.otel` — this story introduces the `splunkgate.audit.event_count` span
+  attribute as a one-off; future ADR may codify it as `splunkgate.audit.*` namespace."
 
 ### B-C-05 — story-mw-07 — support_agent.py 30-LOC counting rule is checkable but the example skeleton EXCEEDS 30 lines
 
@@ -137,7 +137,7 @@ which deserves explicit ADR mention.
 
 ```
 async def main() -> None:
-    service = connect(host=os.environ["AEGIS_SPLUNK_HOST"], ...)
+    service = connect(host=os.environ["SPLUNKGATE_SPLUNK_HOST"], ...)
     model = OpenAIModel(model="gpt-4o", api_key=os.environ["OPENAI_API_KEY"], base_url="...")
     profile = "financial_services"
     agent = Agent(
@@ -171,21 +171,21 @@ NON-blank lines. Lines like `        response = await agent.invoke_with_data(` a
 two continuation lines all count individually. Recount: 24 statement-equivalent lines.
 **Confirmed passes 30-LOC budget.** Demoting to non-issue.
 
-### B-C-06 — story-mcp-02 — `aegis_judges.splunklib_security_fallback.detect_injection` invented module
+### B-C-06 — story-mcp-02 — `splunkgate_judges.splunklib_security_fallback.detect_injection` invented module
 
 **Location:** mcp-02 line 24, 132.
 
 **Problem.** No EPIC-04 or EPIC-05 story creates a module named
-`aegis_judges.splunklib_security_fallback`. The actual splunklib import path per
+`splunkgate_judges.splunklib_security_fallback`. The actual splunklib import path per
 context/02-agent-frameworks/06-splunklib-ai-deep-read.md line 127 is
 `from splunklib.ai.security import detect_injection` (or
 `from splunklib.ai import detect_injection`). The mw-03 story-mw-03 creates a thin shim
-at `packages/aegis_mw/src/aegis_mw/_first_pass.py` — but that's in `aegis_mw`, not
-`aegis_judges`, and is not exported.
+at `packages/splunkgate_mw/src/splunkgate_mw/_first_pass.py` — but that's in `splunkgate_mw`, not
+`splunkgate_judges`, and is not exported.
 
 **Suggested fix.** Either:
 (a) Add to mcp-02 file mod map: a thin re-export shim at
-`packages/aegis_judges/src/aegis_judges/splunklib_security_fallback.py` that does
+`packages/splunkgate_judges/src/splunkgate_judges/splunklib_security_fallback.py` that does
 `from splunklib.ai.security import detect_injection`, OR
 (b) Change mcp-02 line 24 to import directly:
 `from splunklib.ai.security import detect_injection`.
@@ -194,26 +194,26 @@ at `packages/aegis_mw/src/aegis_mw/_first_pass.py` — but that's in `aegis_mw`,
 
 ### B-C-07 — Cross-story — `defenseclaw_backend` module is imported by 3 stories but no story creates it
 
-**Location:** mw-02 line 23 (`aegis_judges.defenseclaw_backend.evaluate_tool_call`),
-mw-05 line 114 (`aegis_judges.defenseclaw_backend.evaluate_subagent_call`),
-mcp-03 lines 23/144 (`aegis_judges.defenseclaw_backend.evaluate_tool_call`).
+**Location:** mw-02 line 23 (`splunkgate_judges.defenseclaw_backend.evaluate_tool_call`),
+mw-05 line 114 (`splunkgate_judges.defenseclaw_backend.evaluate_subagent_call`),
+mcp-03 lines 23/144 (`splunkgate_judges.defenseclaw_backend.evaluate_tool_call`).
 
 **Problem.** Three Surface 1/Surface 2 stories depend on a `defenseclaw_backend` Python
 module that no EPIC-04, EPIC-05, or EPIC-08 story creates. EPIC-08 (dc-01/02/03) ships
 config YAML, an upstream PR plan, and a LangGraph example — NONE of them ship a Python
-`aegis_judges.defenseclaw_backend` module. mw-02 line 117 says "treat that import as
+`splunkgate_judges.defenseclaw_backend` module. mw-02 line 117 says "treat that import as
 the contract; respx fixture can stand in if EPIC-08 hasn't landed yet (mark with TODO +
 issue link)" — this is a known gap, but unresolved.
 
 **Suggested fix.** Add a new EPIC-08 story (or fold into dc-01):
 - `story-dc-01b-defenseclaw-python-shim.md` — NEW story creating
-  `packages/aegis_judges/src/aegis_judges/defenseclaw_backend.py` with the two API
+  `packages/splunkgate_judges/src/splunkgate_judges/defenseclaw_backend.py` with the two API
   functions `evaluate_tool_call(name, args) -> RuleHit | None` and
   `evaluate_subagent_call(name, input) -> RuleHit | None`. Implementation can wrap the
   small Python-side subset of rules (regex patterns ported from DefenseClaw's
   `policies/guardrail/default/rules/*.yaml`); the FULL rule pack lives in Go in
   DefenseClaw upstream — we only need the in-process subset for tests + the cheap path
-  inside `aegis_mw` and `aegis_mcp`.
+  inside `splunkgate_mw` and `splunkgate_mcp`.
 
 Update dependency arrows in `sprint-status.yaml`: mw-02, mw-05, mcp-03 should depend on
 the new dc-01b. Add the story to dispatch_queue in epics.md.
@@ -261,7 +261,7 @@ Update the AC line 59 similarly.
 
 **Location:** foundsec-01 line 124.
 
-`AEGIS_DEV_INSECURE_TLS=1` is described as overriding `verify_tls=False`, but the
+`SPLUNKGATE_DEV_INSECURE_TLS=1` is described as overriding `verify_tls=False`, but the
 constructor takes `verify_tls: bool = True` and the BDD at line 52 says "constructed
 with verify_tls=False → 1 warning event". The relationship between the env var and the
 constructor arg isn't fully specified — if `verify_tls=True` (default) is passed but
@@ -296,27 +296,27 @@ says `hits >= 4`. The file mod map (line 23) says ≥ 8; the AC says ≥ 4. Pick
 
 ### B-M-05 — story-mw-01 — `__all__` claim missing from spec
 
-**Location:** mw-01 AC line 50 asserts `aegis_mw.__all__` contains exactly 6 names, but
+**Location:** mw-01 AC line 50 asserts `splunkgate_mw.__all__` contains exactly 6 names, but
 file mod map line 24 doesn't say `__init__.py` must declare `__all__`. Coding agent may
-omit it and the AC will fail with `AttributeError: module 'aegis_mw' has no attribute
+omit it and the AC will fail with `AttributeError: module 'splunkgate_mw' has no attribute
 '__all__'`. Add to file mod map: "`__init__.py` declares `__all__ = [...]` with exactly
 the 6 listed names."
 
 ### B-M-06 — story-mw-02 — `surface="mw_tool"` literal is asserted but no story defines it as canonical
 
-**Location:** mw-02 AC line 51 asserts `aegis.surface="mw_tool"`. mw-05 line 23 asserts
+**Location:** mw-02 AC line 51 asserts `splunkgate.surface="mw_tool"`. mw-05 line 23 asserts
 `surface="mw_subagent"`. mw-06 line 23 asserts `surface="mw_agent"`. mw-03/04 use
 `surface="mw_model"`. These four literals are load-bearing for Surface 4 dashboards but
 aren't declared as the canonical set in any architecture.md surface enum. Risk: a
 typo in one story (e.g. `surface="mw_tools"` plural) will silently break the dashboard.
 
 **Suggested fix.** Add to story-core-01 (or core-02) file mod map: a
-`aegis_core.surfaces` module with `class Surface(str, Enum): MW_TOOL = "mw_tool"; ...`
+`splunkgate_core.surfaces` module with `class Surface(str, Enum): MW_TOOL = "mw_tool"; ...`
 and import the enum in every middleware/MCP story instead of using string literals.
 
 ### B-M-07 — story-mw-02 — `from_env()` factory pattern referenced but not specified for AI Defense client
 
-**Location:** mw-02 line 118 says "AI Defense client `aegis_judges.ai_defense.inspect`
+**Location:** mw-02 line 118 says "AI Defense client `splunkgate_judges.ai_defense.inspect`
 defaults to mock=True per ADR-006". No ADR-006 in the architecture.md I read. There is
 ADR-005 (sourcetype), ADR-004 (own MCP), ADR-002 (monorepo), ADR-003 (Foundation-Sec
 explainer-only), ADR-010 (cheap-first-pass). Verify ADR-006 exists or remove the
@@ -417,9 +417,9 @@ because the test for "diff blocks present" is THE acceptance gate for this story
 **Location:** dc-03 line 78. The §14 grep at line 79 only checks `agent.py`, `README.md`,
 `defenseclaw-config.yaml` — `mock_llm.py` not in list, fine. But the README at line 23
 says "the architecture line: `LangGraph agent → DefenseClaw proxy (proxy.go, 4430 LOC)
-→ LLM upstream + Aegis HEC sink`" — that's fine. Just confirm the agent.py file does
+→ LLM upstream + SplunkGate HEC sink`" — that's fine. Just confirm the agent.py file does
 not contain the word "mock" anywhere (the §14 grep on line 79 would fail). The agent
-uses `AEGIS_LLM_BASE_URL` env var — should be safe.
+uses `SPLUNKGATE_LLM_BASE_URL` env var — should be safe.
 
 ---
 
@@ -464,10 +464,10 @@ uses `AEGIS_LLM_BASE_URL` env var — should be safe.
 | EPIC-07: official `mcp` Python SDK | PASS (mcp-01 line 142 explicitly bans flask/fastapi) |
 | EPIC-07: MCP protocol 2025-11-25 pinned | PASS |
 | EPIC-07: structuredContent + outputSchema used | PASS |
-| EPIC-07: tool names use `aegis_` prefix (not splunk_/saia_) | PASS — all 4 tools |
+| EPIC-07: tool names use `splunkgate_` prefix (not splunk_/saia_) | PASS — all 4 tools |
 | EPIC-07: Splunk MCP Server closed-source coexistence acknowledged | PASS (cited 6 times) |
-| EPIC-07: MCP sub-convention attrs co-emit with gen_ai.evaluation.result | PARTIAL (mcp-01 spec'd; mcp-02/03/04/05 only assert `aegis.surface` not `mcp.method.name` — see B-M-XX) |
-| EPIC-07: `AuditReport` added to `aegis_core` | PASS (mcp-05 line 23) |
+| EPIC-07: MCP sub-convention attrs co-emit with gen_ai.evaluation.result | PARTIAL (mcp-01 spec'd; mcp-02/03/04/05 only assert `splunkgate.surface` not `mcp.method.name` — see B-M-XX) |
+| EPIC-07: `AuditReport` added to `splunkgate_core` | PASS (mcp-05 line 23) |
 | EPIC-08: DefenseClaw line counts (600 + 4430) cited correctly | PASS |
 | EPIC-08: Apache-2.0 acknowledged | PASS |
 | EPIC-08: upstream PR is markdown + branch ref, NOT Go dump in repo | PASS (dc-02 line 21, line 31, line 136) |

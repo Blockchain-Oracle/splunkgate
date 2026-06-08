@@ -1,7 +1,0 @@
-<nav search_view="search" color="#FF6B6B">
-  <view name="agent_risk_overview" default="true" />
-  <view name="verdict_inspector" />
-  <view name="regulator_evidence_pack" />
-  <view name="aegis_setup" />
-  <view name="search" />
-</nav>

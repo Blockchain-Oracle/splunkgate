@@ -8,140 +8,12 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "aegis-core",
-    "aegis-eval",
-    "aegis-judges",
-    "aegis-mcp",
-    "aegis-monorepo",
-    "aegis-mw",
-]
-
-[[package]]
-name = "aegis-core"
-version = "0.0.1"
-source = { editable = "packages/aegis_core" }
-dependencies = [
-    { name = "httpx" },
-    { name = "opentelemetry-api" },
-    { name = "opentelemetry-sdk" },
-    { name = "pydantic" },
-    { name = "structlog" },
-    { name = "tenacity" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "httpx", specifier = ">=0.27" },
-    { name = "opentelemetry-api", specifier = ">=1.27" },
-    { name = "opentelemetry-sdk", specifier = ">=1.27" },
-    { name = "pydantic", specifier = ">=2.10" },
-    { name = "structlog", specifier = ">=24.4" },
-    { name = "tenacity", specifier = ">=9.0" },
-]
-
-[[package]]
-name = "aegis-eval"
-version = "0.0.1"
-source = { editable = "eval" }
-dependencies = [
-    { name = "aegis-core" },
-    { name = "aegis-judges" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aegis-core", editable = "packages/aegis_core" },
-    { name = "aegis-judges", editable = "packages/aegis_judges" },
-]
-
-[[package]]
-name = "aegis-judges"
-version = "0.0.1"
-source = { editable = "packages/aegis_judges" }
-dependencies = [
-    { name = "aegis-core" },
-]
-
-[package.metadata]
-requires-dist = [{ name = "aegis-core", editable = "packages/aegis_core" }]
-
-[[package]]
-name = "aegis-mcp"
-version = "0.0.1"
-source = { editable = "packages/aegis_mcp" }
-dependencies = [
-    { name = "aegis-core" },
-    { name = "aegis-judges" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aegis-core", editable = "packages/aegis_core" },
-    { name = "aegis-judges", editable = "packages/aegis_judges" },
-]
-
-[[package]]
-name = "aegis-monorepo"
-version = "0.0.1"
-source = { virtual = "." }
-
-[package.dev-dependencies]
-dev = [
-    { name = "aegis-core" },
-    { name = "aegis-eval" },
-    { name = "aegis-judges" },
-    { name = "aegis-mcp" },
-    { name = "aegis-mw" },
-    { name = "hypothesis" },
-    { name = "mypy" },
-    { name = "pillow" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "respx" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "aegis-core", editable = "packages/aegis_core" },
-    { name = "aegis-eval", editable = "eval" },
-    { name = "aegis-judges", editable = "packages/aegis_judges" },
-    { name = "aegis-mcp", editable = "packages/aegis_mcp" },
-    { name = "aegis-mw", editable = "packages/aegis_mw" },
-    { name = "hypothesis", specifier = ">=6.112" },
-    { name = "mypy", specifier = ">=1.11" },
-    { name = "pillow", specifier = "==12.2.0" },
-    { name = "pre-commit", specifier = ">=4.0" },
-    { name = "pytest", specifier = ">=8.3" },
-    { name = "pytest-asyncio", specifier = ">=0.24" },
-    { name = "pytest-cov", specifier = ">=5" },
-    { name = "respx", specifier = ">=0.21" },
-    { name = "ruff", specifier = ">=0.6" },
-]
-
-[[package]]
-name = "aegis-mw"
-version = "0.1.0"
-source = { editable = "packages/aegis_mw" }
-dependencies = [
-    { name = "aegis-core" },
-    { name = "aegis-judges" },
-    { name = "pydantic" },
-    { name = "splunk-sdk", extra = ["ai"] },
-    { name = "structlog" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aegis-core", editable = "packages/aegis_core" },
-    { name = "aegis-judges", editable = "packages/aegis_judges" },
-    { name = "pydantic", specifier = ">=2.10" },
-    { name = "splunk-sdk", extras = ["ai"], specifier = ">=3.0.0" },
-    { name = "structlog", specifier = ">=24.4" },
+    "splunkgate-core",
+    "splunkgate-eval",
+    "splunkgate-judges",
+    "splunkgate-mcp",
+    "splunkgate-monorepo",
+    "splunkgate-mw",
 ]
 
 [[package]]
@@ -1533,6 +1405,134 @@ ai = [
     { name = "langchain" },
     { name = "mcp" },
     { name = "pydantic" },
+]
+
+[[package]]
+name = "splunkgate-core"
+version = "0.0.1"
+source = { editable = "packages/splunkgate_core" }
+dependencies = [
+    { name = "httpx" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-sdk" },
+    { name = "pydantic" },
+    { name = "structlog" },
+    { name = "tenacity" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "httpx", specifier = ">=0.27" },
+    { name = "opentelemetry-api", specifier = ">=1.27" },
+    { name = "opentelemetry-sdk", specifier = ">=1.27" },
+    { name = "pydantic", specifier = ">=2.10" },
+    { name = "structlog", specifier = ">=24.4" },
+    { name = "tenacity", specifier = ">=9.0" },
+]
+
+[[package]]
+name = "splunkgate-eval"
+version = "0.0.1"
+source = { editable = "eval" }
+dependencies = [
+    { name = "splunkgate-core" },
+    { name = "splunkgate-judges" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "splunkgate-core", editable = "packages/splunkgate_core" },
+    { name = "splunkgate-judges", editable = "packages/splunkgate_judges" },
+]
+
+[[package]]
+name = "splunkgate-judges"
+version = "0.0.1"
+source = { editable = "packages/splunkgate_judges" }
+dependencies = [
+    { name = "splunkgate-core" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "splunkgate-core", editable = "packages/splunkgate_core" }]
+
+[[package]]
+name = "splunkgate-mcp"
+version = "0.0.1"
+source = { editable = "packages/splunkgate_mcp" }
+dependencies = [
+    { name = "splunkgate-core" },
+    { name = "splunkgate-judges" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "splunkgate-core", editable = "packages/splunkgate_core" },
+    { name = "splunkgate-judges", editable = "packages/splunkgate_judges" },
+]
+
+[[package]]
+name = "splunkgate-monorepo"
+version = "0.0.1"
+source = { virtual = "." }
+
+[package.dev-dependencies]
+dev = [
+    { name = "hypothesis" },
+    { name = "mypy" },
+    { name = "pillow" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "respx" },
+    { name = "ruff" },
+    { name = "splunkgate-core" },
+    { name = "splunkgate-eval" },
+    { name = "splunkgate-judges" },
+    { name = "splunkgate-mcp" },
+    { name = "splunkgate-mw" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "hypothesis", specifier = ">=6.112" },
+    { name = "mypy", specifier = ">=1.11" },
+    { name = "pillow", specifier = "==12.2.0" },
+    { name = "pre-commit", specifier = ">=4.0" },
+    { name = "pytest", specifier = ">=8.3" },
+    { name = "pytest-asyncio", specifier = ">=0.24" },
+    { name = "pytest-cov", specifier = ">=5" },
+    { name = "respx", specifier = ">=0.21" },
+    { name = "ruff", specifier = ">=0.6" },
+    { name = "splunkgate-core", editable = "packages/splunkgate_core" },
+    { name = "splunkgate-eval", editable = "eval" },
+    { name = "splunkgate-judges", editable = "packages/splunkgate_judges" },
+    { name = "splunkgate-mcp", editable = "packages/splunkgate_mcp" },
+    { name = "splunkgate-mw", editable = "packages/splunkgate_mw" },
+]
+
+[[package]]
+name = "splunkgate-mw"
+version = "0.1.0"
+source = { editable = "packages/splunkgate_mw" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "splunk-sdk", extra = ["ai"] },
+    { name = "splunkgate-core" },
+    { name = "splunkgate-judges" },
+    { name = "structlog" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.10" },
+    { name = "splunk-sdk", extras = ["ai"], specifier = ">=3.0.0" },
+    { name = "splunkgate-core", editable = "packages/splunkgate_core" },
+    { name = "splunkgate-judges", editable = "packages/splunkgate_judges" },
+    { name = "structlog", specifier = ">=24.4" },
 ]
 
 [[package]]

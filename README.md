@@ -1,4 +1,4 @@
-# Aegis
+# SplunkGate
 
 > Runtime safety net for AI agents deployed in Splunk + Cisco enterprise environments. Built for the Splunk Agentic Ops Hackathon (Devpost, deadline Jun 15 2026).
 
@@ -8,7 +8,7 @@
 
 ## What is it
 
-Aegis is a four-surface AI agent safety net that any agent in a Splunk-customer environment can consult (or be intercepted by) before taking risky actions. It answers three questions in real time, with auditable record-keeping:
+SplunkGate is a four-surface AI agent safety net that any agent in a Splunk-customer environment can consult (or be intercepted by) before taking risky actions. It answers three questions in real time, with auditable record-keeping:
 
 1. Is this user input a prompt-injection attempt?
 2. Does this agent output contain PII / PHI / PCI / credentials / source code?
@@ -20,10 +20,10 @@ Verdicts emit as OpenTelemetry GenAI evaluation events, land in Splunk via HEC (
 
 | # | Surface | Consumer | Status |
 |---|---|---|---|
-| S1 | `aegis-mw` — Python middleware library for `splunklib.ai` agents | Agent developer | spec |
-| S2 | `aegis-mcp` — own MCP server (parallel to Splunk's, not into it) | Any MCP client (Claude Desktop / Cursor / LangGraph / custom) | spec |
+| S1 | `splunkgate-mw` — Python middleware library for `splunklib.ai` agents | Agent developer | spec |
+| S2 | `splunkgate-mcp` — own MCP server (parallel to Splunk's, not into it) | Any MCP client (Claude Desktop / Cursor / LangGraph / custom) | spec |
 | S3 | DefenseClaw integration (config delta + upstream PR) | HTTP-intercept layer for non-`splunklib.ai` agents | spec |
-| S4 | `aegis-app` — Splunk app with SPL/MLTK + Dashboard Studio v2 | CISO / SOC analyst / compliance / regulator | spec |
+| S4 | `splunkgate-app` — Splunk app with SPL/MLTK + Dashboard Studio v2 | CISO / SOC analyst / compliance / regulator | spec |
 
 ## Judgment layer
 
@@ -40,7 +40,7 @@ Multi-model, each model doing what it was actually built for:
 ## Repo layout
 
 ```
-aegis/
+splunkgate/
 ├── README.md           ← you are here
 ├── LICENSE             ← Apache-2.0
 ├── .gitignore
@@ -56,7 +56,7 @@ aegis/
 │   │   ├── story-mw-01-*.md
 │   │   └── ...
 │   └── plans/
-│       └── 2026-06-02-aegis-spec-set-design.md
+│       └── 2026-06-02-splunkgate-spec-set-design.md
 └── (code arrives after specs land + epics get GitHub-issue'd)
 ```
 
@@ -74,4 +74,4 @@ After this, `git commit` runs ruff + mypy --strict + 400-LOC cap + gitleaks + no
 - Architecture: `../research/splunk-agentic-ops-2026/13-architecture-recommendation-v2.md`
 - Domain knowledge: `../context/` (12 numbered folders, ~150K words, 12+ primary-source PDFs, every claim flagged ✅/🟡/❓/❌)
 - Hallucination audit: `../context/HALLUCINATION-AUDIT.md`
-- Brainstorm output: `docs/plans/2026-06-02-aegis-spec-set-design.md`
+- Brainstorm output: `docs/plans/2026-06-02-splunkgate-spec-set-design.md`

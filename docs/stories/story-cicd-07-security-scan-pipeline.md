@@ -11,8 +11,8 @@
 ## User story
 
 **As a** coding agent who might unknowingly pull a CVE-laden transitive dep, leak a credential into git history, or write Python that bandit flags as security-smelling
-**I want to** the security workflow run pip-audit, gitleaks, trivy filesystem scan, and bandit (scoped to `aegis_judges`) on every push and nightly
-**So that** vulnerable dependencies, leaked secrets, and security smells get caught before they reach `main`, and Aegis's submission gets to claim a clean security posture in the README
+**I want to** the security workflow run pip-audit, gitleaks, trivy filesystem scan, and bandit (scoped to `splunkgate_judges`) on every push and nightly
+**So that** vulnerable dependencies, leaked secrets, and security smells get caught before they reach `main`, and SplunkGate's submission gets to claim a clean security posture in the README
 
 ---
 
@@ -20,12 +20,12 @@
 
 Exact files the coding agent creates or modifies for this story:
 
-- `.github/workflows/security.yml` — NEW — defines the `Security` workflow. Triggers: `push` on all branches + `schedule: cron '0 3 * * *'` (3am UTC nightly). Four jobs (`pip-audit`, `gitleaks`, `trivy`, `bandit`) — each runs `runs-on: ubuntu-latest`, no `needs:` (run in parallel). Copy verbatim from `docs/cicd-spec.md` § "security.yml — security scanning" lines 352-398. Severity floor for trivy: `CRITICAL,HIGH` (`exit-code: '1'`). Bandit scope: `packages/aegis_judges/src/` only (the package that touches credentials).
+- `.github/workflows/security.yml` — NEW — defines the `Security` workflow. Triggers: `push` on all branches + `schedule: cron '0 3 * * *'` (3am UTC nightly). Four jobs (`pip-audit`, `gitleaks`, `trivy`, `bandit`) — each runs `runs-on: ubuntu-latest`, no `needs:` (run in parallel). Copy verbatim from `docs/cicd-spec.md` § "security.yml — security scanning" lines 352-398. Severity floor for trivy: `CRITICAL,HIGH` (`exit-code: '1'`). Bandit scope: `packages/splunkgate_judges/src/` only (the package that touches credentials).
 - `.bandit` — NEW — bandit config file (~30 lines). Skip rules: `B101` (assert_used — pytest uses asserts), `B404` (subprocess imports — needed for `splunklib`-style invocation). Confidence floor: `MEDIUM`. Severity floor: `MEDIUM`.
-- `.gitleaks.toml` — NEW — gitleaks config (~50 lines). Inherits from gitleaks default ruleset. Allowlist: (1) `tests/fixtures/` paths (synthetic-fixture carve-out); (2) `AEGIS_AI_DEFENSE_API_KEY` placeholder in `docs/` (env-var name not the value); (3) the `verify=False` documented warning in `docs/architecture.md` (string contains `verify=False` but is not a secret). NO allowlist for `AKIA*`-shaped strings outside fixture paths.
+- `.gitleaks.toml` — NEW — gitleaks config (~50 lines). Inherits from gitleaks default ruleset. Allowlist: (1) `tests/fixtures/` paths (synthetic-fixture carve-out); (2) `SPLUNKGATE_AI_DEFENSE_API_KEY` placeholder in `docs/` (env-var name not the value); (3) the `verify=False` documented warning in `docs/architecture.md` (string contains `verify=False` but is not a secret). NO allowlist for `AKIA*`-shaped strings outside fixture paths.
 - `docs/ops/security-scan-policy.md` — NEW — short doc (~50 lines) covering: (1) which scanners run on which trigger; (2) the severity floor per scanner; (3) how to triage a pip-audit GHSA hit (open ADR, ignore via `--ignore-vuln GHSA-XXXX`, document in `pyproject.toml` comment); (4) how to handle a real gitleaks hit (rotate + `git-filter-repo` per `docs/cicd-spec.md` line 496).
 - `tests/fixtures/security/has_pip_audit_target.txt` — NEW — file documenting that pip-audit runs over `uv.lock` (no fixture content needed; pip-audit auto-detects)
-- `tests/test_bandit_clean.py` — NEW — pytest module with 2 test cases: (a) running `bandit -r packages/aegis_judges/src/` on placeholder code exits 0 (or low-severity-only); (b) inserting `eval("user_input")` in a temp file causes bandit `-r` over the temp file to exit non-zero (proves bandit actually fires)
+- `tests/test_bandit_clean.py` — NEW — pytest module with 2 test cases: (a) running `bandit -r packages/splunkgate_judges/src/` on placeholder code exits 0 (or low-severity-only); (b) inserting `eval("user_input")` in a temp file causes bandit `-r` over the temp file to exit non-zero (proves bandit actually fires)
 
 The coding agent must NOT modify files outside this map without re-checking CLAUDE.md.
 
@@ -57,7 +57,7 @@ Given `trivy fs --severity CRITICAL,HIGH --exit-code 1 .` runs locally
 When  the scan completes
 Then  exit code is 0 (or trivy not installed locally — accept via env-gate `if command -v trivy`)
 
-Given `uv run --with bandit bandit -r packages/aegis_judges/src/ -c .bandit` runs
+Given `uv run --with bandit bandit -r packages/splunkgate_judges/src/ -c .bandit` runs
 When  the scan completes on placeholder code
 Then  exit code is 0 (no MEDIUM+/MEDIUM+ findings)
 
@@ -110,8 +110,8 @@ if command -v trivy >/dev/null; then
   trivy fs --severity CRITICAL,HIGH --exit-code 1 .
 fi
 
-# 5. bandit clean on aegis_judges placeholder code
-uv run --with bandit bandit -r packages/aegis_judges/src/ -c .bandit
+# 5. bandit clean on splunkgate_judges placeholder code
+uv run --with bandit bandit -r packages/splunkgate_judges/src/ -c .bandit
 
 # 6. Bandit-violator test fires
 uv run pytest tests/test_bandit_clean.py -v

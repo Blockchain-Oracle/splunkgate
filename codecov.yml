@@ -9,9 +9,9 @@ coverage:
         target: 70%
 
 flags:
-  aegis_core:
+  splunkgate_core:
     paths:
-      - packages/aegis_core/src/aegis_core
-  aegis_judges:
+      - packages/splunkgate_core/src/splunkgate_core
+  splunkgate_judges:
     paths:
-      - packages/aegis_judges/src/aegis_judges
+      - packages/splunkgate_judges/src/splunkgate_judges

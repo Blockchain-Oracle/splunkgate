@@ -1,0 +1,17 @@
+[project]
+name = "splunkgate-judges"
+version = "0.0.1"
+description = "SplunkGate multi-judge layer: AI Defense client, DefenseClaw shim, Foundation-Sec explainer"
+requires-python = ">=3.13"
+license = { text = "Apache-2.0" }
+dependencies = ["splunkgate-core"]
+
+[tool.uv.sources]
+splunkgate-core = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/splunkgate_judges"]

@@ -14,7 +14,7 @@ EPIC-10 stories are dense and honest (mock-flagging, MSJ ceiling caveats, Improm
 
 EPIC-11 stories meet the Devpost submission-gate requirements (architecture diagram at repo root, light + dark variants, demo video < 3 min, README §13 order, 5 incumbent credits). One critical: story-readme-01 lists 6 incumbents in BDD criterion #8 (`Splunkbase 8765` and `Splunkbase 7404` count as separate names alongside `MCP Watch` and `Cisco Security Cloud`), and BDD criterion #14 asserts "all six" while PRD §13 lists 5 incumbents — naming inconsistency.
 
-EPIC-12 mirrors CIMplicity's 25-check pattern verbatim. One critical: story-app-12 emits `aegis_app-<version>.tar.gz` but the audit-rule per "no `v` prefix" Splunkbase convention says `aegis_app-<version>.tgz`. Both extensions are valid Splunk-side; this is a minor convention drift. Documentation of server-side signing is present in story-app-12 Notes.
+EPIC-12 mirrors CIMplicity's 25-check pattern verbatim. One critical: story-app-12 emits `splunkgate_app-<version>.tar.gz` but the audit-rule per "no `v` prefix" Splunkbase convention says `splunkgate_app-<version>.tgz`. Both extensions are valid Splunk-side; this is a minor convention drift. Documentation of server-side signing is present in story-app-12 Notes.
 
 ---
 
@@ -29,12 +29,12 @@ EPIC-12 mirrors CIMplicity's 25-check pattern verbatim. One critical: story-app-
 ### C-C-02 — story-app-08-risk-factors-conf-es-rba-integration.md — Same 11 rule names hallucinated (3 places)
 
 - **Problem.** Same hallucination as C-C-01, replicated across three locations:
-  - Line 23 (file modification map): "Required stanzas ... `[Aegis - Prompt Injection]`, `[Aegis - PII]`, `[Aegis - PHI]`, `[Aegis - PCI]`, `[Aegis - Code Detection]`, `[Aegis - Toxicity]`, `[Aegis - Profanity]`, `[Aegis - Harassment]`, `[Aegis - Hate Speech]`, `[Aegis - Violence]`, `[Aegis - Self-Harm]`"
+  - Line 23 (file modification map): "Required stanzas ... `[SplunkGate - Prompt Injection]`, `[SplunkGate - PII]`, `[SplunkGate - PHI]`, `[SplunkGate - PCI]`, `[SplunkGate - Code Detection]`, `[SplunkGate - Toxicity]`, `[SplunkGate - Profanity]`, `[SplunkGate - Harassment]`, `[SplunkGate - Hate Speech]`, `[SplunkGate - Violence]`, `[SplunkGate - Self-Harm]`"
   - Line 40 (BDD acceptance): the grep -E pattern includes `Toxicity|Self-Harm|Violence` instead of the verified verbatim names
   - Line 92 (shell verification block 2): same hallucinated regex
   - Line 179 (Notes): "the 11 named Cisco AI Defense rule classifications are: Prompt Injection, PII, PHI, PCI, Code Detection, **Toxicity**, Profanity, Harassment, Hate Speech, **Violence**, **Self-Harm**."
 - **Impact.** The 11 risk_factors.conf stanzas + the BDD grep + the per-rule risk-value table (line 179) all depend on these names being correct. ES RBA will silently fail to fire on `Sexual Content & Exploitation` and `Social Division & Polarization` events because no stanza matches. The shell-verification grep will require the coding agent to author wrong stanza names to pass the BDD.
-- **Suggested fix.** Replace all four occurrences with the verified PRD §92 list. Update the per-rule risk-value mapping (line 179) — Sexual Content & Exploitation and Social Division & Polarization need explicit scores; Toxicity / Self-Harm / Violence rows must be removed (or, if those are desired Aegis-internal categories, document that in a Notes block and mark them as derived fields, not as Cisco rules).
+- **Suggested fix.** Replace all four occurrences with the verified PRD §92 list. Update the per-rule risk-value mapping (line 179) — Sexual Content & Exploitation and Social Division & Polarization need explicit scores; Toxicity / Self-Harm / Violence rows must be removed (or, if those are desired SplunkGate-internal categories, document that in a Notes block and mark them as derived fields, not as Cisco rules).
 
 ### C-C-03 — story-eval-01 + docs/eval-spec.md — ADR-011 vs eval-spec spelling conflict not resolved at source
 
@@ -50,8 +50,8 @@ EPIC-12 mirrors CIMplicity's 25-check pattern verbatim. One critical: story-app-
 
 ### C-C-05 — story-app-12-splunkbase-submission-package-and-checklist.md — `.tar.gz` vs `.tgz` Splunkbase convention drift
 
-- **Problem.** Story-app-12 line 14 / 23 / 28 / 50 specifies `dist/aegis_app-<version>.tar.gz`. The special audit rule for this batch states: "Splunkbase tgz uses `aegis_app-<version>.tgz` (no `v` prefix, per Splunkbase rules) — verified by cicd-08 deferral plan." Both extensions are technically valid Splunk-side (Splunkbase accepts both), but story-cicd-08 (per the cross-references in this story's Notes) standardizes on `.tgz`. The `.tar.gz` choice creates a naming divergence between the EPIC-12 artifact and the EPIC-01 release pipeline.
-- **Impact.** Release pipeline (story-cicd-08) likely greps for `dist/aegis_app-*.tgz` to sign + upload. Story-app-12's `find dist -name 'aegis_app-*.tar.gz'` would produce a different file pattern. The two would not connect.
+- **Problem.** Story-app-12 line 14 / 23 / 28 / 50 specifies `dist/splunkgate_app-<version>.tar.gz`. The special audit rule for this batch states: "Splunkbase tgz uses `splunkgate_app-<version>.tgz` (no `v` prefix, per Splunkbase rules) — verified by cicd-08 deferral plan." Both extensions are technically valid Splunk-side (Splunkbase accepts both), but story-cicd-08 (per the cross-references in this story's Notes) standardizes on `.tgz`. The `.tar.gz` choice creates a naming divergence between the EPIC-12 artifact and the EPIC-01 release pipeline.
+- **Impact.** Release pipeline (story-cicd-08) likely greps for `dist/splunkgate_app-*.tgz` to sign + upload. Story-app-12's `find dist -name 'splunkgate_app-*.tar.gz'` would produce a different file pattern. The two would not connect.
 - **Suggested fix.** Pick `.tgz` (matches Splunkbase convention used by both DNS Guard 7922 and CIMplicity); update file modification map line 23, BDD criteria line 50-58, shell verification block 4. Verify story-cicd-08 also uses `.tgz` — if it uses `.tar.gz` instead, fix there or here so they match.
 
 ### C-C-06 — story-app-06-dashboard-verdict-inspector.md — input-name URL deep-link contract inconsistency with story-app-05
@@ -72,9 +72,9 @@ EPIC-12 mirrors CIMplicity's 25-check pattern verbatim. One critical: story-app-
 
 - **C-M-01 — story-app-02 line 23.** props.conf stanza lists `DATETIME_CONFIG = ` (empty value). Splunk accepts this but AppInspect warns on empty stanza values. Either set `DATETIME_CONFIG = CURRENT` or drop the line.
 
-- **C-M-02 — story-app-02 line 109.** Shell verification uses `${AEGIS_SPLUNK_HOST}` inside a Python `c.connect(host="${AEGIS_SPLUNK_HOST}", ...)` call inside a heredoc — Python doesn't shell-expand. Should use `os.environ['AEGIS_SPLUNK_HOST']`. Same pattern repeated in story-app-03 line 132 and story-app-04 line 122 and story-app-08 line 136.
+- **C-M-02 — story-app-02 line 109.** Shell verification uses `${SPLUNKGATE_SPLUNK_HOST}` inside a Python `c.connect(host="${SPLUNKGATE_SPLUNK_HOST}", ...)` call inside a heredoc — Python doesn't shell-expand. Should use `os.environ['SPLUNKGATE_SPLUNK_HOST']`. Same pattern repeated in story-app-03 line 132 and story-app-04 line 122 and story-app-08 line 136.
 
-- **C-M-03 — story-app-03 line 23.** `[Aegis - MSJ scaling indicator]` saved search is required in this story but the savedsearches.conf section also says "All ML training searches disabled by default (`disabled = 1`)." Spell out whether the MSJ scaling search is one of the disabled-by-default 6 or one of the 3 dashboard-driving searches. BDD criterion line 63 expects `disabled = 1` count >= 6 — if MSJ is disabled, the dashboard panel in story-app-05 will be empty until user enables it.
+- **C-M-03 — story-app-03 line 23.** `[SplunkGate - MSJ scaling indicator]` saved search is required in this story but the savedsearches.conf section also says "All ML training searches disabled by default (`disabled = 1`)." Spell out whether the MSJ scaling search is one of the disabled-by-default 6 or one of the 3 dashboard-driving searches. BDD criterion line 63 expects `disabled = 1` count >= 6 — if MSJ is disabled, the dashboard panel in story-app-05 will be empty until user enables it.
 
 - **C-M-04 — story-app-04 line 25.** Story owns the schema but defers bootstrapping to story-app-03 — yet story-app-03 has already shipped (epic dispatch order). Cross-story update reference is brittle. Add the bootstrap saved search here as an explicit "UPDATE story-app-03 savedsearches.conf" entry in the file modification map.
 
@@ -84,19 +84,19 @@ EPIC-12 mirrors CIMplicity's 25-check pattern verbatim. One critical: story-app-
 
 - **C-M-07 — story-app-07 line 198.** SR 26-2 footnote 3 verbatim quote: the story says "Verify the exact phrasing in the saved context file before pasting — if the file has different exact words, use those instead." Good. But the BDD #6 (line 53) grep checks for `out of named MRM scope|risk management practices` as alternatives — a reasonable substring guard, but a literal quote of the actual SR 26-2 footnote would be safer. Coding agent will need to read `context/03-regulatory/03-ffiec-occ-fed-banking.md` and copy-paste; flag in Notes that the verbatim quote may be slightly different from the story's paraphrase.
 
-- **C-M-08 — story-app-07 line 199.** EU AI Act Article 6 mapping table specifies 6 high-risk requirements with Aegis surface mappings. BDD #10 (line 70) only requires "at least 4 high-risk requirements." Mismatch between Notes (6) and BDD (4). Lock to 6 to match Article 6's actual sub-articles.
+- **C-M-08 — story-app-07 line 199.** EU AI Act Article 6 mapping table specifies 6 high-risk requirements with SplunkGate surface mappings. BDD #10 (line 70) only requires "at least 4 high-risk requirements." Mismatch between Notes (6) and BDD (4). Lock to 6 to match Article 6's actual sub-articles.
 
-- **C-M-09 — story-app-09 line 27.** Includes `static/screenshot.png` as a new file. This is for Splunkbase (1280×720). Notes line 168 says "Story-app-12 swaps this for an actual dashboard screenshot." The placeholder gets generated programmatically with "Aegis" wordmark — but story-app-12 doesn't list `static/screenshot.png` in its file modification map. The swap is documented but not enforced.
+- **C-M-09 — story-app-09 line 27.** Includes `static/screenshot.png` as a new file. This is for Splunkbase (1280×720). Notes line 168 says "Story-app-12 swaps this for an actual dashboard screenshot." The placeholder gets generated programmatically with "SplunkGate" wordmark — but story-app-12 doesn't list `static/screenshot.png` in its file modification map. The swap is documented but not enforced.
 
 - **C-M-10 — story-app-10 line 33.** `infra/splunk-docker-compose.yml` uses image `splunk/splunk:9.4.0`. Per architecture.md, Splunk compatibility line is "9.4, 10.0, 10.1, 10.2, 10.3, 10.4." 9.4 is the floor — fine. But Abu's verified Splunk Cloud is 10.4.2604.5 — testing only against 9.4 leaves a 5-version gap. Document this in Notes as a known coverage gap.
 
 - **C-M-11 — story-app-11 line 11 + 86.** Estimate "~2h" but file modification map has 8 new files (yaml + warnings.md + 2 scripts + 2 fixtures + 1 test file + 1 README). Realistic estimate is 3h+. Two-hour cap risk.
 
-- **C-M-12 — story-app-11 line 109 + 113.** Shell verification block 3 reads `../inspiration/cimplicity-ai-app/.appinspect.manualcheck.yaml` — this is a relative path from inside `splunk_apps/aegis_app/` but the script runs from repo root. Path resolution will fail. Use `inspiration/cimplicity-ai-app/.appinspect.manualcheck.yaml` (repo-root relative).
+- **C-M-12 — story-app-11 line 109 + 113.** Shell verification block 3 reads `../inspiration/cimplicity-ai-app/.appinspect.manualcheck.yaml` — this is a relative path from inside `splunk_apps/splunkgate_app/` but the script runs from repo root. Path resolution will fail. Use `inspiration/cimplicity-ai-app/.appinspect.manualcheck.yaml` (repo-root relative).
 
 - **C-M-13 — story-app-12 line 25.** Manifest.json fields list is comprehensive but missing `info.classification.developmentStatus = "GA"` in the list — Notes line 185 mentions it but file modification map doesn't enforce. Add to file map.
 
-- **C-M-14 — story-eval-01 line 86.** §14 grep BDD assumes `eval/src/aegis_eval/synthetic.py` is the only "production" file to grep — but story-eval-04 introduces `eval/src/aegis_eval/baselines/_gpt_oss_mock.py` which contains `mock` in the filename (intentionally, per §14 carve-out for `*_mock.py`). The §14 grep across `eval/src/` will flag this unless the grep is scoped to exclude `_mock.py` files. Document the carve-out in story-eval-01's §14 line.
+- **C-M-14 — story-eval-01 line 86.** §14 grep BDD assumes `eval/src/splunkgate_eval/synthetic.py` is the only "production" file to grep — but story-eval-04 introduces `eval/src/splunkgate_eval/baselines/_gpt_oss_mock.py` which contains `mock` in the filename (intentionally, per §14 carve-out for `*_mock.py`). The §14 grep across `eval/src/` will flag this unless the grep is scoped to exclude `_mock.py` files. Document the carve-out in story-eval-01's §14 line.
 
 - **C-M-15 — story-eval-02 line 27.** Line 27 says register `inspiration/llm-attacks` as submodule pinned to commit `0f6244a`. Verify this commit is the released revision used in Zou et al. 2023 — Notes line 165 doesn't cite it. If the commit hash is fabricated, this will fail at `git submodule add` time. Add a verification step.
 
@@ -104,7 +104,7 @@ EPIC-12 mirrors CIMplicity's 25-check pattern verbatim. One critical: story-app-
 
 - **C-M-17 — story-eval-04 line 27.** Loader parses `inspiration/defenseclaw/internal/gateway/rules.go`. This requires the DefenseClaw repo as a submodule but `.gitmodules` is not in this story's file modification map (it was added in story-eval-02). Add `.gitmodules` UPDATE entry to the file map.
 
-- **C-M-18 — story-eval-05 line 27.** Cost table JSON includes `"splunklib_security_regex"` as a baseline key — but story-eval-04 only ships 3 baselines (DefenseClaw / gpt-oss-120b / AI Defense alone). The 5th + 6th rows (splunklib.ai 9-regex + aegis_full_stack) are not produced by story-eval-04. Either expand story-eval-04 to 5 baseline callables or document that report.py handles the missing-row case gracefully.
+- **C-M-18 — story-eval-05 line 27.** Cost table JSON includes `"splunklib_security_regex"` as a baseline key — but story-eval-04 only ships 3 baselines (DefenseClaw / gpt-oss-120b / AI Defense alone). The 5th + 6th rows (splunklib.ai 9-regex + splunkgate_full_stack) are not produced by story-eval-04. Either expand story-eval-04 to 5 baseline callables or document that report.py handles the missing-row case gracefully.
 
 ---
 
@@ -117,7 +117,7 @@ EPIC-12 mirrors CIMplicity's 25-check pattern verbatim. One critical: story-app-
 | EPIC-09: props/transforms parse OTel GenAI event shape | OK (story-app-02 line 23 + Notes line 143-145 reference dotted-attribute → flat-name mapping) |
 | EPIC-09: 8 MLTK macros from DNS Guard pattern (fit DensityFunction + fit KMeans k=2 + anomalydetection) | OK (story-app-03 line 23 + BDD line 36 enforces exact 8-macro count) |
 | EPIC-09: 3 dashboards match ux-spec | OK (story-app-05/06/07 — names, themes, viz structure all match ux-spec.md) |
-| EPIC-09: cisco_ai_defense:aegis_verdict sourcetype everywhere | OK (every dashboard story's BDD asserts the sourcetype in every dataSource query) |
+| EPIC-09: cisco_ai_defense:splunkgate_verdict sourcetype everywhere | OK (every dashboard story's BDD asserts the sourcetype in every dataSource query) |
 | EPIC-09: Dashboard Studio v2 JSON-in-XML with `<dashboard version="2.0" theme="dark">` | OK (story-app-05/06/07 all enforce both attributes via BDD greps) |
 | EPIC-09: NIST AI RMF 4 functions (GOVERN/MAP/MEASURE/MANAGE) quoted verbatim in dashboard 3 | OK (story-app-07 line 197 + BDD line 50 enforces 4 verbatim names in order) |
 | EPIC-09: SR 26-2 footnote 3 verbatim in dashboard 3 | PARTIAL (story-app-07 line 198 asks coding agent to verify exact phrasing in `context/03-regulatory/03-ffiec-occ-fed-banking.md` — see C-M-07) |
@@ -130,18 +130,18 @@ EPIC-12 mirrors CIMplicity's 25-check pattern verbatim. One critical: story-app-
 | EPIC-10: 11 verbatim Imprompter payloads from arxiv 2410.14923v2 | OK (story-eval-03 line 24 + BDD line 39 enforce exactly 11 records; line 70 enforces Figure-1 verbatim Unicode payload) |
 | EPIC-10: MSJ scaling honesty (probabilistic ceiling per Anthropic 2024) | OK (story-eval-01 Notes line 168, story-eval-05 line 174-175, ux-spec line 76, story-app-05 line 186 all reference the power-law ceiling explicitly) |
 | EPIC-10: story-eval-05 split into 5 files | OK (metrics.py / reliability.py / latency.py / cost.py / report.py + plus run_full.py + smoke.py — split explicit per Notes line 171) |
-| EPIC-10: Mock-first paths for AI Defense + Foundation-Sec (AEGIS_AI_DEFENSE_MOCK + AEGIS_GPT_OSS_MOCK env vars) | OK (story-eval-04 lines 25-26 honor both env vars; story-eval-05 line 122 chains both in CI smoke) |
+| EPIC-10: Mock-first paths for AI Defense + Foundation-Sec (SPLUNKGATE_AI_DEFENSE_MOCK + SPLUNKGATE_GPT_OSS_MOCK env vars) | OK (story-eval-04 lines 25-26 honor both env vars; story-eval-05 line 122 chains both in CI smoke) |
 | EPIC-10: smoke.py runs < 60 seconds in CI | OK (story-eval-05 line 30 sizes the smoke set explicitly; BDD line 62 enforces wall clock; shell verify line 125 measures it) |
 | EPIC-11: architecture_diagram.png at repo ROOT | OK (story-readme-02 line 23 + BDD line 38 + shell verify line 119 all enforce `test -f architecture_diagram.png` at repo root, not docs/) |
 | EPIC-11: Light + dark variants of architecture diagram | OK (story-readme-02 ships both PNGs via single `.mmd` source + theme flag) |
-| EPIC-11: Demo video link placeholder with verbatim replacement command | OK (story-readme-01 line 179 + story-demo-01 line 26 both reference the `AEGIS_DEMO_PENDING` placeholder + sed swap) |
+| EPIC-11: Demo video link placeholder with verbatim replacement command | OK (story-readme-01 line 179 + story-demo-01 line 26 both reference the `SPLUNKGATE_DEMO_PENDING` placeholder + sed swap) |
 | EPIC-11: README order matches PRD §13 (title → pitch → banner → video → arch → install → eval table → credits → license) | OK (story-readme-01 line 23 specifies sections 1-9 in the PRD order verbatim) |
 | EPIC-11: Credits to MCP Watch (8765), Cisco Security Cloud (7404), DefenseClaw, splunklib.ai, NeMo Guardrails | PARTIAL — see C-C-04 (BDD greps for 6-7 substrings instead of 5 named incumbents) |
 | EPIC-11: Demo script verbatim 90-second walkthrough matching PRD § Demo moment | OK (story-demo-01 line 23 specifies exact beats with PRD-cited durations; BDD line 39 enforces "exactly 5 beats"; BDD line 43 enforces the verbatim injection payload from PRD) |
-| EPIC-11: Demo script has terminal-script.sh judges can re-run (mock mode) | OK (story-demo-01 line 25 + BDD line 100 enforce `AEGIS_AI_DEFENSE_MOCK=true bash docs/demo/terminal-script.sh` reproduces beat 2+3) |
+| EPIC-11: Demo script has terminal-script.sh judges can re-run (mock mode) | OK (story-demo-01 line 25 + BDD line 100 enforce `SPLUNKGATE_AI_DEFENSE_MOCK=true bash docs/demo/terminal-script.sh` reproduces beat 2+3) |
 | EPIC-12: `.appinspect.manualcheck.yaml` mirrors CIMplicity's 25-check pattern | OK (story-app-11 line 24 lists all 25 checks verbatim in the documented order; BDD line 39 enforces exactly 25 + set-equality against CIMplicity reference) |
-| EPIC-12: `.appinspect.expect.yaml` empty or near-empty | OK (story-app-11 line 23 + Notes lines 166, 178-179 explicitly document that Aegis ships no Python in `bin/` so the file should be empty or comment-only) |
-| EPIC-12: Splunkbase tgz uses `aegis_app-<version>.tgz` (no `v` prefix) | PARTIAL — see C-C-05 (uses `.tar.gz` instead of `.tgz` — convention drift) |
+| EPIC-12: `.appinspect.expect.yaml` empty or near-empty | OK (story-app-11 line 23 + Notes lines 166, 178-179 explicitly document that SplunkGate ships no Python in `bin/` so the file should be empty or comment-only) |
+| EPIC-12: Splunkbase tgz uses `splunkgate_app-<version>.tgz` (no `v` prefix) | PARTIAL — see C-C-05 (uses `.tar.gz` instead of `.tgz` — convention drift) |
 | EPIC-12: Documents Splunkbase server-side signing pattern | OK (story-app-12 Notes line 178 explicitly documents that signing happens server-side at Splunkbase ingestion; no client-side cert files required) |
 | EPIC-12: Documents Splunkbase submission checklist | OK (story-app-12 line 26 ships `docs/splunkbase-submission-checklist.md` with 10 named items; BDD line 68-76 enforces presence of every keyword) |
 
@@ -152,7 +152,7 @@ EPIC-12 mirrors CIMplicity's 25-check pattern verbatim. One critical: story-app-
 | Story ID | Format | BDD | File-map | Citations | Critical findings |
 |---|---|---|---|---|---|
 | story-app-01-app-conf-and-metadata-skeleton | OK | OK | OK | OK | none |
-| story-app-02-props-transforms-for-aegis-verdict-sourcetype | OK | OK | OK | OK | C-M-01, C-M-02 |
+| story-app-02-props-transforms-for-splunkgate-verdict-sourcetype | OK | OK | OK | OK | C-M-01, C-M-02 |
 | story-app-03-savedsearches-and-mltk-macros | OK | OK | OK | OK | C-M-03 |
 | story-app-04-collections-conf-kvstore-verdict-history | OK | OK | OK (cross-story update flagged) | OK | C-M-04 |
 | story-app-05-dashboard-agent-risk-overview | OK | OK | OK | OK | **C-C-01** (rule names) |
@@ -190,4 +190,4 @@ EPIC-12 mirrors CIMplicity's 25-check pattern verbatim. One critical: story-app-
 
 - **PII/PHI/PCI ground-truth corpus has no dedicated story.** eval-spec.md §"Datasets" §5 describes 200 outputs labeled by jurisdiction (GDPR + HIPAA + PCI + benign) but no story file ships this corpus. story-eval-01 ships only the 3 jailbreak sub-corpora; story-eval-03 ships Imprompter. The 50/50/50/50 ground-truth corpus described in eval-spec is missing from EPIC-10. Either fold into story-eval-01 explicitly (expand its scope to include `pii_phi_pci.jsonl`) or add story-eval-06.
 - **No story explicitly tests Splunk-Cloud 10.4 compatibility.** Story-app-10's Docker compose uses 9.4 (floor). Cross-version compatibility for the dashboard's `theme="dark"` JSON-in-XML wrapper across 9.4 / 10.0 / 10.4 is not tested.
-- **`aegis_full_stack` baseline (the headline row).** story-eval-04 ships 3 baselines; story-eval-05 line 178 says the 5th "baseline" is `aegis_full_stack` (Aegis's own composition) — but no story ships this callable. It's implicit in EPIC-06 + EPIC-04 + EPIC-05, but `report.py`'s ability to render the bolded "Aegis full stack" row depends on a wrapper that no story owns.
+- **`splunkgate_full_stack` baseline (the headline row).** story-eval-04 ships 3 baselines; story-eval-05 line 178 says the 5th "baseline" is `splunkgate_full_stack` (SplunkGate's own composition) — but no story ships this callable. It's implicit in EPIC-06 + EPIC-04 + EPIC-05, but `report.py`'s ability to render the bolded "SplunkGate full stack" row depends on a wrapper that no story owns.

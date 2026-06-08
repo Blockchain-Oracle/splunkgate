@@ -1,0 +1,24 @@
+[project]
+name = "splunkgate-mw"
+version = "0.1.0"
+description = "SplunkGate middleware library for splunklib.ai (Surface 1)"
+requires-python = ">=3.13"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "splunkgate-core",
+    "splunkgate-judges",
+    "splunk-sdk[ai]>=3.0.0",
+    "pydantic>=2.10",
+    "structlog>=24.4",
+]
+
+[tool.uv.sources]
+splunkgate-core = { workspace = true }
+splunkgate-judges = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/splunkgate_mw"]

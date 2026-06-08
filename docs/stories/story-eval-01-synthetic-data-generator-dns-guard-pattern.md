@@ -10,7 +10,7 @@
 
 ## User story
 
-**As a** judge reading the Aegis eval table without access to Cisco AI Defense credentials
+**As a** judge reading the SplunkGate eval table without access to Cisco AI Defense credentials
 **I want to** see a synthetic corpus generator that produces three sub-corpora of agent-trace prompts (tool-call abuse, multi-turn MSJ-style injection, benign control), runnable in < 60 s on a laptop with zero external dependencies
 **So that** the eval harness can render real precision/recall/F1/ECE numbers in CI even without a live AI Defense tenant, and the corpus mirrors the DNS Guard 2025 winning pattern judges already recognize
 
@@ -27,8 +27,8 @@ Exact files the coding agent creates or modifies for this story:
   - `Synthetic-Data/jailbreak_corpus/benign_control.jsonl` — ~300 benign SOC-analyst and customer-support prompts (synthetic-only, no real customer data per `../../../context/04-pii-phi-pci/01-pii-definitions-by-jurisdiction.md`)
 - `Synthetic-Data/jailbreak_corpus/.gitkeep` — NEW — empty file so the empty subfolder is tracked before generation runs
 - `Synthetic-Data/pii_leak_corpus/.gitkeep` — NEW — empty file (story-eval-03 lands `imprompter_payloads.jsonl` here)
-- `eval/src/aegis_eval/synthetic.py` — NEW — loader that reads any of the three JSONL outputs into a list of `EvalPrompt` records (Pydantic v2 model with fields matching the JSONL schema), validates the record schema on read, and exposes `load_tool_call_abuse() / load_multi_turn_injection() / load_benign_control()` callables for the eval harness
-- `eval/src/aegis_eval/__init__.py` — NEW — re-exports `EvalPrompt` and the three loaders
+- `eval/src/splunkgate_eval/synthetic.py` — NEW — loader that reads any of the three JSONL outputs into a list of `EvalPrompt` records (Pydantic v2 model with fields matching the JSONL schema), validates the record schema on read, and exposes `load_tool_call_abuse() / load_multi_turn_injection() / load_benign_control()` callables for the eval harness
+- `eval/src/splunkgate_eval/__init__.py` — NEW — re-exports `EvalPrompt` and the three loaders
 - `eval/tests/test_synthetic_corpus.py` — NEW — ≥ 12 tests: generator script runs to completion under `subprocess.run` with `check=True`; each of the three output JSONL files exists; tool-call abuse has ≥ 200 records; multi-turn has ≥ 150 records; benign control has ≥ 300 records; every record validates as `EvalPrompt`; every multi-turn record's `prompt` field contains ≥ 4 turn separators; every benign record has `expected_verdict="ALLOW"`; deterministic — running the generator twice with the same seed produces byte-identical outputs; `expected_verdict` only takes values in `{ALLOW, BLOCK, MODIFY, REVIEW}`; `expected_severity` only takes values in `{NONE_SEVERITY, LOW, MEDIUM, HIGH}`; `source_citation` field is non-empty on every record
 
 The coding agent must NOT modify files outside this map without re-checking `CLAUDE.md`.
@@ -72,7 +72,7 @@ When  the output files from run 1 and run 2 are compared via `sha256sum`
 Then  all three pairs of hashes match (deterministic)
 
 Given the eval loader module
-When  `python -c "from aegis_eval.synthetic import load_tool_call_abuse, load_multi_turn_injection, load_benign_control; print(len(load_tool_call_abuse()), len(load_multi_turn_injection()), len(load_benign_control()))"` runs
+When  `python -c "from splunkgate_eval.synthetic import load_tool_call_abuse, load_multi_turn_injection, load_benign_control; print(len(load_tool_call_abuse()), len(load_multi_turn_injection()), len(load_benign_control()))"` runs
 Then  exit code is 0 and the three counts match the JSONL line counts
 
 Given `uv run pytest eval/tests/test_synthetic_corpus.py -v`
@@ -84,7 +84,7 @@ When  wc -l is run
 Then  each file is <= 400 LOC
 
 Given §14 grep on the production code (excluding the generator and JSONL fixtures)
-When  `grep -rE "(mock|fake|dummy|hardcoded|simulated)" eval/src/aegis_eval/synthetic.py` runs
+When  `grep -rE "(mock|fake|dummy|hardcoded|simulated)" eval/src/splunkgate_eval/synthetic.py` runs
 Then  output contains zero unjustified hits   # synthetic test data lives in Synthetic-Data/, not src/
 ```
 
@@ -114,7 +114,7 @@ test -f Synthetic-Data/jailbreak_corpus/benign_control.jsonl
 # 3. Every record validates
 uv run python - <<'PY'
 import json
-from aegis_eval.synthetic import EvalPrompt
+from splunkgate_eval.synthetic import EvalPrompt
 for path in [
     "Synthetic-Data/jailbreak_corpus/tool_call_abuse.jsonl",
     "Synthetic-Data/jailbreak_corpus/multi_turn_injection.jsonl",
@@ -152,7 +152,7 @@ uv run pytest eval/tests/test_synthetic_corpus.py -v 2>&1 | grep -cE "PASSED"
 # Must output >= 12
 
 # 7. 400-LOC cap
-for f in Synthetic-Data/generate_agent_verdicts.py eval/src/aegis_eval/synthetic.py eval/src/aegis_eval/__init__.py eval/tests/test_synthetic_corpus.py; do
+for f in Synthetic-Data/generate_agent_verdicts.py eval/src/splunkgate_eval/synthetic.py eval/src/splunkgate_eval/__init__.py eval/tests/test_synthetic_corpus.py; do
   lines=$(wc -l < "$f")
   [ "$lines" -gt 400 ] && { echo "FAIL: $f has $lines LOC"; exit 1; }
 done
@@ -163,12 +163,12 @@ echo "ALL CHECKS PASS"
 
 ## Notes for coding agent
 
-- **Per ADR-011 in `docs/architecture.md`**, the DNS Guard 2025 winner used the folder name `Syntethic-Data/` (with the typo). Aegis uses the *corrected* spelling `Synthetic-Data/` because the typo causes shell-verification copy-paste confusion. The DNS Guard pattern we mirror is the *content* — Python data generator in a sibling folder, deterministic seed, `[1/N]` print headers, summary table — not the misspelling. Both `docs/eval-spec.md` and `docs/architecture.md` are aligned on the corrected spelling.
+- **Per ADR-011 in `docs/architecture.md`**, the DNS Guard 2025 winner used the folder name `Syntethic-Data/` (with the typo). SplunkGate uses the *corrected* spelling `Synthetic-Data/` because the typo causes shell-verification copy-paste confusion. The DNS Guard pattern we mirror is the *content* — Python data generator in a sibling folder, deterministic seed, `[1/N]` print headers, summary table — not the misspelling. Both `docs/eval-spec.md` and `docs/architecture.md` are aligned on the corrected spelling.
 - **Per `../../../context/11-prior-art/01-build-a-thon-2025-deep-read.md`**, DNS Guard's `generate_dns_events.py` is the exact pattern to mirror: single file, stdlib-only, deterministic seed, `[1/5] … [5/5]` print headers, summary table at the end. Look at `../inspiration/Splunk-DNS-Guard-AI/Syntethic-Data/generate_dns_events.py` for the verbatim structure.
 - **Per `../../../context/01-threat-landscape/02-jailbreak-techniques.md` §5 (Anthropic Many-Shot Jailbreaking PDF grounded)**, the power-law exponent is invariant to SFT/RL — we must be honest in the eval table about the probabilistic ceiling. The multi-turn corpus should span 4, 8, 16, 32 shot counts so the harness can plot detection-rate vs shot-count and confirm we sit on the same scaling curve. Per the paper Eq. 1: `−E[log P(harmful resp. | n-shot MSJ)] = Cn⁻ᵅ + K`.
 - **Per `../../../context/01-threat-landscape/03-tool-abuse-patterns.md`** (referenced from the threat-landscape index), the tool-call abuse corpus should include the documented attack shapes: path traversal in file-tool args (`../../../etc/passwd`), SQL injection in DB-tool args (`'; DROP TABLE users; --`), shell metacharacter injection in shell-tool args (`; rm -rf /`), and argument-confusion attacks where benign-looking args reference attacker-controlled URLs.
-- **Per the §14 carve-out in `docs/architecture.md`**, the `Synthetic-Data/` folder is **not** §14-clean (it's literally synthetic data — that's the point). The §14 grep is scoped to `packages/aegis_*/src/` and `eval/src/aegis_eval/` production code paths only. The `synthetic.py` loader must not contain hardcoded payloads — it only reads JSONL — but the generator IS allowed to contain seed templates.
-- The `EvalPrompt` Pydantic model lives in `eval/src/aegis_eval/__init__.py` (or a dedicated `eval/src/aegis_eval/types.py` if the `__init__.py` grows). Schema: `id: str` (UUID4 default), `category: Literal["tool_call_abuse","multi_turn_injection","benign_control","jailbreakbench","advbench","imprompter"]`, `prompt: str`, `expected_verdict: Literal["ALLOW","BLOCK","MODIFY","REVIEW"]`, `expected_severity: Literal["NONE_SEVERITY","LOW","MEDIUM","HIGH"]`, `source_citation: str` (e.g., `"synthetic:tool_call_abuse:v1"`).
+- **Per the §14 carve-out in `docs/architecture.md`**, the `Synthetic-Data/` folder is **not** §14-clean (it's literally synthetic data — that's the point). The §14 grep is scoped to `packages/splunkgate_*/src/` and `eval/src/splunkgate_eval/` production code paths only. The `synthetic.py` loader must not contain hardcoded payloads — it only reads JSONL — but the generator IS allowed to contain seed templates.
+- The `EvalPrompt` Pydantic model lives in `eval/src/splunkgate_eval/__init__.py` (or a dedicated `eval/src/splunkgate_eval/types.py` if the `__init__.py` grows). Schema: `id: str` (UUID4 default), `category: Literal["tool_call_abuse","multi_turn_injection","benign_control","jailbreakbench","advbench","imprompter"]`, `prompt: str`, `expected_verdict: Literal["ALLOW","BLOCK","MODIFY","REVIEW"]`, `expected_severity: Literal["NONE_SEVERITY","LOW","MEDIUM","HIGH"]`, `source_citation: str` (e.g., `"synthetic:tool_call_abuse:v1"`).
 - DNS Guard's generator prints a summary table at the end — replicate the shape: `[5/5] --- Generation Summary ---` followed by `Total Events Generated:`, `Time Range:`, `Event Breakdown:`, and per-category counts. Judges who recognize DNS Guard's pattern will pattern-match instantly.
 - Do NOT add numpy / pandas / faker — stdlib only per `docs/architecture.md` § "Banned" (numpy / pandas not allowed in tight runtime path, and this script ships in the repo root, not eval/).
 - The 4 shot-counts (4, 8, 16, 32) × ~37 base harmful targets = ~148 multi-turn sequences, padded to ≥ 150. Source the base harmful targets from a small inline list of NIST-categorized harmful behaviors (e.g., "synthesize cocaine", "generate malware", "produce CSAM" — flag these as `BLOCK / HIGH` in the JSONL). Do not exfiltrate the JailbreakBench dataset into the generator — that loader is story-eval-02.
