@@ -1,10 +1,10 @@
-Aegis — Agentic AI Safety
-=========================
+SplunkGate — Agentic AI Safety
+==============================
 
 Runtime AI agent safety net for Splunk + Cisco enterprises.
 
 Version: 1.0.0
-Author: Aegis Project
+Author: SplunkGate Project
 License: Apache-2.0
 
 Supported Splunk versions: 9.4, 10.0, 10.1, 10.2, 10.3, 10.4
@@ -13,11 +13,12 @@ Supported platforms: Splunk Cloud, Splunk Enterprise
 What this app does
 ------------------
 
-Ingests Aegis verdicts (emitted via HTTP Event Collector by the aegis_mw
-Python middleware) under the sourcetype cisco_ai_defense:aegis_verdict —
-the same namespace populated by the Cisco Security Cloud Splunkbase app
-(7404), so SOC analysts see Aegis events next to AI Defense events in
-their existing search workflows.
+Ingests SplunkGate verdicts (emitted via HTTP Event Collector by the
+splunkgate_mw Python middleware) under the sourcetype
+cisco_ai_defense:splunkgate_verdict — the same namespace populated by
+the Cisco Security Cloud Splunkbase app (7404), so SOC analysts see
+SplunkGate events next to AI Defense events in their existing search
+workflows.
 
 Includes three Dashboard Studio v2 dashboards:
 
@@ -32,23 +33,23 @@ Install
 -------
 
 Splunk Cloud:
-  Apps -> Find more apps -> search "Aegis" -> Install
+  Apps -> Find more apps -> search "SplunkGate" -> Install
   (Or upload via Splunkbase once the app is published.)
 
 Splunk Enterprise:
-  $SPLUNK_HOME/bin/splunk install app /path/to/aegis_app.tgz
+  $SPLUNK_HOME/bin/splunk install app /path/to/splunkgate_app.tgz
   $SPLUNK_HOME/bin/splunk restart
 
 After install:
-  Settings -> Apps -> Aegis -> Set up
-  Configure the HEC token your aegis_mw middleware emits to so the
-  cisco_ai_defense:aegis_verdict sourcetype is indexed.
+  Settings -> Apps -> SplunkGate -> Set up
+  Configure the HEC token your splunkgate_mw middleware emits to so
+  the cisco_ai_defense:splunkgate_verdict sourcetype is indexed.
 
 Documentation
 -------------
 
 Top-level README and architecture diagram at the repo root:
-  https://github.com/Blockchain-Oracle/aegis
+  https://github.com/Blockchain-Oracle/splunkgate
 
 Bug reports and feature requests:
-  https://github.com/Blockchain-Oracle/aegis/issues
+  https://github.com/Blockchain-Oracle/splunkgate/issues
