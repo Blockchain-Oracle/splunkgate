@@ -79,6 +79,7 @@ appinspect_report.html
 
 # Secrets / env
 .env
+.env.bak
 .env.local
 .env.*.local
 *.pem
