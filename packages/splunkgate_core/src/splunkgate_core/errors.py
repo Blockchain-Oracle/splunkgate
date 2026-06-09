@@ -50,6 +50,16 @@ class NetworkError(SplunkGateError):
     """
 
 
+class ValidationError(SplunkGateError):
+    """Raised when input violates a structural validation rule.
+
+    Used by `splunkgate_judge_tool_call` for the 64 KB tool_args cap +
+    other bounded-size validations in mcp-03..05 + future mw work.
+    Subclasses `SplunkGateError` so it propagates through MCP's lowlevel
+    handler as `isError: true` per the in-band error pattern.
+    """
+
+
 class ModelInputBlockedBySplunkGate(SplunkGateError):  # noqa: N818 — name locked by story-mw-03 + architecture.md
     """Raised by SafetyModelMiddleware when pre-inference scan returns BLOCK.
 
