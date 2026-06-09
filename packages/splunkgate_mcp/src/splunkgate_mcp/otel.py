@@ -10,15 +10,13 @@ splunkgate_core (we reuse, do not duplicate).
 
 from __future__ import annotations
 
-from typing import Any
-
 # MCP spec version per context/10-standards/01-mcp-spec-deep.md (Stable).
 # Do NOT hardcode "2025-03-26" — that's Splunk's older version per the
 # CiscoDevNet README.
 MCP_PROTOCOL_VERSION = "2025-11-25"
 
 
-def build_span_attributes(*, session_id: str, method_name: str) -> dict[str, Any]:
+def build_span_attributes(*, session_id: str, method_name: str) -> dict[str, str]:
     """Build the dict of MCP sub-convention attributes for a tool-call span.
 
     The caller wraps each tool invocation in a SERVER-kind span named
