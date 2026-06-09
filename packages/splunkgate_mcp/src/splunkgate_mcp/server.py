@@ -348,5 +348,33 @@ def build_http_app() -> Starlette:
     return app
 
 
-# Register _ping at import time so `tools/list` works immediately.
+def _ensure_score_prompt_injection_registered() -> None:
+    """Idempotent registration of `splunkgate_score_prompt_injection` (mcp-02).
+
+    Mirrors `ensure_ping_registered`: tests that clear `_REGISTERED_TOOLS`
+    for isolation can recall this without re-importing the module, and
+    we pop the FastMCP-side entry first so re-registration doesn't
+    collide with the leftover tool. Production calls this exactly once
+    at module import.
+    """
+    name = "splunkgate_score_prompt_injection"
+    if name in _REGISTERED_TOOLS:
+        return
+    # Test-isolation reset path; see `ensure_ping_registered` for rationale.
+    server._tool_manager._tools.pop(name, None)  # noqa: SLF001
+    # Import here (not at module top) to avoid a circular import:
+    # the tool module calls back into `register_tool` from this module.
+    # Pass `sys.modules[__name__]` so the tool module can call back into
+    # our `register_tool` without importing this module directly. Keeping
+    # the import edge one-way (server → tools) prevents future circular
+    # imports as more tools land in mcp-03..05.
+    import sys  # noqa: PLC0415
+
+    from splunkgate_mcp.tools import score_prompt_injection  # noqa: PLC0415
+
+    score_prompt_injection.register(sys.modules[__name__])
+
+
+# Register _ping + mcp-02 tool at import time so `tools/list` works immediately.
 ensure_ping_registered()
+_ensure_score_prompt_injection_registered()
