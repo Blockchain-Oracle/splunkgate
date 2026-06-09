@@ -220,7 +220,7 @@ stories:
     depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk, story-judges-05-ai-defense-end-to-end-integration-test]
   - id: story-mcp-03-tool-judge-tool-call
     epic: "EPIC-07 — Surface 2 MCP Server"
-    status: PENDING
+    status: IN_PROGRESS
     depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk]
   - id: story-mcp-04-tool-check-output-leak
     epic: "EPIC-07 — Surface 2 MCP Server"
@@ -393,7 +393,7 @@ stories:
   # EPIC-04 addition — DefenseClaw Python shim (resolves the 3-story orphaned import)
   - id: story-judges-06-defenseclaw-python-shim
     epic: "EPIC-04 — Cisco AI Defense client"
-    status: PENDING
+    status: IN_PROGRESS  # 2026-06-09 — absorbed into mcp-03 PR per design doc Phase A0
     depends_on: [story-core-01-verdict-pydantic-types, story-dc-01-config-delta-docs-and-example]
 
   # EPIC-09 addition — Synthetic verdict emitter for dashboards + demo
