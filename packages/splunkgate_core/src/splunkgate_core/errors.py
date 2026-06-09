@@ -87,3 +87,19 @@ class ModelOutputBlockedBySplunkGate(SplunkGateError):  # noqa: N818 — name lo
         message = f"Model output blocked by SplunkGate: {verdict!r}"
         super().__init__(message)
         self.verdict = verdict
+
+
+class ToolBlockedBySplunkGate(SplunkGateError):  # noqa: N818 — name locked by story-mw-02 + architecture.md
+    """Raised by SafetyToolMiddleware when tool-call judgement returns BLOCK.
+
+    Carries the Verdict that caused the block so callers can inspect rules,
+    severity, and explanation. The downstream tool handler was NEVER invoked
+    — the agent loop unwinds with the typed exception and downstream
+    callers can inspect `e.verdict`.
+    """
+
+    def __init__(self, verdict: object) -> None:
+        """Wrap the blocking verdict; message is built from verdict.explanation."""
+        message = f"Tool call blocked by SplunkGate: {verdict!r}"
+        super().__init__(message)
+        self.verdict = verdict
