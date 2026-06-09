@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "splunkgate-mcp-server": {
+      "command": "python",
+      "args": ["-m", "splunkgate_mcp"],
+      "env": {
+        "SPLUNKGATE_MCP_TRANSPORT": "stdio",
+        "SPLUNKGATE_AI_DEFENSE_MOCK": "1",
+        "SPLUNKGATE_AI_DEFENSE_REGION": "us"
+      }
+    }
+  }
+}
