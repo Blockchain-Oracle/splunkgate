@@ -220,7 +220,10 @@ stories:
     depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk, story-judges-05-ai-defense-end-to-end-integration-test]
   - id: story-mcp-03-tool-judge-tool-call
     epic: "EPIC-07 — Surface 2 MCP Server"
-    status: IN_PROGRESS
+    status: COMPLETE
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/118"
+    merged_at: "2026-06-09T12:45:00Z"
+    notes: "Cheap regex first-pass via new defenseclaw_backend (absorbs judges-06): Shell Injection / Base64 Payload / PII / PCI patterns. Catastrophic BLOCK routing (Shell+HIGH → BLOCK); ambiguous → escalation to AI Defense. surface=mcp_judge_tool via Literal narrowing. Modifications.suggested_args preserves every input key (spec L146) via _redact_value nested-structure walk. 64 KB tool_args cap via new ValidationError raises BEFORE any judge call (test verifies respx call_count==0). _safe_emit + _REDACTION_PATTERNS deliberately duplicated from mcp-02/04 per design doc — consolidate post-mcp-05. 5 reviewers (4 pr-review-toolkit + security-reviewer); 2 BLOCKING fixes applied (iter-cap padding bypass + unmapped-rule silent no-op). 30 tests pass (15 tool + 13 backend + 2 fix-regression contracts)."
     depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk]
   - id: story-mcp-04-tool-check-output-leak
     epic: "EPIC-07 — Surface 2 MCP Server"
@@ -393,7 +396,10 @@ stories:
   # EPIC-04 addition — DefenseClaw Python shim (resolves the 3-story orphaned import)
   - id: story-judges-06-defenseclaw-python-shim
     epic: "EPIC-04 — Cisco AI Defense client"
-    status: IN_PROGRESS  # 2026-06-09 — absorbed into mcp-03 PR per design doc Phase A0
+    status: COMPLETE  # 2026-06-09 — absorbed into mcp-03 PR per design doc Phase A0
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/118"
+    merged_at: "2026-06-09T12:45:00Z"
+    notes: "Shipped as packages/splunkgate_judges/src/splunkgate_judges/defenseclaw_backend.py (186 LOC, ≤200 cap) inside PR #118 per design doc Phase A0 absorption. evaluate_tool_call(tool_name, tool_args) → RuleHit | None async; regex pack: Shell Injection (rm -rf, dd, curl|sh, etc.), Base64 Payload (≥100-char alphanumeric), PII (SSN), PCI (16-digit cards). Nested-structure walk via _iter_strings (cycle-guarded via id() set, NO iteration cap after silent-failure-hunter caught padding bypass on PR #118 review). 13 tests pass. story-dc-01 dependency forward-declared; regexes embedded inline so no fixture-file dep on EPIC-08."
     depends_on: [story-core-01-verdict-pydantic-types, story-dc-01-config-delta-docs-and-example]
 
   # EPIC-09 addition — Synthetic verdict emitter for dashboards + demo
