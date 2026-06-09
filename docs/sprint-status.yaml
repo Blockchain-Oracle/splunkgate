@@ -213,7 +213,7 @@ stories:
     depends_on: [story-core-01-verdict-pydantic-types]
   - id: story-mcp-02-tool-score-prompt-injection
     epic: "EPIC-07 — Surface 2 MCP Server"
-    status: PENDING
+    status: IN_PROGRESS
     depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk, story-judges-05-ai-defense-end-to-end-integration-test]
   - id: story-mcp-03-tool-judge-tool-call
     epic: "EPIC-07 — Surface 2 MCP Server"
