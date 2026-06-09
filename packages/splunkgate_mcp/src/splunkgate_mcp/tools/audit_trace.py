@@ -159,30 +159,59 @@ def _coerce_uuid(value: object, fallback: UUID) -> UUID:
 
 
 def _coerce_label(value: object) -> VerdictLabel:
-    """Map a string row field to VerdictLabel; default ALLOW on miss."""
+    """Map a string row field to VerdictLabel; default ALLOW + WARN on miss.
+
+    Per PR #119 silent-failure-hunter + code-reviewer #2: an unrecognized
+    verdict string (schema drift, future label, casing typo) was silently
+    downgraded to ALLOW. Regulator-evidence-pack dashboards would show a
+    falsified verdict. Log so the coercion miss is visible.
+    """
     if isinstance(value, str):
         try:
             return VerdictLabel(value.upper())
         except ValueError:
+            _LOGGER.warning(
+                "audit_trace.coerce_miss",
+                extra={"field": "verdict", "value": value, "fallback": "ALLOW"},
+            )
             return VerdictLabel.ALLOW
+    if value is not None:
+        _LOGGER.warning(
+            "audit_trace.coerce_miss",
+            extra={"field": "verdict", "value": repr(value), "fallback": "ALLOW"},
+        )
     return VerdictLabel.ALLOW
 
 
 def _coerce_severity(value: object) -> Severity:
-    """Map a string row field to Severity; default NONE_SEVERITY on miss."""
+    """Map a string row to Severity; default NONE_SEVERITY + WARN on miss."""
     if isinstance(value, str):
         try:
             return Severity(value.upper())
         except ValueError:
+            _LOGGER.warning(
+                "audit_trace.coerce_miss",
+                extra={"field": "severity", "value": value, "fallback": "NONE_SEVERITY"},
+            )
             return Severity.NONE_SEVERITY
+    if value is not None:
+        _LOGGER.warning(
+            "audit_trace.coerce_miss",
+            extra={"field": "severity", "value": repr(value), "fallback": "NONE_SEVERITY"},
+        )
     return Severity.NONE_SEVERITY
 
 
 def _coerce_surface(value: object) -> Surface:
-    """Map a string row to Surface; default `mcp_audit` on miss/unknown."""
+    """Map a string row to Surface; default `mcp_audit` + WARN on miss."""
     if isinstance(value, str) and value in _VALID_SURFACES:
         # Membership test makes the cast to Surface (Literal) safe.
         return value  # type: ignore[return-value]
+    if value is not None:
+        _LOGGER.warning(
+            "audit_trace.coerce_miss",
+            extra={"field": "surface", "value": repr(value), "fallback": _SURFACE},
+        )
     return _SURFACE
 
 
@@ -250,9 +279,16 @@ def _build_aggregate(
             key_parts.append(str(raw) if raw is not None else "")
         key = "|".join(key_parts)
         count_raw = row.get("count", 0)
-        try:
-            count = int(count_raw) if not isinstance(count_raw, bool) else 0
-        except (TypeError, ValueError):
+        # `count_raw` is typed `object` (Splunk row values are heterogeneous).
+        # Narrow to types `int()` accepts before calling — mypy rejects `int(object)`.
+        if isinstance(count_raw, bool):
+            count = 0  # ignore bools (`True` would coerce to 1, misleading)
+        elif isinstance(count_raw, (int, str)):
+            try:
+                count = int(count_raw)
+            except (TypeError, ValueError):
+                count = 0
+        else:
             count = 0
         existing = aggregate.get(key)
         if isinstance(existing, int):

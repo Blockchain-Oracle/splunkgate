@@ -39,7 +39,7 @@ _LOGGER = logging.getLogger(__name__)
 # Env-var keys — copied to module constants so a typo surfaces at import.
 _ENV_HOST = "SPLUNKGATE_SPLUNK_HOST"
 _ENV_USER = "SPLUNKGATE_SPLUNK_USER"
-_ENV_PASSWORD = "SPLUNKGATE_SPLUNK_PASSWORD"  # noqa: S105 — env var name, not a secret
+_ENV_PASSWORD = "SPLUNKGATE_SPLUNK_PASSWORD"  # noqa: S105 — env var name, not a secret  # nosec B105
 _ENV_INSECURE_TLS = "SPLUNKGATE_DEV_INSECURE_TLS"
 
 # Splunk REST endpoint path for the synchronous oneshot search.
@@ -73,6 +73,30 @@ def _require_env(key: str) -> str:
         msg = f"{key} not set (or empty); required for Splunk REST search"
         raise ConfigError(msg)
     return value
+
+
+def _check_splunk_messages(parsed: dict[str, object]) -> None:
+    """Raise `SplunkSearchError` if Splunk's response carries FATAL/ERROR.
+
+    Extracted out of `submit_search` to keep cyclomatic complexity down
+    (ruff C901) — the FATAL-detection branch was added in PR #119 review
+    to close the silent-failure-hunter finding where a Splunk 200 with
+    a malformed-SPL FATAL body was treated as empty success.
+    """
+    messages = parsed.get("messages")
+    if not isinstance(messages, list):
+        return
+    for entry in messages:
+        if not isinstance(entry, dict):
+            continue
+        msg_type = entry.get("type")
+        if not isinstance(msg_type, str):
+            continue
+        if msg_type.upper() not in {"FATAL", "ERROR"}:
+            continue
+        text = entry.get("text", "<no message>")
+        msg = f"Splunk REST returned {msg_type} message: {text!r}"
+        raise SplunkSearchError(msg)
 
 
 class SplunkSearchClient:
@@ -212,6 +236,12 @@ class SplunkSearchClient:
         if not isinstance(parsed, dict):
             msg = f"Splunk REST JSON body was not an object: {type(parsed).__name__}"
             raise SplunkSearchError(msg)
+
+        # Splunk sometimes returns HTTP 200 with a FATAL message in the body
+        # for malformed SPL — must inspect `messages[].type`. Per PR #119
+        # silent-failure-hunter: previously masked SPL errors as empty success.
+        _check_splunk_messages(parsed)
+
         results = parsed.get("results", [])
         if not isinstance(results, list):
             msg = f"Splunk REST `results` field was not a list: {type(results).__name__}"
