@@ -224,7 +224,10 @@ stories:
     depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk]
   - id: story-mcp-04-tool-check-output-leak
     epic: "EPIC-07 — Surface 2 MCP Server"
-    status: IN_PROGRESS  # 2026-06-09 — REOPENED per ADR-013a (PR #114); 4-tool MCP strengthens Best MCP bonus pitch + matches mcp-06 docs.
+    status: COMPLETE  # 2026-06-09 — REOPENED per ADR-013a (PR #114); shipped via PR #117.
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/117"
+    merged_at: "2026-06-09T12:15:00Z"
+    notes: "Sensitivity-profile-driven AI Defense calls (default/fsi/hipaa/pubsec → PII/PCI/PHI rule subsets per spec L143-147). Client-side regex redaction keyed by AIDefenseRule, verbatim tokens [REDACTED:PII|PHI|PCI] locked by Splunk dashboard grep contract. surface=mcp_check_output via Literal narrowing. Catastrophic-rule BLOCK routing (HIGH severity + PII/PCI/PHI → BLOCK per spec L152). _safe_emit duplicated from mcp-02 per design doc (DO NOT extract until mcp-05 lands). Surface alias Sensitivity = Literal[...] extracted; module-level totality guard prevents profile drift. _redact logs WARN on regex-coverage gaps (silent-failure-hunter blocker fix). 4 pr-review-toolkit reviewers; 18 tests pass."
     depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk, story-judges-05-ai-defense-end-to-end-integration-test]
   - id: story-mcp-05-tool-audit-trace
     epic: "EPIC-07 — Surface 2 MCP Server"
