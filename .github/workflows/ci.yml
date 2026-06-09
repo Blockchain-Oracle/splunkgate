@@ -77,6 +77,31 @@ jobs:
           flags: ${{ matrix.package }}
           fail_ci_if_error: false
 
+  appinspect:
+    name: Splunk AppInspect
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      - name: Install libmagic (required by splunk-appinspect → python-magic)
+        run: sudo apt-get update && sudo apt-get install -y libmagic1
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --frozen
+      - run: uv run splunk-appinspect inspect splunk_apps/splunkgate_app/ --output-file appinspect-report.json --mode test --included-tags cloud --included-tags self-service --included-tags appapproval
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appinspect-report
+          path: appinspect-report.json
+      - run: |
+          if uv run python .github/scripts/parse_appinspect.py appinspect-report.json; then
+            echo "AppInspect passed (no error-severity findings)"
+          else
+            echo "AppInspect found error-severity issues"; exit 1
+          fi
+
   build-wheels:
     name: Build wheels
     runs-on: ubuntu-latest
@@ -101,6 +126,7 @@ jobs:
     name: Build Splunk app .tgz
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    needs: [appinspect]
     steps:
       - uses: actions/checkout@v4
       - name: Build .tgz (guarded — splunk_apps/splunkgate_app/ lands in EPIC-09)

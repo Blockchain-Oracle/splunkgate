@@ -1,0 +1,35 @@
+{
+  "request_id": "fixture-in-expect-list",
+  "reports": [
+    {
+      "app_name": "splunkgate_app",
+      "app_version": "0.1.0",
+      "summary": {
+        "error": 1,
+        "failure": 0,
+        "future_failure": 0,
+        "skipped": 0,
+        "not_applicable": 0,
+        "warning": 0,
+        "success": 0
+      },
+      "groups": [
+        {
+          "name": "check_static_assets",
+          "description": "Static asset checks",
+          "checks": [
+            {
+              "name": "check_for_binary_files_without_source_code",
+              "description": "Binary files must ship with source code or be justified.",
+              "tags": ["cloud", "appapproval"],
+              "result": "error",
+              "messages": [
+                {"message": "Binary asset static/appIcon.png ships without a source file", "result": "error"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

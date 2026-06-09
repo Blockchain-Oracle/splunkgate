@@ -1,0 +1,42 @@
+{
+  "request_id": "fixture-one-error",
+  "reports": [
+    {
+      "app_name": "splunkgate_app",
+      "app_version": "0.1.0",
+      "summary": {
+        "error": 1,
+        "failure": 0,
+        "future_failure": 0,
+        "skipped": 0,
+        "not_applicable": 0,
+        "warning": 0,
+        "success": 1
+      },
+      "groups": [
+        {
+          "name": "check_cloud_compatibility",
+          "description": "Splunk Cloud compatibility checks",
+          "checks": [
+            {
+              "name": "check_for_existence_of_default_app_conf",
+              "description": "Sanity check.",
+              "tags": ["cloud"],
+              "result": "success",
+              "messages": []
+            },
+            {
+              "name": "check_app_does_not_use_disallowed_python_modules",
+              "description": "App imports a python module that is on the Splunk Cloud deny-list.",
+              "tags": ["cloud", "self-service"],
+              "result": "error",
+              "messages": [
+                {"message": "App imports the disallowed module `subprocess`", "result": "error"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

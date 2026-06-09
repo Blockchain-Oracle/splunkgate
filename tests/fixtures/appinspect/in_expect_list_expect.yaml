@@ -1,0 +1,6 @@
+# Fixture-local expect file used by the in_expect_list test.
+# Object-keyed schema (mirrors the production .appinspect.expect.yaml shape).
+# The parser must suppress the check_name `check_for_binary_files_without_source_code`
+# emitted by tests/fixtures/appinspect/in_expect_list.json.
+check_for_binary_files_without_source_code:
+  comment: 'Test fixture — verifies that the parser suppresses error findings whose check_name is listed in the expect file.'

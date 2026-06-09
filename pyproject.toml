@@ -16,6 +16,7 @@ dev = [
     "respx>=0.21",
     "ruff>=0.6",
     "mypy>=1.11",
+    "types-pyyaml>=6.0",
     "pre-commit>=4.0",
     "splunkgate-core",
     "splunkgate-judges",
@@ -26,6 +27,11 @@ dev = [
     # PNG output, and Pillow can ship encoder/font-metric tweaks in minor
     # bumps that silently break the BDD block-4 determinism assertion.
     "pillow==12.2.0",
+    # Splunk AppInspect — official Splunkbase static-analysis tool. 4.2.1 is
+    # the floor mandated by docs/architecture.md § "Stack (locked)"; never
+    # downgrade to 4.1.x even if a dep complains. Used by the `appinspect`
+    # CI job (story-cicd-05) to gate splunk_apps/splunkgate_app/ on every PR.
+    "splunk-appinspect>=4.2.1",
 ]
 
 [tool.pytest.ini_options]

@@ -1,0 +1,52 @@
+{
+  "request_id": "fixture-zero-findings",
+  "reports": [
+    {
+      "app_name": "splunkgate_app",
+      "app_version": "0.1.0",
+      "summary": {
+        "error": 0,
+        "failure": 0,
+        "future_failure": 0,
+        "skipped": 1,
+        "not_applicable": 0,
+        "warning": 1,
+        "success": 2,
+        "manual_check": 1
+      },
+      "groups": [
+        {
+          "name": "check_packaging_standards",
+          "description": "Splunk app packaging standards",
+          "checks": [
+            {
+              "name": "check_that_extracted_splunk_app_contains_default_app_conf_file",
+              "description": "Check that the extracted Splunk App contains a default/app.conf file.",
+              "tags": ["cloud", "self-service", "appapproval"],
+              "result": "success",
+              "messages": []
+            },
+            {
+              "name": "check_app_version_is_present",
+              "description": "Check that the app version is set.",
+              "tags": ["cloud"],
+              "result": "warning",
+              "messages": [
+                {"message": "App version field could be more descriptive", "result": "warning"}
+              ]
+            },
+            {
+              "name": "check_for_known_vulnerabilities",
+              "description": "Manual check for known vulnerabilities in shipped libraries.",
+              "tags": ["cloud", "appapproval"],
+              "result": "manual_check",
+              "messages": [
+                {"message": "Reviewer must verify dependency CVE status", "result": "manual_check"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

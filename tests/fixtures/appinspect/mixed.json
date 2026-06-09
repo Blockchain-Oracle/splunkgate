@@ -1,0 +1,59 @@
+{
+  "request_id": "fixture-mixed",
+  "reports": [
+    {
+      "app_name": "splunkgate_app",
+      "app_version": "0.1.0",
+      "summary": {
+        "error": 1,
+        "failure": 0,
+        "future_failure": 0,
+        "skipped": 0,
+        "not_applicable": 0,
+        "warning": 2,
+        "success": 0
+      },
+      "groups": [
+        {
+          "name": "check_inputs_conf",
+          "description": "inputs.conf checks",
+          "checks": [
+            {
+              "name": "check_inputs_conf_section_headers",
+              "description": "Validate inputs.conf section headers.",
+              "tags": ["cloud"],
+              "result": "warning",
+              "messages": [
+                {"message": "inputs.conf stanza has a non-recommended interval", "result": "warning"}
+              ]
+            },
+            {
+              "name": "check_inputs_conf_disabled_default",
+              "description": "Inputs should be disabled by default.",
+              "tags": ["cloud", "self-service"],
+              "result": "error",
+              "messages": [
+                {"message": "Input stanza is enabled by default; must be disabled = 1", "result": "error"}
+              ]
+            }
+          ]
+        },
+        {
+          "name": "check_documentation",
+          "description": "Documentation checks",
+          "checks": [
+            {
+              "name": "check_readme_exists",
+              "description": "Check README exists.",
+              "tags": ["appapproval"],
+              "result": "warning",
+              "messages": [
+                {"message": "README is shorter than 100 characters", "result": "warning"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
