@@ -54,3 +54,9 @@ packages/splunkgate_judges/tests/test_ai_defense_client.py:generic-api-key:25
 91bf73b229c4acd71c224d52f1f27a20431bcee7:packages/splunkgate_mcp/tests/test_tool_score_prompt_injection.py:generic-api-key:174
 91bf73b229c4acd71c224d52f1f27a20431bcee7:packages/splunkgate_mcp/tests/test_tool_score_prompt_injection.py:generic-api-key:285
 91bf73b229c4acd71c224d52f1f27a20431bcee7:packages/splunkgate_mcp/tests/test_tool_score_prompt_injection.py:generic-api-key:317
+# Re-fingerprinted post-squash-merge to main (commit hash + line numbers
+# shifted by the PR #116 fix round which removed the dead _call_inside_span
+# helper and trimmed a couple of lines above the key sites):
+7d0c3be672fe46cc1b47ad1693e8da99f9774351:packages/splunkgate_mcp/tests/test_tool_score_prompt_injection.py:generic-api-key:161
+7d0c3be672fe46cc1b47ad1693e8da99f9774351:packages/splunkgate_mcp/tests/test_tool_score_prompt_injection.py:generic-api-key:272
+7d0c3be672fe46cc1b47ad1693e8da99f9774351:packages/splunkgate_mcp/tests/test_tool_score_prompt_injection.py:generic-api-key:304

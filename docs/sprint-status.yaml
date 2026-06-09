@@ -224,7 +224,7 @@ stories:
     depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk]
   - id: story-mcp-04-tool-check-output-leak
     epic: "EPIC-07 — Surface 2 MCP Server"
-    status: DEFERRED  # 2026-06-05 — per ADR-013 slim, redundant with S1 model_middleware post-inference scan and S4 dashboard verdict surfacing.
+    status: IN_PROGRESS  # 2026-06-09 — REOPENED per ADR-013a (PR #114); 4-tool MCP strengthens Best MCP bonus pitch + matches mcp-06 docs.
     depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk, story-judges-05-ai-defense-end-to-end-integration-test]
   - id: story-mcp-05-tool-audit-trace
     epic: "EPIC-07 — Surface 2 MCP Server"
