@@ -1,0 +1,43 @@
+{
+  "results": [
+    {
+      "_time": "2026-06-09T12:00:00.000+00:00",
+      "trace_id": "11111111-1111-1111-1111-111111111111",
+      "verdict": "BLOCK",
+      "severity": "HIGH",
+      "surface": "mcp_score",
+      "rules": ["Prompt Injection"],
+      "classifications": ["SECURITY_VIOLATION"],
+      "explanation": "Prompt injection detected (HIGH).",
+      "latency_ms": 12.4,
+      "agent_id": "agent-alpha",
+      "count": "1"
+    },
+    {
+      "_time": "2026-06-09T12:01:00.000+00:00",
+      "trace_id": "11111111-1111-1111-1111-111111111111",
+      "verdict": "ALLOW",
+      "severity": "NONE_SEVERITY",
+      "surface": "mw_tool",
+      "rules": [],
+      "classifications": [],
+      "explanation": "splunklib.security clean",
+      "latency_ms": 3.1,
+      "agent_id": "agent-alpha",
+      "count": "1"
+    },
+    {
+      "_time": "2026-06-09T12:02:00.000+00:00",
+      "trace_id": "11111111-1111-1111-1111-111111111111",
+      "verdict": "MODIFY",
+      "severity": "LOW",
+      "surface": "mcp_check_output",
+      "rules": ["PII"],
+      "classifications": ["PRIVACY_VIOLATION"],
+      "explanation": "PII detected (SSN).",
+      "latency_ms": 8.7,
+      "agent_id": "agent-alpha",
+      "count": "1"
+    }
+  ]
+}

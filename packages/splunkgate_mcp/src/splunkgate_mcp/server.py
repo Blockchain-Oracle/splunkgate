@@ -415,9 +415,30 @@ def _ensure_judge_tool_call_registered() -> None:
     judge_tool_call.register(sys.modules[__name__])
 
 
-# Register _ping + mcp-02 + mcp-03 + mcp-04 tools at import time so
-# `tools/list` works.
+def _ensure_audit_trace_registered() -> None:
+    """Idempotent registration of `splunkgate_audit_trace` (mcp-05).
+
+    Symmetric with the other ensure_* helpers. mcp-05 is the only tool
+    whose `outputSchema` is `AuditReport.model_json_schema()` rather
+    than the Verdict schema — FastMCP derives that from the typed
+    `-> AuditReport` return annotation on `audit_trace`.
+    """
+    name = "splunkgate_audit_trace"
+    if name in _REGISTERED_TOOLS:
+        return
+    # Test-isolation reset path; see `ensure_ping_registered` for rationale.
+    server._tool_manager._tools.pop(name, None)  # noqa: SLF001
+    import sys  # noqa: PLC0415
+
+    from splunkgate_mcp.tools import audit_trace  # noqa: PLC0415
+
+    audit_trace.register(sys.modules[__name__])
+
+
+# Register _ping + mcp-02 + mcp-03 + mcp-04 + mcp-05 tools at import time
+# so `tools/list` works.
 ensure_ping_registered()
 _ensure_score_prompt_injection_registered()
 _ensure_check_output_leak_registered()
 _ensure_judge_tool_call_registered()
+_ensure_audit_trace_registered()

@@ -78,12 +78,18 @@ def emit_verdict_event(
     *,
     mcp_method_name: str | None = None,
     mcp_session_id: UUID | None = None,
+    extra_attributes: dict[str, AttrValue] | None = None,
 ) -> None:
     """Attach a `gen_ai.evaluation.result` event to the current span.
 
     Idempotent if no active span exists — OTel returns a NonRecordingSpan
     whose add_event is a no-op. Downstream collectors handle no-op events
     correctly.
+
+    `extra_attributes` lets a caller add tool-specific attributes onto
+    the same event (e.g. mcp-05's `splunkgate.audit.event_count`). Keys
+    MUST follow the `splunkgate.<surface>.*` namespace convention so they
+    don't collide with future upstream gen_ai.* additions.
     """
     span = trace.get_current_span()
     if not span.is_recording():
@@ -101,4 +107,9 @@ def emit_verdict_event(
         mcp_method_name=mcp_method_name,
         mcp_session_id=mcp_session_id,
     )
+    if extra_attributes is not None:
+        # Tool-specific keys override built-ins on purpose: a tool that
+        # supplies a `splunkgate.surface` override knows what it's doing
+        # (none currently do; the BDD spec only adds new keys).
+        attrs.update(extra_attributes)
     span.add_event("gen_ai.evaluation.result", attributes=attrs)
