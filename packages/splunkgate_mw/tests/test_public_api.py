@@ -25,8 +25,6 @@ from splunklib.ai.middleware import (
     AgentRequest,
     SubagentRequest,
     SubagentResponse,
-    ToolRequest,
-    ToolResponse,
 )
 
 MIDDLEWARE_CLASSES = (
@@ -134,20 +132,11 @@ def test_middleware_kwargs_only() -> None:
             cls("default")  # type: ignore[misc]
 
 
-@pytest.mark.asyncio
-async def test_tool_middleware_stub_delegates_to_handler() -> None:
-    """Stub pass-through: handler return must propagate unchanged."""
-    instance = SafetyToolMiddleware(profile="default")
-    sentinel = object()
-
-    async def handler(_request: ToolRequest) -> ToolResponse:
-        return sentinel  # type: ignore[return-value]
-
-    request = object()
-    result = await instance.tool_middleware(request, handler)  # type: ignore[arg-type]
-    assert result is sentinel
-
-
+# test_tool_middleware_stub_delegates_to_handler removed: SafetyToolMiddleware
+# is no longer a pass-through stub (replaced by the real DefenseClaw +
+# AI Defense chain in story-mw-02). Behavioral coverage now lives in
+# tests/test_tool_middleware.py.
+#
 # test_model_middleware_stub_delegates_to_handler removed: SafetyModelMiddleware
 # is no longer a pass-through stub (replaced by the real pre-inference scan in
 # story-mw-03). Behavioral coverage now lives in tests/test_model_middleware_pre.py.

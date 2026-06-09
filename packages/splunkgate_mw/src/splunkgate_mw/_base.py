@@ -20,12 +20,14 @@ from splunklib.ai.middleware import (
     ModelResponse,
     SubagentRequest,
     SubagentResponse,
-    ToolRequest,
-    ToolResponse,
 )
 
+# Re-exported here to preserve the story-mw-01 import surface
+# `from splunkgate_mw._base import SafetyToolMiddleware`. The real
+# implementation now lives in `tool_middleware.py` (story-mw-02).
 from splunkgate_mw.config import Config
 from splunkgate_mw.profiles import Profile
+from splunkgate_mw.tool_middleware import SafetyToolMiddleware
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -66,22 +68,6 @@ class _SafetyMiddlewareBase(AgentMiddleware):  # type: ignore[misc]  # splunklib
         self._logger = structlog.get_logger(self.__class__.__name__).bind(
             profile=self._profile.name,
         )
-
-
-class SafetyToolMiddleware(_SafetyMiddlewareBase):
-    """SplunkGate safety wrap for tool calls.
-
-    Stub: delegates to `await handler(request)`. Real risk scoring (DefenseClaw
-    regex pack against tool args) lands in story-mw-02.
-    """
-
-    async def tool_middleware(
-        self,
-        request: ToolRequest,
-        handler: "Callable[[ToolRequest], Awaitable[ToolResponse]]",
-    ) -> ToolResponse:
-        """Pass-through stub; real logic in story-mw-02."""
-        return await handler(request)
 
 
 class SafetyModelMiddleware(_SafetyMiddlewareBase):
