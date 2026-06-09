@@ -5,7 +5,9 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import uuid4
 
+import pytest
 import splunkgate_mcp
+from splunkgate_core.errors import ConfigError
 from splunkgate_core.verdict import Severity, Verdict, VerdictLabel
 from splunkgate_mcp._test_helpers import list_tools_for_test
 from splunkgate_mcp.otel import MCP_PROTOCOL_VERSION, build_span_attributes
@@ -14,6 +16,7 @@ from splunkgate_mcp.server import (
     _REGISTERED_TOOLS,
     ensure_ping_registered,
     register_tool,
+    resolve_transport,
     server,
 )
 
@@ -111,3 +114,22 @@ def test_ping_tool_registered_at_bootstrap() -> None:
     assert "_ping" in _REGISTERED_TOOLS
     ping = _REGISTERED_TOOLS["_ping"]
     assert ping.outputSchema == VERDICT_OUTPUT_SCHEMA
+
+
+def test_resolve_transport_defaults_to_stdio(monkeypatch: pytest.MonkeyPatch) -> None:
+    """SPLUNKGATE_MCP_TRANSPORT unset → stdio (per MCP spec default)."""
+    monkeypatch.delenv("SPLUNKGATE_MCP_TRANSPORT", raising=False)
+    assert resolve_transport() == "stdio"
+
+
+def test_resolve_transport_http_when_env_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    """SPLUNKGATE_MCP_TRANSPORT=http → http (Streamable HTTP opt-in)."""
+    monkeypatch.setenv("SPLUNKGATE_MCP_TRANSPORT", "http")
+    assert resolve_transport() == "http"
+
+
+def test_resolve_transport_invalid_raises_config_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Invalid SPLUNKGATE_MCP_TRANSPORT raises ConfigError at startup, not first message."""
+    monkeypatch.setenv("SPLUNKGATE_MCP_TRANSPORT", "ftp")
+    with pytest.raises(ConfigError, match="SPLUNKGATE_MCP_TRANSPORT"):
+        resolve_transport()

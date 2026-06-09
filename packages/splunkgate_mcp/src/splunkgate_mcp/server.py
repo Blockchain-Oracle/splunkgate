@@ -24,11 +24,16 @@ land in Tasks 7-9.
 
 from __future__ import annotations
 
+import os
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any
+from datetime import UTC, datetime
+from typing import Any, Literal
+from uuid import uuid4
 
 from mcp.server.fastmcp import FastMCP
+from splunkgate_core.errors import ConfigError
+from splunkgate_core.verdict import Severity, Verdict, VerdictLabel
 
 # FastMCP instance — the SDK boundary. Name is the canonical server name
 # advertised over the MCP protocol's `initialize` handshake.
@@ -122,11 +127,6 @@ def register_tool(
 # valid input or live judges. Stays registered after stories mcp-02..05
 # land — it's the canonical "is the server up?" check.
 
-from datetime import UTC, datetime  # noqa: E402
-from uuid import uuid4  # noqa: E402
-
-from splunkgate_core.verdict import Severity, Verdict, VerdictLabel  # noqa: E402
-
 
 async def _ping() -> Verdict:
     """No-op health check. Returns a static ALLOW verdict.
@@ -160,14 +160,44 @@ def ensure_ping_registered() -> None:
     """
     if "_ping" in _REGISTERED_TOOLS:
         return
-    # FastMCP raises if a tool is already registered there too — clear it
-    # alongside _REGISTERED_TOOLS so tests can re-call this helper safely.
+    # Test-isolation reset path: tests clear `_REGISTERED_TOOLS` for
+    # isolation but FastMCP's `_tool_manager._tools` keeps its own entry.
+    # Pop here so a re-call of this helper from a test re-registers
+    # cleanly without "duplicate tool" errors from FastMCP. NOT a
+    # production defensive guard — production never has _ping cleared.
     server._tool_manager._tools.pop("_ping", None)  # noqa: SLF001
     register_tool(
         name="_ping",
         fn=_ping,
         description="Health-probe no-op. Returns a static ALLOW verdict.",
     )
+
+
+# --- Transport resolution -----------------------------------------------
+#
+# Per the MCP spec (`context/10-standards/01-mcp-spec-deep.md`), clients
+# SHOULD support stdio whenever possible. stdio is our default. Streamable
+# HTTP is opt-in via the `SPLUNKGATE_MCP_TRANSPORT` env var; it binds
+# 127.0.0.1 only and validates the Origin header per the spec's DNS-
+# rebinding mitigation. Both behaviors land in Tasks 8-9.
+
+Transport = Literal["stdio", "http"]
+
+
+def resolve_transport() -> Transport:
+    """Read SPLUNKGATE_MCP_TRANSPORT; default to stdio.
+
+    Raises ConfigError on unknown values so misconfiguration surfaces at
+    startup (when __main__.py calls this), not during the first protocol
+    message — easier to diagnose, fail-fast per the no-silent-failure rule.
+    """
+    raw = os.environ.get("SPLUNKGATE_MCP_TRANSPORT", "stdio").lower()
+    if raw == "stdio":
+        return "stdio"
+    if raw == "http":
+        return "http"
+    msg = f"SPLUNKGATE_MCP_TRANSPORT must be 'stdio' or 'http', got {raw!r}"
+    raise ConfigError(msg)
 
 
 # Register _ping at import time so `tools/list` works immediately.
