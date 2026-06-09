@@ -41,3 +41,16 @@ packages/splunkgate_judges/tests/test_ai_defense_client.py:generic-api-key:25
 626c83e021d2da49564924871e60ad6f55dc6cc4:packages/splunkgate_judges/tests/test_ai_defense_mock.py:generic-api-key:162
 626c83e021d2da49564924871e60ad6f55dc6cc4:packages/splunkgate_judges/tests/test_ai_defense_mock.py:generic-api-key:168
 626c83e021d2da49564924871e60ad6f55dc6cc4:packages/splunkgate_judges/tests/test_ai_defense_mock.py:generic-api-key:178
+# Re-fingerprinted by a subsequent commit (same lines, same content):
+6e0642447f7fd289b27f51c96946da11e8c1e067:packages/splunkgate_judges/tests/test_ai_defense_mock.py:generic-api-key:162
+6e0642447f7fd289b27f51c96946da11e8c1e067:packages/splunkgate_judges/tests/test_ai_defense_mock.py:generic-api-key:168
+6e0642447f7fd289b27f51c96946da11e8c1e067:packages/splunkgate_judges/tests/test_ai_defense_mock.py:generic-api-key:178
+
+# packages/splunkgate_mcp/tests/test_tool_score_prompt_injection.py (story-mcp-02)
+# — synthetic "ai-def-test-key-1234567890abcdefghij" fixture set via monkeypatch
+# in 3 tests that override `_mock_ai_defense` to exercise the live AIDefenseClient
+# path with respx. Same shape as the splunkgate_judges fixtures above; never
+# authenticates against any real Cisco endpoint.
+91bf73b229c4acd71c224d52f1f27a20431bcee7:packages/splunkgate_mcp/tests/test_tool_score_prompt_injection.py:generic-api-key:174
+91bf73b229c4acd71c224d52f1f27a20431bcee7:packages/splunkgate_mcp/tests/test_tool_score_prompt_injection.py:generic-api-key:285
+91bf73b229c4acd71c224d52f1f27a20431bcee7:packages/splunkgate_mcp/tests/test_tool_score_prompt_injection.py:generic-api-key:317
