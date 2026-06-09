@@ -213,7 +213,10 @@ stories:
     depends_on: [story-core-01-verdict-pydantic-types]
   - id: story-mcp-02-tool-score-prompt-injection
     epic: "EPIC-07 — Surface 2 MCP Server"
-    status: IN_PROGRESS
+    status: COMPLETE
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/116"
+    merged_at: "2026-06-09T11:00:00Z"
+    notes: "FastMCP-derived outputSchema=Verdict per mcp-01 single-source-of-truth pattern. Cheap first-pass via splunklib.ai.security.detect_injection → escalation to Cisco AI Defense for ambiguous inputs (ADR-010). surface=mcp_score locked. In-band error reporting via raised AIDefenseUpstreamError → FastMCP CallToolResult(isError=True) per spec. 4 pr-review-toolkit reviewers (code/silent-failure/test/type-design); 7 of 9+ findings addressed in PR — gitleaks fingerprints added, dead helper removed, OTel emit wrapped in _safe_emit, contradictory severity logs WARN, trace_id semantics documented, _SURFACE Literal narrowed, trace_id uniqueness test added. 39 tests pass. Deferred (non-blocking): ScoreContext typed model + Protocol register + connection pooling + isError wire test + mock contract test."
     depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk, story-judges-05-ai-defense-end-to-end-integration-test]
   - id: story-mcp-03-tool-judge-tool-call
     epic: "EPIC-07 — Surface 2 MCP Server"
