@@ -45,7 +45,8 @@ These 6 revisions resolve real spec/codebase gaps. Each PR's commit message must
    *Reason*: `SPLUNKGATE_SPLUNK_HEC_TOKEN` is write-only for HEC indexing — wrong scope for `/services/search/jobs`. The env already exposes `SPLUNKGATE_SPLUNK_HOST` + `SPLUNKGATE_SPLUNK_USER` + `SPLUNKGATE_SPLUNK_PASSWORD` (verified). The Splunk REST client constructs an `httpx.BasicAuth(user, password)` and POSTs to `/services/search/jobs?output_mode=json`.
 
 3. **mcp-05: `SplunkSearchClient` lives in `splunkgate_judges/splunk_search.py`, NOT `splunkgate_judges/foundation_sec.py`**
-   *Reason*: `foundation_sec` module is DEFERRED per ADR-013 (Hosted Models access unverified). The Splunk REST abstraction is independently useful — extract it cleanly. Future foundsec-01 (when undeferred) can import from `splunk_search`. Updates `story-mcp-05`'s file modification map to point at the new path.
+   *Reason*: `foundation_sec` module is DEFERRED per ADR-013 (Hosted Models access unverified). The Splunk REST abstraction is independently useful — extract it cleanly. Future `story-foundsec-02` (Foundation-Sec `| ai` SPL prompt, when undeferred) can import from `splunk_search` for its REST search needs. Updates `story-mcp-05`'s file modification map to point at the new path.
+   *Ownership*: `SplunkSearchClient` constructs its own `httpx.AsyncClient` inside `from_env()` and owns its lifecycle. Callers call `await client.aclose()` to release the connection pool; `async with SplunkSearchClient.from_env() as client:` is the recommended pattern in tests and `__main__`. Disambiguates the API for downstream consumers (mcp-05 audit_trace + future foundsec-02 SPL caller).
 
 4. **mcp-06 docs: Splunk MCP Server is on Splunkbase app 7931, NOT "closed-source"**
    *Reason*: ADR-004a (2026-06-05 correction). The CiscoDevNet repo was README+LICENSE at research time, but Splunk LLC published the real app to Splunkbase (verified live Playwright probe 2026-06-05; 13,990 downloads). Coexistence demo now references **three** real Splunkbase apps in one MCP client config: 7931 (Splunk MCP) + 7245 (SAIA) + ours (SplunkGate). This is the load-bearing artifact for the Best MCP $1K bonus narrative.
@@ -60,7 +61,9 @@ These 6 revisions resolve real spec/codebase gaps. Each PR's commit message must
 
 Per Abu's decisions, two new modules ship inside the consuming MCP PR (not as standalone stories):
 
-1. **`packages/splunkgate_judges/src/splunkgate_judges/defenseclaw_backend.py`** — in mcp-03 PR
+1. **`packages/splunkgate_judges/src/splunkgate_judges/defenseclaw_backend.py`** — in mcp-03 PR (**absorbs `story-judges-06`**)
+   *Ownership note*: This file path is explicitly attributed to `story-judges-06-defenseclaw-python-shim` (PENDING) in `docs/architecture.md:86` and `docs/sprint-status.yaml`. The mcp-03 bundling is not an end-run around judges-06 — it IS judges-06, shipped inside the first PR that consumes it. Sprint-status flips both `story-judges-06` and `story-mcp-03` to COMPLETE when the mcp-03 PR merges. Architecture.md line 86's owner annotation stays accurate.
+   *Dependency note*: `story-judges-06` declares a dep on `story-dc-01` (DefenseClaw config-delta docs, PENDING). For the mcp-03 PR we forward-declare the regex subset without waiting on dc-01's documentation prose; the regexes are the load-bearing artifact, not the docs. dc-01 lands separately and references back to this implementation.
    *Purpose*: Cheap-first-pass classifier for tool-call arg sets. Port the DefenseClaw rule-pack subset (regex patterns for `shell_exec`, `rm -rf`, base64 payload, US SSN, common PII patterns).
    *API*: `async def evaluate_tool_call(tool_name: str, tool_args: dict[str, object]) -> RuleHit | None`
    *Source*: regex literals embedded in module (no fixture file dep on EPIC-08). If EPIC-08's `defenseclaw_rules.json` lands later, refactor reads it.
@@ -147,7 +150,8 @@ Non-negotiable per `memory:feedback_pr_review_every_pr` + `memory:feedback_use_f
 2. **mcp-05**: DEFERRED → PENDING (reopened — see ADR-013 addendum below)
 3. **mcp-01, mcp-02, mcp-03**: PENDING → IN_PROGRESS (as each one's PR opens)
 4. **mcp-06**: PENDING → IN_PROGRESS (after the 4 tool PRs land)
-5. **story-app-13** drift fix: PENDING → COMPLETE (PR #110 already merged 2026-06-08)
+5. **judges-06** (defenseclaw_python_shim): PENDING → COMPLETE when mcp-03 PR merges (absorbed — see "New backend modules" section above)
+6. **story-app-13** drift fix: PENDING → COMPLETE (PR #110 already merged 2026-06-08)
 
 Commit message convention: `chore(sprint-status): flip <story-id> to <STATUS>`. Commit directly to `main` (no PR needed for status hygiene).
 
@@ -157,11 +161,11 @@ Commit message convention: `chore(sprint-status): flip <story-id> to <STATUS>`. 
 
 ## Open risks (surface honestly, not blockers)
 
-1. **mcp-02 transitively depends on story-judges-05 (PENDING)** — judges-05 is the AI Defense e2e integration test (nightly eval). Mitigation: proceed with `respx` mocks per ADR-006. judges-05 is a quality gate for live AI Defense calls, not a blocker for mcp-02's correctness.
+1. **mcp-02 transitively depends on story-judges-05 (PENDING)** — judges-05 is the AI Defense e2e integration test (nightly eval). Not shown in the dependency graph above because it's not on the critical path. Mitigation: proceed with `respx` mocks per ADR-006. judges-05 is a quality gate for live AI Defense calls, not a blocker for mcp-02's correctness. (Caught in PR #114 review — added here for future readers.)
 
 2. **`splunklib.ai.security.detect_injection` availability** — referenced by mcp-02 spec (and ADR-010). The mw package already imports `splunklib.ai.middleware` cleanly, so the package is installed at workspace level — but mcp-02 must declare the dep explicitly in `packages/splunkgate_mcp/pyproject.toml`. Verify during mcp-02 implementation.
 
-3. **DefenseClaw rule-pack fidelity** — `defenseclaw_backend.py` ports a regex subset; the full Go-side rule-pack is richer. v1 covers shell injection + base64 + US SSN + common PII patterns. Honest signal in the explainer's WHY-string: "matched defenseclaw_regex subset; full rule-pack pending EPIC-08 integration."
+3. **DefenseClaw rule-pack fidelity** — `defenseclaw_backend.py` ports a regex subset; the full Go-side rule-pack is richer. v1 covers shell injection + base64 + US SSN + common PII patterns. Honest signal surfaces in two places: (a) the `Verdict.explanation` string contains `"matched defenseclaw_regex subset; full rule-pack pending EPIC-08 integration."`, and (b) the `RuleHit.source` field is `"defenseclaw_regex"` (the Literal value already declared on RuleHit, per ADR-003). Downstream dashboards filter on `source="defenseclaw_regex"` and surface the "subset" caveat in the Verdict Inspector detail panel.
 
 4. **Splunk REST search auth scope** — `SPLUNKGATE_SPLUNK_USER` is `sc_admin` per `.env`. mcp-05's `splunk_search.py` requires a role with `search_jobs_inspector` or equivalent capability. Verify by smoke test against local Docker container before merging mcp-05.
 
