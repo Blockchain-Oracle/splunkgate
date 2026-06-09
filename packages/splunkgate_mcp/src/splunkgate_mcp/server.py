@@ -395,7 +395,29 @@ def _ensure_check_output_leak_registered() -> None:
     check_output_leak.register(sys.modules[__name__])
 
 
-# Register _ping + mcp-02 + mcp-04 tools at import time so `tools/list` works.
+def _ensure_judge_tool_call_registered() -> None:
+    """Idempotent registration of `splunkgate_judge_tool_call` (mcp-03).
+
+    Symmetric with the other ensure_* helpers. Tests that clear
+    `_REGISTERED_TOOLS` for isolation can recall this without re-
+    importing the module; production calls it exactly once at module
+    import.
+    """
+    name = "splunkgate_judge_tool_call"
+    if name in _REGISTERED_TOOLS:
+        return
+    # Test-isolation reset path; see `ensure_ping_registered` for rationale.
+    server._tool_manager._tools.pop(name, None)  # noqa: SLF001
+    import sys  # noqa: PLC0415
+
+    from splunkgate_mcp.tools import judge_tool_call  # noqa: PLC0415
+
+    judge_tool_call.register(sys.modules[__name__])
+
+
+# Register _ping + mcp-02 + mcp-03 + mcp-04 tools at import time so
+# `tools/list` works.
 ensure_ping_registered()
 _ensure_score_prompt_injection_registered()
 _ensure_check_output_leak_registered()
+_ensure_judge_tool_call_registered()
