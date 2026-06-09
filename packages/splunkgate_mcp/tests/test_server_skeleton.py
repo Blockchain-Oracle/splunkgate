@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import inspect
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import pytest
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 import splunkgate_mcp
 from splunkgate_core.errors import ConfigError
 from splunkgate_core.verdict import Severity, Verdict, VerdictLabel
@@ -152,6 +156,23 @@ def test_http_constants_are_127_0_0_1_and_8765() -> None:
     assert HTTP_BIND_PORT == 8765
 
 
+@pytest.fixture
+def reset_session_manager() -> Generator[None]:
+    """Reset FastMCP's one-shot session manager between HTTP origin tests.
+
+    `StreamableHTTPSessionManager.run()` is a one-shot — each test that
+    builds the HTTP app needs a fresh session manager or the second
+    `build_http_app()` call dies with "can only be called once per
+    instance". Production calls `build_http_app` exactly once at startup,
+    so this reset stays out of the production code path (per Task 9
+    simplification review).
+    """
+    server._session_manager = None  # noqa: SLF001 — test isolation
+    yield
+    server._session_manager = None  # noqa: SLF001 — leave clean
+
+
+@pytest.mark.usefixtures("reset_session_manager")
 def test_http_origin_header_rejects_cross_origin() -> None:
     """HTTP POST with cross-origin Origin returns 403 per MCP DNS-rebind mitigation."""
     app = build_http_app()
@@ -164,6 +185,7 @@ def test_http_origin_header_rejects_cross_origin() -> None:
     assert resp.status_code == 403
 
 
+@pytest.mark.usefixtures("reset_session_manager")
 def test_http_origin_header_accepts_localhost() -> None:
     """HTTP POST with localhost Origin passes the check (status != 403)."""
     app = build_http_app()
@@ -181,13 +203,20 @@ def test_http_origin_header_accepts_localhost() -> None:
     assert resp.status_code != 403
 
 
-def test_http_origin_header_missing_is_allowed() -> None:
-    """HTTP POST without Origin header is allowed (stdio bridge case)."""
+@pytest.mark.usefixtures("reset_session_manager")
+def test_http_origin_header_missing_is_rejected() -> None:
+    """HTTP POST without Origin returns 403 per MCP DNS-rebind requirement.
+
+    Per security review M1: stdio-bridge clients use STDIO transport, NOT
+    HTTP. Any HTTP request without Origin is either a misconfigured client
+    or a malicious actor attempting DNS rebinding via Origin omission
+    (e.g. `fetch(url, {mode:'no-cors'})` or non-CORS form POST). The MCP
+    spec mandates Origin validation on every HTTP request.
+    """
     app = build_http_app()
-    with TestClient(app) as client:
-        resp = client.post(
-            "/mcp",
-            json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}},
-        )
-    # Missing Origin should NOT trigger 403
-    assert resp.status_code != 403
+    client = TestClient(app)
+    resp = client.post(
+        "/mcp",
+        json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}},
+    )
+    assert resp.status_code == 403

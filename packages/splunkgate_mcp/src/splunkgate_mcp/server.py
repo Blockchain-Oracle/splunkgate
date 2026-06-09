@@ -255,32 +255,36 @@ async def serve_http() -> None:
 # --- HTTP Origin validation (MCP DNS-rebinding mitigation) --------------
 #
 # Per context/10-standards/01-mcp-spec-deep.md: "The HTTP transport MUST
-# validate the Origin header." Allowed origins are the localhost family
-# (127.0.0.1 / localhost / [::1]) plus the missing-Origin case (legitimate
-# stdio-bridge clients may not set the header). Everything else is 403.
+# validate the Origin header." Allowed origins are exactly the localhost
+# family (127.0.0.1 / localhost / [::1]). Missing Origin is REJECTED —
+# stdio-bridge clients never hit this middleware (they use the STDIO
+# transport, not HTTP), so any HTTP request without Origin is either a
+# misconfigured client or a DNS-rebinding attempt that omitted the
+# header to bypass the check. Per security-review M1 finding.
 
 _ALLOWED_ORIGIN_HOSTS = frozenset({"127.0.0.1", "localhost", "[::1]"})
 
 
 def _is_allowed_origin(origin_header: str | None) -> bool:
-    """Return True if the Origin header is missing or points at localhost.
+    """Return True only if Origin is present, well-formed, and localhost.
 
-    Missing Origin is allowed because legitimate MCP clients (Claude Desktop,
-    Cursor) running over the stdio bridge may not set it. Any non-localhost
-    origin is rejected per MCP DNS-rebinding mitigation.
+    Missing Origin is rejected: MCP spec requires Origin validation on
+    every HTTP request, and stdio clients don't use HTTP. A missing
+    header on the HTTP path means either a broken client or a malicious
+    actor exploiting browser quirks (e.g. `fetch(url, {mode:'no-cors'})`)
+    to bypass the check via DNS rebinding to 127.0.0.1.
     """
     if origin_header is None:
-        return True
-    # Origin is `scheme://host[:port]` per RFC 6454. Cheap parse: drop the
-    # scheme prefix, then the optional `:port` suffix. The remainder is
-    # the host, which we match against the localhost-family allowlist.
-    try:
-        without_scheme = origin_header.split("://", 1)[1]
-        host = without_scheme.split(":", 1)[0]
-    except IndexError:
-        # Malformed Origin → reject (defensive — RFC 6454 origins always
-        # contain a scheme).
         return False
+    # Strip surrounding whitespace defensively (HTTP header values can
+    # carry leading/trailing OWS per RFC 7230 §3.2.4).
+    cleaned = origin_header.strip()
+    if "://" not in cleaned:
+        # No scheme — malformed per RFC 6454. Reject.
+        return False
+    # Origin is `scheme://host[:port]` per RFC 6454. Drop the scheme
+    # prefix, then the optional `:port` suffix. The remainder is the host.
+    host = cleaned.split("://", 1)[1].split(":", 1)[0]
     return host in _ALLOWED_ORIGIN_HOSTS
 
 
@@ -305,15 +309,10 @@ def build_http_app() -> Starlette:
 
     Extracted as its own function so tests can exercise the middleware
     without spinning up a real uvicorn worker. Production `serve_http`
-    (above) calls this then hands the app to uvicorn.
-
-    Resets FastMCP's lazily-cached `_session_manager` first because
-    `StreamableHTTPSessionManager.run()` is a one-shot — each call to
-    `build_http_app` must produce a fresh, runnable session manager so
-    tests can build the app multiple times (and so a hypothetical
-    production restart cycle does not reuse a torn-down manager).
+    (below) calls this then hands the app to uvicorn — exactly ONCE
+    per process. Tests that need a fresh app per case use the
+    `reset_session_manager` fixture in test_server_skeleton.py.
     """
-    server._session_manager = None  # noqa: SLF001 — see docstring
     app: Starlette = server.streamable_http_app()
     app.add_middleware(OriginCheckMiddleware)
     return app
