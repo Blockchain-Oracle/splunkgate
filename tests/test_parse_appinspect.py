@@ -190,8 +190,74 @@ def test_no_slop_markers_in_parser() -> None:
 
 @pytest.mark.parametrize(
     "fixture",
-    ["zero_findings.json", "one_error.json", "mixed.json", "in_expect_list.json"],
+    [
+        "zero_findings.json",
+        "one_error.json",
+        "mixed.json",
+        "in_expect_list.json",
+        "empty_reports.json",
+        "missing_reports.json",
+    ],
 )
 def test_fixtures_are_valid_json(fixture: str) -> None:
     """Every committed fixture (except malformed.json) must be valid JSON."""
     json.loads((FIXTURES / fixture).read_text(encoding="utf-8"))
+
+
+# Regression tests for cicd-05 silent-failure traps caught by the
+# pr-review-toolkit silent-failure-hunter on the original PR #122. Without
+# these, an AppInspect run that bailed before checks (B1) or a typo'd
+# expect.yaml (B2) would silently green-stamp the gate.
+
+
+def test_b1_empty_reports_array_fails_loud() -> None:
+    """B1: `{"reports": []}` from an AppInspect crash must NOT print 'passed'."""
+    result = run_parser(FIXTURES / "empty_reports.json")
+    assert result.returncode == 1
+    assert "no `reports[]` envelope" in result.stderr or "empty" in result.stderr.lower()
+    assert "passed" not in result.stdout.lower()
+
+
+def test_b1_missing_reports_key_fails_loud() -> None:
+    """B1: a body without any `reports` key (e.g., `{"success": false}`) must fail."""
+    result = run_parser(FIXTURES / "missing_reports.json")
+    assert result.returncode == 1
+    assert "::error::" in result.stderr
+    assert "passed" not in result.stdout.lower()
+
+
+def test_b2_malformed_expect_yaml_clean_annotation(tmp_path: Path) -> None:
+    """B2: a YAML syntax error in expect.yaml surfaces as `::error`, not a traceback."""
+    expect = tmp_path / "expect.yaml"
+    expect.write_text("accepted_errors:\n  - check_a\n  : not_valid\n", encoding="utf-8")
+    rpath = tmp_path / "report.json"
+    rpath.write_text(
+        json.dumps({"reports": [{"groups": [{"checks": []}]}]}),
+        encoding="utf-8",
+    )
+    result = run_parser(rpath, "--expect-file", str(expect))
+    assert result.returncode == 1
+    assert "::error" in result.stderr
+    assert "malformed YAML" in result.stderr
+    assert "Traceback" not in result.stderr
+
+
+def test_b2_scalar_accepted_errors_rejected(tmp_path: Path) -> None:
+    """B2: `accepted_errors: check_xyz` (scalar, not list) must fail loud.
+
+    Previously this fell through to the object-keyed branch and silently
+    used `{"accepted_errors"}` as a phantom suppression key — letting a
+    real error finding pass if its name happened to match.
+    """
+    expect = tmp_path / "expect.yaml"
+    expect.write_text("accepted_errors: check_xyz\n", encoding="utf-8")
+    rpath = tmp_path / "report.json"
+    rpath.write_text(
+        json.dumps({"reports": [{"groups": [{"checks": []}]}]}),
+        encoding="utf-8",
+    )
+    result = run_parser(rpath, "--expect-file", str(expect))
+    assert result.returncode == 1
+    assert "::error" in result.stderr
+    assert "accepted_errors" in result.stderr
+    assert "list" in result.stderr

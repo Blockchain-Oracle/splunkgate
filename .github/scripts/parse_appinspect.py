@@ -86,17 +86,43 @@ def _suppressed_from_list(entries: list[object]) -> set[str]:
     return {n for n in (_coerce_entry(e) for e in entries) if n is not None}
 
 
+class ExpectFileError(Exception):
+    """Raised when the expect YAML is structurally malformed.
+
+    Per silent-failure-hunter on PR #122 follow-up: previously a typo'd
+    `expect.yaml` either crashed the parser with a YAMLError traceback or
+    silently produced a phantom suppression set (e.g. scalar `accepted_errors`
+    leaked the key itself as a spurious check name). This makes the failure
+    explicit so CI surfaces a clean `::error` annotation.
+    """
+
+
 def _parse_loaded(data: object) -> set[str]:
-    """Pull the suppression set out of a yaml-loaded body."""
+    """Pull the suppression set out of a yaml-loaded body.
+
+    Raises `ExpectFileError` on shapes the parser doesn't recognize — that
+    includes the silent-failure trap where `accepted_errors:` is a scalar
+    (would otherwise fall through to the object-keyed branch and treat
+    `{"accepted_errors"}` as a phantom check-name suppression).
+    """
+    if data is None:
+        return set()
     if isinstance(data, list):
         return _suppressed_from_list(data)
     if isinstance(data, dict):
-        accepted = data.get("accepted_errors")
-        if isinstance(accepted, list):
+        if "accepted_errors" in data:
+            accepted = data["accepted_errors"]
+            if not isinstance(accepted, list):
+                msg = (
+                    f"`accepted_errors` must be a list of strings or "
+                    f"check-name dicts; got {type(accepted).__name__}"
+                )
+                raise ExpectFileError(msg)
             return _suppressed_from_list(accepted)
         # Object-keyed-by-check-name shape (the production file's schema).
         return {k for k in data if isinstance(k, str)}
-    return set()
+    msg = f"expect file root must be a list or dict; got {type(data).__name__}"
+    raise ExpectFileError(msg)
 
 
 def load_expect(expect_path: Path) -> set[str]:
@@ -107,13 +133,22 @@ def load_expect(expect_path: Path) -> set[str]:
       - top-level list under key `accepted_errors`: each entry is a str OR a
         dict with `check_name` key
       - top-level dict (no `accepted_errors` key) → keys ARE check names
+
+    Raises `ExpectFileError` on malformed YAML or on shapes outside the
+    documented set (e.g. scalar `accepted_errors`) — the caller in `main()`
+    converts the exception into a clean `::error` annotation + exit 1.
     """
     if not expect_path.exists():
         return set()
     raw = expect_path.read_text(encoding="utf-8")
     if not raw.strip():
         return set()
-    return _parse_loaded(yaml.safe_load(raw))
+    try:
+        data = yaml.safe_load(raw)
+    except yaml.YAMLError as exc:
+        msg = f"malformed YAML in {expect_path}: {exc}"
+        raise ExpectFileError(msg) from exc
+    return _parse_loaded(data)
 
 
 def iter_checks(report: dict[str, Any]) -> list[dict[str, Any]]:
@@ -168,12 +203,18 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def main(argv: list[str]) -> int:
-    args = parse_args(argv)
+def _load_report(report_path: Path) -> dict[str, Any] | int:
+    """Read + parse + validate the AppInspect JSON envelope.
+
+    Returns the parsed dict on success, or an int exit code on any failure
+    after emitting the appropriate `::error` annotation to stderr.
+    Centralises the four early-exit paths so `main()` stays under the
+    ruff PLR0911 return-statement ceiling.
+    """
     try:
-        raw = args.report.read_text(encoding="utf-8")
+        raw = report_path.read_text(encoding="utf-8")
     except OSError as exc:
-        print(f"::error::cannot read AppInspect report {args.report}: {exc}", file=sys.stderr)
+        print(f"::error::cannot read AppInspect report {report_path}: {exc}", file=sys.stderr)
         return 1
     try:
         report = json.loads(raw)
@@ -183,8 +224,35 @@ def main(argv: list[str]) -> int:
     if not isinstance(report, dict):
         print("::error::AppInspect report root must be a JSON object", file=sys.stderr)
         return 1
+    # Silent-failure trap (silent-failure-hunter on PR #122 follow-up):
+    # if AppInspect bails before running checks (auth failure, package-parse
+    # abort, etc.), it emits `{"reports": []}` or `{"success": false}` with
+    # no `reports` key. `test -s` in CI catches zero bytes but not zero
+    # checks — so a no-op AppInspect run would silently print "passed"
+    # without this guard.
+    reports = report.get("reports")
+    if not isinstance(reports, list) or not reports:
+        print(
+            "::error::AppInspect report has no `reports[]` envelope or it is "
+            "empty — the tool likely crashed before running checks. Failing "
+            "the gate rather than green-stamping a no-op run.",
+            file=sys.stderr,
+        )
+        return 1
+    return report
 
-    suppressed = load_expect(args.expect_file)
+
+def main(argv: list[str]) -> int:
+    args = parse_args(argv)
+    report = _load_report(args.report)
+    if isinstance(report, int):
+        return report
+
+    try:
+        suppressed = load_expect(args.expect_file)
+    except ExpectFileError as exc:
+        print(f"::error file={args.expect_file}::{exc}", file=sys.stderr)
+        return 1
 
     errors_emitted = 0
     suppressed_count = 0

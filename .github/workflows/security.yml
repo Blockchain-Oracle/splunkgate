@@ -45,6 +45,29 @@ jobs:
       # malicious XML into splunk_apps/splunkgate_app/ — which would already
       # be caught at PR review. Acceptable risk; lift when AppInspect ships
       # a release with lxml>=6.1.0.
+      #
+      # Tripwire (per silent-failure-hunter on PR #122 follow-up): the
+      # ignore above is workflow-global. If a future story adds lxml as a
+      # direct production dep, the CVE silently disappears. This step fails
+      # the run if `lxml` is reachable from any package other than
+      # `splunk-appinspect` — forcing a deliberate re-evaluation of the
+      # ignore scope when the dep tree changes.
+      - name: Tripwire — fail if lxml leaks beyond splunk-appinspect
+        run: |
+          set -euo pipefail
+          # `uv pip show lxml` lists which packages require lxml. We expect
+          # exactly one reverse-dep: splunk-appinspect. Any additional
+          # reverse-dep means the workflow-global PYSEC-2026-87 ignore is
+          # broader than intended.
+          required_by=$(uv pip show lxml 2>/dev/null | awk -F': ' '/^Required-by:/ {print $2}' | tr ',' '\n' | sed 's/[[:space:]]*//g' | sort -u | grep -v '^$' || true)
+          echo "lxml reverse-deps: ${required_by:-<none>}"
+          unexpected=$(echo "$required_by" | grep -v '^splunk-appinspect$' || true)
+          if [ -n "$unexpected" ]; then
+            echo "::error::lxml is now a transitive dep of: $unexpected"
+            echo "::error::The PYSEC-2026-87 ignore was scoped to splunk-appinspect only."
+            echo "::error::Re-evaluate the ignore scope or remove the leaked dep before merge."
+            exit 1
+          fi
       - run: uv run --with pip-audit pip-audit --skip-editable --ignore-vuln PYSEC-2026-87
 
   gitleaks:

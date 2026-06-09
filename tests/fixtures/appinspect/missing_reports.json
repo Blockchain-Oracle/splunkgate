@@ -1,0 +1,5 @@
+{
+  "request_id": "synthetic-missing-reports-fixture",
+  "success": false,
+  "error": "package parse aborted before checks could run"
+}
