@@ -28,7 +28,8 @@ import os
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, cast
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 from mcp.server.fastmcp import FastMCP
@@ -108,7 +109,7 @@ def register_tool(
         msg = f"duplicate tool: {name}"
         raise ValueError(msg)
     server.add_tool(
-        fn=fn,  # type: ignore[arg-type]
+        fn=fn,
         name=name,
         description=description,
     )
@@ -151,7 +152,11 @@ async def _ping() -> Verdict:
         severity=Severity.NONE_SEVERITY,
         rules=[],
         explanation="health check (no-op)",
-        surface="mcp_score",
+        # surface="mcp_health" — dedicated literal so health-probe verdicts
+        # don't pollute Splunk dashboards that facet on surface (story-app-05
+        # / -08). Added to Verdict.surface Literal in splunkgate_core per
+        # code-reviewer finding on PR #115.
+        surface="mcp_health",
         latency_ms=0.0,
     )
 
@@ -256,35 +261,50 @@ async def serve_http() -> None:
 #
 # Per context/10-standards/01-mcp-spec-deep.md: "The HTTP transport MUST
 # validate the Origin header." Allowed origins are exactly the localhost
-# family (127.0.0.1 / localhost / [::1]). Missing Origin is REJECTED —
+# family (127.0.0.1 / localhost / ::1). Missing Origin is REJECTED —
 # stdio-bridge clients never hit this middleware (they use the STDIO
 # transport, not HTTP), so any HTTP request without Origin is either a
 # misconfigured client or a DNS-rebinding attempt that omitted the
-# header to bypass the check. Per security-review M1 finding.
+# header to bypass the check.
 
-_ALLOWED_ORIGIN_HOSTS = frozenset({"127.0.0.1", "localhost", "[::1]"})
+# Bare-hostname allowlist (no brackets). `urlsplit.hostname` returns the
+# bracket-less form for IPv6, so the comparison key is also bracket-less.
+_ALLOWED_ORIGIN_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+
+# Only the two schemes the MCP DNS-rebind threat model assumes. `file://`,
+# `data://`, `null` (browser sandbox iframe), and other schemes are
+# rejected regardless of host.
+_ALLOWED_ORIGIN_SCHEMES = frozenset({"http", "https"})
 
 
 def _is_allowed_origin(origin_header: str | None) -> bool:
-    """Return True only if Origin is present, well-formed, and localhost.
+    """Return True only if Origin is well-formed, http(s), and localhost.
 
     Missing Origin is rejected: MCP spec requires Origin validation on
     every HTTP request, and stdio clients don't use HTTP. A missing
     header on the HTTP path means either a broken client or a malicious
     actor exploiting browser quirks (e.g. `fetch(url, {mode:'no-cors'})`)
     to bypass the check via DNS rebinding to 127.0.0.1.
+
+    Uses `urllib.parse.urlsplit` so IPv6 origins (`http://[::1]:8080`)
+    parse correctly — string-split-on-`:` previously truncated `[::1]`
+    to `[`, silently 403-ing legitimate IPv6 localhost clients.
     """
     if origin_header is None:
         return False
     # Strip surrounding whitespace defensively (HTTP header values can
     # carry leading/trailing OWS per RFC 7230 §3.2.4).
     cleaned = origin_header.strip()
-    if "://" not in cleaned:
-        # No scheme — malformed per RFC 6454. Reject.
+    if not cleaned:
         return False
-    # Origin is `scheme://host[:port]` per RFC 6454. Drop the scheme
-    # prefix, then the optional `:port` suffix. The remainder is the host.
-    host = cleaned.split("://", 1)[1].split(":", 1)[0]
+    parts = urlsplit(cleaned)
+    if parts.scheme.lower() not in _ALLOWED_ORIGIN_SCHEMES:
+        # Wrong scheme (file://, data://, null, etc.) or malformed Origin
+        # missing `://` (urlsplit returns empty scheme then).
+        return False
+    host = parts.hostname  # bracket-less for IPv6; lowercased for hostnames
+    if host is None:
+        return False
     return host in _ALLOWED_ORIGIN_HOSTS
 
 
@@ -301,7 +321,9 @@ class OriginCheckMiddleware(BaseHTTPMiddleware):
         origin = request.headers.get("origin")
         if not _is_allowed_origin(origin):
             return Response(status_code=403, content=b"Origin not allowed")
-        return await call_next(request)
+        # `call_next` returns `Any` from Starlette's typing — cast to
+        # Response since the contract guarantees a Response (or it raised).
+        return cast("Response", await call_next(request))
 
 
 def build_http_app() -> Starlette:

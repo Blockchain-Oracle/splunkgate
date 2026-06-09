@@ -90,6 +90,7 @@ class Verdict(BaseModel):
         "mcp_judge_tool",
         "mcp_check_output",
         "mcp_audit",
+        "mcp_health",
         "defenseclaw",
     ]
     latency_ms: float

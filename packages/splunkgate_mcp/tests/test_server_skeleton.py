@@ -24,6 +24,7 @@ from splunkgate_mcp.server import (
     _REGISTERED_TOOLS,
     HTTP_BIND_HOST,
     HTTP_BIND_PORT,
+    _is_allowed_origin,
     build_http_app,
     ensure_ping_registered,
     register_tool,
@@ -242,3 +243,54 @@ def test_main_module_version_flag_exits_clean() -> None:
     )
     assert result.returncode == 0, f"stderr: {result.stderr}"
     assert "0.1.0" in result.stdout, f"stdout: {result.stdout!r}"
+
+
+# --- Origin parser edge cases (PR #115 review findings) -----------------
+# Tests below exercise `_is_allowed_origin` directly because spinning up
+# `build_http_app` per case is expensive + already covered by the 3 main
+# Origin tests above. These tests catch the parser bugs the toolkit
+# code-reviewer flagged: IPv6 bracket parsing, scheme allowlist, null.
+
+
+def test_origin_ipv6_localhost_accepted() -> None:
+    """IPv6 localhost `http://[::1]:8080` is accepted (urlsplit handles brackets).
+
+    Code-reviewer caught: the old parser split on first `:` after stripping
+    the scheme, producing host `"["` for `[::1]:8080`. The allowlist
+    contained `"[::1]"` but the parser could never produce it — silent
+    functional break for IPv6 clients. urllib.parse.urlsplit.hostname
+    returns the bracket-less form (`"::1"`), and the allowlist now matches.
+    """
+
+    assert _is_allowed_origin("http://[::1]:8080") is True
+    assert _is_allowed_origin("http://[::1]") is True
+
+
+def test_origin_file_scheme_rejected() -> None:
+    """`file://localhost/etc/passwd` is rejected — only http(s) is allowed.
+
+    Browsers can emit `file://` from local HTML; MCP DNS-rebind threat
+    model assumes http(s) only, so other schemes get 403.
+    """
+
+    assert _is_allowed_origin("file://localhost/etc/passwd") is False
+
+
+def test_origin_null_literal_rejected() -> None:
+    """`Origin: null` (sandboxed iframe) is rejected — no scheme to validate."""
+
+    assert _is_allowed_origin("null") is False
+
+
+def test_origin_whitespace_normalized() -> None:
+    """Trailing/leading whitespace is stripped before parsing (RFC 7230 OWS)."""
+
+    assert _is_allowed_origin("  http://127.0.0.1:3000  ") is True
+    assert _is_allowed_origin("  ") is False  # empty after strip
+
+
+def test_origin_attacker_host_rejected() -> None:
+    """Suffix attacks like `http://127.0.0.1.attacker.com` are rejected."""
+
+    assert _is_allowed_origin("http://127.0.0.1.attacker.com") is False
+    assert _is_allowed_origin("http://localhost.attacker.com") is False

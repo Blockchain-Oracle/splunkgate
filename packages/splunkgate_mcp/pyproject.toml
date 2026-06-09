@@ -7,7 +7,11 @@ license = { text = "Apache-2.0" }
 dependencies = [
     "splunkgate-core",
     "splunkgate-judges",
-    "mcp[cli]>=1.27.0",
+    # Pinned ~=1.27 (compatible-release: >=1.27.0,<2.0) because register_tool
+    # depends on FastMCP's private `_tool_manager._tools` shape per PR #115
+    # toolkit code-review finding rank-2. Upgrading to 2.x requires verifying
+    # the private path still exists or extracting to a public-API path.
+    "mcp[cli]~=1.27",
     "pydantic>=2.10",
     "opentelemetry-api>=1.27",
     "opentelemetry-sdk>=1.27",
