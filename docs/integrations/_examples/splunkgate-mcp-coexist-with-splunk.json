@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "splunkgate-mcp-server": {
+      "command": "python",
+      "args": ["-m", "splunkgate_mcp"],
+      "env": {
+        "SPLUNKGATE_MCP_TRANSPORT": "stdio",
+        "SPLUNKGATE_AI_DEFENSE_MOCK": "1",
+        "SPLUNKGATE_AI_DEFENSE_REGION": "us"
+      }
+    },
+    "splunk-mcp-server": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://<SPLUNK_HOST>:8089/services/mcp",
+        "--header",
+        "Authorization: Bearer <YOUR_ENCRYPTED_TOKEN>"
+      ],
+      "env": {
+        "NODE_TLS_REJECT_UNAUTHORIZED": "0"
+      }
+    }
+  }
+}
