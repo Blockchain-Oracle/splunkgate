@@ -18,7 +18,7 @@ import httpx
 import pytest
 import respx
 from opentelemetry import trace
-from splunkgate_core.verdict import Severity, Verdict, VerdictLabel
+from splunkgate_core.verdict import Severity, VerdictLabel
 from splunkgate_judges._errors import AIDefenseUpstreamError
 from splunkgate_judges._regions import REGION_BASE_URLS
 from splunkgate_mcp._test_helpers import list_tools_for_test
@@ -31,7 +31,6 @@ from splunkgate_mcp.tools.score_prompt_injection import (
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
-    from opentelemetry.sdk.trace import ReadableSpan
     from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
         InMemorySpanExporter,
     )
@@ -74,18 +73,6 @@ def exporter(otel_exporter: InMemorySpanExporter) -> Iterator[InMemorySpanExport
     otel_exporter.clear()
     yield otel_exporter
     otel_exporter.clear()
-
-
-async def _call_inside_span(args: ScoreInputs) -> tuple[Verdict, ReadableSpan]:
-    """Call the tool inside an enclosing span and return (verdict, span).
-
-    The tool emits its OTel evaluation event into the current span; tests
-    need an enclosing span to capture the event via the InMemorySpanExporter.
-    """
-    tracer = trace.get_tracer(__name__)
-    with tracer.start_as_current_span("tools/call"):
-        verdict = await score_prompt_injection(args)
-    return verdict, None  # type: ignore[return-value]  # span fetched via exporter
 
 
 # --- BDD 1+2: discoverable + outputSchema deep-equals VERDICT schema ----
@@ -346,3 +333,18 @@ async def test_context_propagates_to_aidefense_metadata_and_agent_id() -> None:
         )
     )
     assert verdict.agent_id == "agent-xyz-42"
+
+
+# --- pr-test-analyzer follow-ups (PR #116 review round 1) ---------------
+
+
+async def test_each_invocation_emits_distinct_trace_id() -> None:
+    """Two sequential calls must produce two distinct trace_ids.
+
+    Catches a future regression where someone accidentally module-caches
+    `trace_id = uuid4()` (called once at import) instead of generating
+    fresh per call. Per pr-test-analyzer review.
+    """
+    v1 = await score_prompt_injection(ScoreInputs(input_text="Hello"))
+    v2 = await score_prompt_injection(ScoreInputs(input_text="Hello again"))
+    assert v1.trace_id != v2.trace_id

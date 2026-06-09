@@ -23,9 +23,10 @@ in-band errors on the wire.
 
 from __future__ import annotations
 
+import logging
 import time
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -45,7 +46,11 @@ if TYPE_CHECKING:
 
 # Locked literal per docs/architecture.md § "API schemas" + story-mcp-02.
 # Do NOT parametrise — Surface 4 dashboard filters key off this string.
-_SURFACE: str = "mcp_score"
+_LOGGER = logging.getLogger(__name__)
+
+# Narrow Literal so mypy enforces alignment with `Verdict.surface: Surface`.
+# Caught by type-design-analyzer on PR #116.
+_SURFACE: Literal["mcp_score"] = "mcp_score"
 
 # MCP method name lives on the enclosing span as `mcp.method.name`; we
 # pass it into emit_verdict_event so the OTel event carries the same
@@ -63,6 +68,12 @@ class ScoreInputs(BaseModel):
     request's `metadata` field; `context["agent_id"]`, when a string,
     populates `Verdict.agent_id` for the Splunk ES Risk-Based Alerting
     correlation contract.
+
+    NOTE: `context["trace_id"]` is currently NOT honored — the tool always
+    generates a fresh `uuid4()` for `Verdict.trace_id`. Caller-supplied
+    correlation IDs intended to tie the verdict to an upstream span must
+    be passed via the OTel context (W3C trace-context headers), not via
+    this dict. (Caught by silent-failure-hunter on PR #116.)
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -119,7 +130,10 @@ def _map_aidefense_to_verdict_label(
     - is_safe=False, MEDIUM     → REVIEW (escalate to human / secondary check)
     - is_safe=False, LOW        → MODIFY (per spec default; the modifier
       surface decides what to redact)
-    - is_safe=False, NONE       → ALLOW (defensive: contradictory upstream)
+    - is_safe=False, NONE       → ALLOW + WARN (contradictory upstream signal:
+      "not safe" but no severity assigned is a real protocol violation we
+      should see, not silently swallow — caught by silent-failure-hunter
+      on PR #116).
     """
     if is_safe:
         return VerdictLabel.ALLOW
@@ -129,6 +143,15 @@ def _map_aidefense_to_verdict_label(
         return VerdictLabel.REVIEW
     if severity is Severity.LOW:
         return VerdictLabel.MODIFY
+    # is_safe=False AND severity=NONE — log so the contradiction is
+    # visible in Splunk dashboards instead of disappearing into the floor.
+    _LOGGER.warning(
+        "ai_defense.contradiction",
+        extra={
+            "issue": "is_safe=False with severity=NONE_SEVERITY",
+            "resolution": "defaulting to ALLOW",
+        },
+    )
     return VerdictLabel.ALLOW
 
 
@@ -234,7 +257,7 @@ async def score_prompt_injection(args: ScoreInputs) -> Verdict:
             started=started,
             agent_id=agent_id,
         )
-        emit_verdict_event(verdict, mcp_method_name=_MCP_METHOD)
+        _safe_emit(verdict)
         return verdict
 
     response = await _escalate_to_ai_defense(
@@ -248,8 +271,26 @@ async def score_prompt_injection(args: ScoreInputs) -> Verdict:
         started=started,
         agent_id=agent_id,
     )
-    emit_verdict_event(verdict, mcp_method_name=_MCP_METHOD)
+    _safe_emit(verdict)
     return verdict
+
+
+def _safe_emit(verdict: Verdict) -> None:
+    """Emit OTel event without letting observability failures lose the verdict.
+
+    Per silent-failure-hunter on PR #116: an exporter crash or malformed-
+    attribute error during `emit_verdict_event` would otherwise propagate
+    out of the tool and drop the verdict on the floor. Catch broadly,
+    log, and continue — the verdict the user paid for survives.
+    """
+    try:
+        emit_verdict_event(verdict, mcp_method_name=_MCP_METHOD)
+    except Exception:  # noqa: BLE001 — observability must never lose the verdict
+        _LOGGER.warning(
+            "otel.emit_failed",
+            extra={"trace_id": str(verdict.trace_id), "surface": verdict.surface},
+            exc_info=True,
+        )
 
 
 def register(server_module: object) -> None:
