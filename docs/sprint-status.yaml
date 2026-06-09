@@ -234,8 +234,11 @@ stories:
     depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk, story-judges-05-ai-defense-end-to-end-integration-test]
   - id: story-mcp-05-tool-audit-trace
     epic: "EPIC-07 — Surface 2 MCP Server"
-    status: IN_PROGRESS  # 2026-06-09 — REOPENED per ADR-013a (PR #114); 4-tool MCP strengthens Best MCP bonus + matches mcp-06 docs.
+    status: COMPLETE  # 2026-06-09 — REOPENED per ADR-013a (PR #114); shipped via PR #119.
+    pr: "https://github.com/Blockchain-Oracle/splunkgate/pull/119"
+    merged_at: "2026-06-09T12:32:56Z"
     depends_on: [story-mcp-01-server-skeleton-with-mcp-python-sdk]
+    notes: "Splunk REST oneshot search via USER+PASSWORD basic auth (not HEC token — wrong scope for /services/search/jobs). AuditReport.aggregate typed dict[str, object] (NOT Any). Tool emits AuditReport — the only non-Verdict-returning MCP tool. 5-reviewer fleet caught silent-failures on _coerce_label/_severity/_surface (would falsify Regulator Evidence Pack labels) + Splunk 200+FATAL body masquerade — both fixed via WARN logs + _check_splunk_messages helper. SPL injection guard via _ALLOWED_DIMENSIONS frozenset. SPLUNKGATE_DEV_INSECURE_TLS=1 opt-in mirrors otel_hec_exporter pattern. Closes the 4-tool MCP track per design doc Phase A0."
   - id: story-mcp-06-claude-desktop-cursor-config-examples
     epic: "EPIC-07 — Surface 2 MCP Server"
     status: PENDING
