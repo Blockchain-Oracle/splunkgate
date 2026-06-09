@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import inspect
+import subprocess
+import sys
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -14,6 +16,7 @@ if TYPE_CHECKING:
 import splunkgate_mcp
 from splunkgate_core.errors import ConfigError
 from splunkgate_core.verdict import Severity, Verdict, VerdictLabel
+from splunkgate_mcp import __main__ as splunkgate_mcp_main
 from splunkgate_mcp._test_helpers import list_tools_for_test
 from splunkgate_mcp.otel import MCP_PROTOCOL_VERSION, build_span_attributes
 from splunkgate_mcp.schemas import VERDICT_OUTPUT_SCHEMA
@@ -220,3 +223,22 @@ def test_http_origin_header_missing_is_rejected() -> None:
         json={"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}},
     )
     assert resp.status_code == 403
+
+
+def test_main_module_has_callable_main() -> None:
+    """`python -m splunkgate_mcp` dispatches via a main() function."""
+    assert hasattr(splunkgate_mcp_main, "main")
+    assert callable(splunkgate_mcp_main.main)
+
+
+def test_main_module_version_flag_exits_clean() -> None:
+    """`python -m splunkgate_mcp --version` exits 0 with version in stdout."""
+    result = subprocess.run(
+        [sys.executable, "-m", "splunkgate_mcp", "--version"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    assert result.returncode == 0, f"stderr: {result.stderr}"
+    assert "0.1.0" in result.stdout, f"stdout: {result.stdout!r}"
