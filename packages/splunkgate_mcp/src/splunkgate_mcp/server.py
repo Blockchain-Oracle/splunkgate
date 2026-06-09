@@ -113,3 +113,62 @@ def register_tool(
         outputSchema=fastmcp_tool.output_schema,
         description=description,
     )
+
+
+# --- _ping no-op tool ---------------------------------------------------
+#
+# The cheapest health-probe surface. Returns a static ALLOW Verdict so
+# the Splunk app's dashboard heartbeat panel can poll without needing
+# valid input or live judges. Stays registered after stories mcp-02..05
+# land — it's the canonical "is the server up?" check.
+
+from datetime import UTC, datetime  # noqa: E402
+from uuid import uuid4  # noqa: E402
+
+from splunkgate_core.verdict import Severity, Verdict, VerdictLabel  # noqa: E402
+
+
+async def _ping() -> Verdict:
+    """No-op health check. Returns a static ALLOW verdict.
+
+    Takes no args — the tool exists only to verify protocol round-trip.
+    Typed `-> Verdict` return is load-bearing: FastMCP derives the
+    outputSchema from this annotation, so `_ping` registers with
+    VERDICT_OUTPUT_SCHEMA as its wire-emitted outputSchema. Without
+    the typed return, downstream tools couldn't trust the schema
+    derivation pattern.
+    """
+    return Verdict(
+        trace_id=uuid4(),
+        timestamp=datetime.now(UTC),
+        verdict=VerdictLabel.ALLOW,
+        severity=Severity.NONE_SEVERITY,
+        rules=[],
+        explanation="health check (no-op)",
+        surface="mcp_score",
+        latency_ms=0.0,
+    )
+
+
+def ensure_ping_registered() -> None:
+    """Idempotent _ping registration. Called at module import + by tests.
+
+    Tests that clear `_REGISTERED_TOOLS` for isolation can call this to
+    restore the canonical `_ping` registration without re-importing the
+    module. `_REGISTERED_TOOLS` is the source of truth for "is it
+    registered" — no separate boolean flag needed.
+    """
+    if "_ping" in _REGISTERED_TOOLS:
+        return
+    # FastMCP raises if a tool is already registered there too — clear it
+    # alongside _REGISTERED_TOOLS so tests can re-call this helper safely.
+    server._tool_manager._tools.pop("_ping", None)  # noqa: SLF001
+    register_tool(
+        name="_ping",
+        fn=_ping,
+        description="Health-probe no-op. Returns a static ALLOW verdict.",
+    )
+
+
+# Register _ping at import time so `tools/list` works immediately.
+ensure_ping_registered()

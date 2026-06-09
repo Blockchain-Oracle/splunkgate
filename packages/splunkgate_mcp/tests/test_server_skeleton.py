@@ -10,7 +10,12 @@ from splunkgate_core.verdict import Severity, Verdict, VerdictLabel
 from splunkgate_mcp._test_helpers import list_tools_for_test
 from splunkgate_mcp.otel import MCP_PROTOCOL_VERSION, build_span_attributes
 from splunkgate_mcp.schemas import VERDICT_OUTPUT_SCHEMA
-from splunkgate_mcp.server import _REGISTERED_TOOLS, register_tool, server
+from splunkgate_mcp.server import (
+    _REGISTERED_TOOLS,
+    ensure_ping_registered,
+    register_tool,
+    server,
+)
 
 
 def test_version_is_0_1_0() -> None:
@@ -97,3 +102,12 @@ def test_list_tools_for_test_returns_registered_tools() -> None:
     assert "_helper_test" in names
     target = next(t for t in tools if t.name == "_helper_test")
     assert target.outputSchema == VERDICT_OUTPUT_SCHEMA
+
+
+def test_ping_tool_registered_at_bootstrap() -> None:
+    """_ping no-op tool registers automatically with VERDICT_OUTPUT_SCHEMA."""
+    ensure_ping_registered()
+
+    assert "_ping" in _REGISTERED_TOOLS
+    ping = _REGISTERED_TOOLS["_ping"]
+    assert ping.outputSchema == VERDICT_OUTPUT_SCHEMA
