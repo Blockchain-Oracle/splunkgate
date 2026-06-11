@@ -14,42 +14,28 @@ _DOSSIER_SOURCE = _REPO_ROOT / "web" / "styles" / "designer" / "splunkgate-base.
 
 
 def test_built_bundle_committed() -> None:
-    """The hand-written `hello.js` placeholder bundle ships in static/."""
-    assert (_SUIT_STATIC / "hello.js").exists()
+    """The Dossier tokens bundle ships in static/ for all SUIT views to reference."""
     assert (_SUIT_STATIC / "tokens.css").exists()
 
 
 def test_dev_source_present() -> None:
-    """The webpack/TypeScript scaffold lives under src/ for the next 3 PRs."""
+    """The webpack/TypeScript scaffold lives under src/ for the SUIT dashboards."""
     assert (_SUIT_SRC / "package.json").exists()
     assert (_SUIT_SRC / "webpack.config.js").exists()
     assert (_SUIT_SRC / "tsconfig.json").exists()
-    assert (_SUIT_SRC / "views" / "hello.tsx").exists()
 
 
-def test_hello_view_xml_present() -> None:
-    """`_suit_hello.xml` view references the static bundle and is hidden via underscore prefix."""
+def test_scaffold_placeholder_removed_in_pr18() -> None:
+    """The PR-15 scaffold placeholder (_suit_hello.xml, hello.js, hello.tsx, default.meta stanza)
+    is deleted in PR #18 alongside the verdict_inspector rebuild."""
     view = _APP_ROOT / "default" / "data" / "ui" / "views" / "_suit_hello.xml"
-    assert view.exists()
-    text = view.read_text(encoding="utf-8")
-    assert "splunkgate-suit/hello.js" in text
-    assert "splunkgate-suit/tokens.css" in text
-    # `isVisible="false"` is NOT a valid <view> attribute in Splunk Simple-XML
-    # and was previously a no-op bug. Hiding is done via the underscore prefix
-    # in the view name + the `export = none` stanza in default.meta. Match on
-    # the actual <view> opening tag, not on the comment that documents the bug.
-    view_tag = re.search(r"<view\b[^>]*>", text, re.DOTALL)
-    assert view_tag is not None, "no <view> element found"
-    assert "isVisible" not in view_tag.group(0), (
-        f"isVisible attribute is not valid on <view>: {view_tag.group(0)}"
+    assert not view.exists(), "_suit_hello.xml must be removed in PR #18"
+    assert not (_SUIT_STATIC / "hello.js").exists(), "hello.js bundle must be removed in PR #18"
+    assert not (_SUIT_SRC / "views" / "hello.tsx").exists(), (
+        "hello.tsx source must be removed in PR #18"
     )
-
-
-def test_hello_view_export_blocked_in_meta() -> None:
-    """`default.meta` blocks the placeholder view from cross-app export."""
     meta = (_APP_ROOT / "metadata" / "default.meta").read_text(encoding="utf-8")
-    assert "[views/_suit_hello]" in meta
-    assert "export = none" in meta.split("[views/_suit_hello]", 1)[1]
+    assert "[views/_suit_hello]" not in meta, "default.meta stanza for _suit_hello must be removed"
 
 
 def test_brand_kit_tokens_ported() -> None:
@@ -141,11 +127,15 @@ def test_tarball_excludes_src_includes_static() -> None:
     ]
     assert appinspect_dirt == [], f"appinspect dirt in tarball: {appinspect_dirt}"
 
-    # Positive control: the built SUIT bundle + the placeholder view do ship.
+    # Positive control: the three SUIT dashboards + Dossier tokens do ship.
+    # The PR-15 hello.js placeholder is removed in PR #18 — see
+    # test_scaffold_placeholder_removed_in_pr18 above for the negative
+    # check on that artefact.
     suit_entries = [n for n in names if "splunkgate-suit/" in n]
-    assert any(n.endswith("hello.js") for n in suit_entries)
     assert any(n.endswith("tokens.css") for n in suit_entries)
-    assert f"{top}/default/data/ui/views/_suit_hello.xml" in names
+    assert any(n.endswith("evidence_pack.js") for n in suit_entries)
+    assert any(n.endswith("agent_risk_overview.js") for n in suit_entries)
+    assert any(n.endswith("verdict_inspector.js") for n in suit_entries)
 
     # Tripwire: silent over-exclusion (a future glob that eats too much) will
     # drop the entry count below the current baseline.

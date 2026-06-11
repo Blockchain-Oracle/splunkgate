@@ -52,11 +52,3 @@ access = read : [ * ], write : [ * ]
 export = system
 
 
-### SCAFFOLD PLACEHOLDER — REMOVED IN PR 18 (verdict-inspector)
-# `_suit_hello` confirms the SUIT bundle pipeline is wired end-to-end.
-# `export = none` keeps it out of cross-app discovery; the underscore prefix
-# keeps it out of app nav. Still reachable via deep-link to authenticated
-# users with app read — the rendered card identifies itself as a scaffold.
-
-[views/_suit_hello]
-export = none
