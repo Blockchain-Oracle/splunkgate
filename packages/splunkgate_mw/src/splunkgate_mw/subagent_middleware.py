@@ -177,16 +177,31 @@ def _ai_defense_verdict(
     )
 
 
+_STRING_ARGS_KEY = "__splunkgate_string_input__"
+
+
 def _resolve_args(call: SubagentCall) -> dict[str, object]:
     """Normalise SubagentCall.args (str | dict) into the dict form used by the rule pack.
 
-    Strings get wrapped under a `"_input"` key so DefenseClaw regexes can
-    still scan the text. The MODIFY path checks the original args shape
-    via `isinstance(call.args, str)` to decide whether to attempt redaction.
+    Strings get wrapped under `__splunkgate_string_input__` (namespaced to
+    avoid collision with any real subagent arg key) so DefenseClaw regexes
+    can still scan the text. Any other shape fails-closed via
+    FailClosedError — PR #128 review caught raw dict(list) silently
+    misinterpreting iterables of pairs.
     """
     if isinstance(call.args, str):
-        return {"_input": call.args}
-    return dict(call.args)
+        return {_STRING_ARGS_KEY: call.args}
+    if isinstance(call.args, dict):
+        return dict(call.args)
+    raise FailClosedError(
+        synthetic_rule="subagent_args_unsupported_shape",
+        severity=Severity.HIGH,
+        explanation=(
+            f"SubagentCall.args is {type(call.args).__name__}; v1 supports "
+            "only str | dict — failing closed."
+        ),
+        cheap_hit=None,
+    )
 
 
 async def judge_subagent_call(
@@ -213,17 +228,15 @@ async def judge_subagent_call(
         trace_uuid = uuid4()
     now = datetime.now(UTC)
     started = time.perf_counter()
-    subagent_args = _resolve_args(call)
-
-    # Reuse the tool-shape evaluator until EPIC-08 ships a subagent-native
-    # one. The cheap pass treats (name, args-as-dict) the same way for
-    # both surfaces.
-    tool_shape_call = cast(
-        "object",
-        replace(call, args=subagent_args) if not isinstance(call.args, str) else call,
-    )
 
     try:
+        subagent_args = _resolve_args(call)
+        # PR #128 review fix: ALWAYS rebuild the call so its `.args` matches
+        # `subagent_args`. The previous conditional left string-args calls
+        # in place — meaning `run_cheap_pass` and `run_escalation`
+        # inspected different shapes of the same call (cheap saw the
+        # wrapped dict, escalation saw the raw string).
+        tool_shape_call = cast("object", replace(call, args=subagent_args))
         cheap_hit = await run_cheap_pass(tool_shape_call, subagent_args, trace_uuid)
 
         if cheap_hit is None:
@@ -262,6 +275,36 @@ async def judge_subagent_call(
             trace_uuid=trace_uuid,
             now=now,
             latency_ms=(time.perf_counter() - started) * 1000,
+            surface=_SURFACE,
+        )
+    except Exception as exc:  # noqa: BLE001 — fail-closed boundary; audit row must survive
+        # PR #128 review fix: catch everything else (pydantic.ValidationError
+        # from a future InspectResponse shape, ValueError from Severity()
+        # cast on a new enum tier, KeyError from a malformed call, MemoryError
+        # on a giant payload, etc.) and convert to a fail-closed BLOCK.
+        # Without this, the agent loop sees a raw exception with no audit
+        # row — the failure mode the _fail_closed.py discipline exists to
+        # prevent.
+        _logger.warning(
+            "judge_subagent_call.internal_error",
+            trace_id=str(trace_uuid),
+            subagent_name=call.name,
+            error=type(exc).__name__,
+            exc_info=True,
+        )
+        return fail_closed_verdict(
+            FailClosedError(
+                synthetic_rule="judge_internal_error",
+                severity=Severity.HIGH,
+                explanation=(
+                    f"judge_subagent_call internal error ({type(exc).__name__}) — failing closed"
+                ),
+                cheap_hit=None,
+            ),
+            trace_uuid=trace_uuid,
+            now=now,
+            latency_ms=(time.perf_counter() - started) * 1000,
+            surface=_SURFACE,
         )
 
 
@@ -329,12 +372,26 @@ class SafetySubagentMiddleware(AgentMiddleware):  # type: ignore[misc]
 
         if verdict.verdict is VerdictLabel.MODIFY:
             if isinstance(request.call.args, str):
+                # PR #128 review fix: emit a synthetic BLOCK verdict
+                # (replacing the MODIFY we already emitted) and raise
+                # SubagentBlockedBySplunkGate to maintain the documented
+                # contract. The old code raised generic SplunkGateError,
+                # leaving callers unable to `except SubagentBlocked…`.
+                # Pydantic model — use model_copy (not dataclasses.replace).
+                forced_block = verdict.model_copy(
+                    update={
+                        "verdict": VerdictLabel.BLOCK,
+                        "modifications": None,
+                        "explanation": _MSG_STRING_ARGS_MODIFY_NOT_SUPPORTED,
+                    },
+                )
+                safe_emit(forced_block)
                 self._logger.warning(
                     "subagent_modify_on_string_args_fail_closed",
                     trace_id=str(verdict.trace_id),
                     subagent_name=request.call.name,
                 )
-                raise SplunkGateError(_MSG_STRING_ARGS_MODIFY_NOT_SUPPORTED)
+                raise SubagentBlockedBySplunkGate(forced_block)
             sanitized_request = _rewrite_request(request, verdict)
             self._logger.info(
                 "subagent_modified",
@@ -344,7 +401,19 @@ class SafetySubagentMiddleware(AgentMiddleware):  # type: ignore[misc]
             )
             return await handler(sanitized_request)
 
-        return await handler(request)
+        if verdict.verdict is VerdictLabel.ALLOW:
+            return await handler(request)
+
+        # PR #128 review fix: VerdictLabel.REVIEW (and any future enum
+        # member) used to silently fall through to handler() — silent
+        # ALLOW with the audit row contradicting the action. Fail-closed.
+        self._logger.error(
+            "subagent_unhandled_verdict_label_fail_closed",
+            trace_id=str(verdict.trace_id),
+            subagent_name=request.call.name,
+            label=verdict.verdict.value,
+        )
+        raise SubagentBlockedBySplunkGate(verdict)
 
 
 def _rewrite_request(request: SubagentRequest, verdict: Verdict) -> SubagentRequest:

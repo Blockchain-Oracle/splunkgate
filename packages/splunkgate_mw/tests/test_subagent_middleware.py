@@ -444,7 +444,10 @@ def test_public_export_resolves_to_real_class() -> None:
     assert Exported is SafetySubagentMiddleware
 
 
-# ── 13. BLOCK verdict's trace_id matches the bound parent ────────────
+# ── 14. BLOCK verdict's trace_id matches the bound parent ────────────
+# (PR #128 review regression tests live in
+#  tests/test_subagent_middleware_review_regressions.py — split out to
+#  keep this file under the 400-LOC cap.)
 
 
 @pytest.mark.asyncio

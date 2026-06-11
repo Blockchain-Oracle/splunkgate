@@ -22,7 +22,7 @@ unchanged from the inlined version.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import structlog
 from splunkgate_core.otel import emit_verdict_event
@@ -34,6 +34,7 @@ if TYPE_CHECKING:
     from datetime import datetime
     from uuid import UUID
 
+    from splunkgate_core.verdict import Surface
     from splunkgate_judges.ai_defense_types import InspectResponse
     from splunklib.ai.messages import ToolCall
 
@@ -47,8 +48,6 @@ __all__ = [
     "run_escalation",
     "safe_emit",
 ]
-
-_SURFACE = "mw_tool"
 
 _logger = structlog.get_logger(__name__)
 
@@ -82,15 +81,21 @@ def fail_closed_verdict(
     trace_uuid: UUID,
     now: datetime,
     latency_ms: float,
+    surface: str = "mw_tool",
 ) -> Verdict:
     """Build a fail-closed BLOCK verdict carrying a synthetic operations rule.
 
     Operators can SPL-filter on the synthetic rule to triage operational
     failures (`ai_defense_unavailable`, `defenseclaw_backend_unavailable`)
-    vs. real attempted attacks.
+    vs. real attempted attacks. `surface` defaults to "mw_tool" for
+    backwards compatibility — `judge_subagent_call` passes "mw_subagent"
+    so Splunk dashboards stay accurate (PR #128 review fix).
     """
     synthetic = RuleHit(rule=fc.synthetic_rule, confidence=1.0, source="defenseclaw_regex")
     rules = [fc.cheap_hit, synthetic] if fc.cheap_hit is not None else [synthetic]
+    # Caller passes a literal from the Surface union; Pydantic validates
+    # the value at construction time, so a wrong-shape surface raises
+    # ValidationError rather than silently writing the wrong field.
     return Verdict(
         trace_id=trace_uuid,
         timestamp=now,
@@ -98,7 +103,7 @@ def fail_closed_verdict(
         severity=fc.severity,
         rules=rules,
         modifications=None,
-        surface=_SURFACE,
+        surface=cast("Surface", surface),
         latency_ms=latency_ms,
         explanation=fc.explanation,
     )
