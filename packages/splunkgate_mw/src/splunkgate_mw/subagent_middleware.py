@@ -47,7 +47,7 @@ from splunkgate_mw._fail_closed import (
 )
 from splunkgate_mw._sanitize import compose_sanitized, is_supported_rule, sanitize_args
 from splunkgate_mw.config import Config
-from splunkgate_mw.profiles import Profile
+from splunkgate_mw.profiles import Profile, resolve_profile
 
 if TYPE_CHECKING:
     from splunkgate_judges.ai_defense_types import InspectResponse
@@ -321,15 +321,13 @@ class SafetySubagentMiddleware(AgentMiddleware):  # type: ignore[misc]
     ) -> None:
         """Wire profile + optional per-subagent overrides + config + AI Defense client."""
         self._config: Config = config if config is not None else Config()
-        self._profile = (
-            profile if isinstance(profile, Profile) else Profile(name=profile, description="")
-        )
+        self._profile = resolve_profile(profile)
         # Eagerly resolve string overrides into Profile instances so the
-        # hot-path lookup is a plain dict access.
+        # hot-path lookup is a plain dict access. resolve_profile() raises
+        # UnknownProfile up-front if a typo lands in the override map.
         overrides = per_subagent_profile or {}
         self._per_subagent_profile: dict[str, Profile] = {
-            name: (p if isinstance(p, Profile) else Profile(name=p, description=""))
-            for name, p in overrides.items()
+            name: resolve_profile(p) for name, p in overrides.items()
         }
         self._ai_defense = ai_defense
         self._logger = structlog.get_logger("SafetySubagentMiddleware").bind(

@@ -233,9 +233,11 @@ async def test_profile_bound_to_structlog_contextvar() -> None:
     """The session summary verdict carries the profile name in agent_id."""
     emitted: list[Verdict] = []
     with patch("splunkgate_mw.agent_middleware.safe_emit", side_effect=emitted.append):
-        mw = SafetyAgentMiddleware(profile=Profile(name="banking", description=""))
+        mw = SafetyAgentMiddleware(
+            profile=Profile(name="financial_services", description=""),
+        )
         await mw.agent_middleware(_FakeRequest("t1"), _ok_handler)
-    assert emitted[0].agent_id == "banking"
+    assert emitted[0].agent_id == "financial_services"
 
 
 # ── 12. Concurrent invocations isolate via contextvars ─────────────────

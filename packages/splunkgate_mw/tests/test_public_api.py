@@ -44,14 +44,19 @@ def test_each_middleware_is_subclass_of_splunklib_ai_agent_middleware() -> None:
 
 
 def test_public_api_all_is_exactly_locked() -> None:
-    """__all__ contract — exactly 6 names per spec line 50; extending requires intentional update."""
+    """__all__ contract — story-mw-07 extends the surface with 4 profile constants + `resolve_profile`."""
     assert sorted(splunkgate_mw.__all__) == [
         "Config",
+        "DEFAULT_PROFILE",
+        "FINANCIAL_SERVICES_PROFILE",
+        "HEALTHCARE_PROFILE",
+        "PUBLIC_SECTOR_PROFILE",
         "Profile",
         "SafetyAgentMiddleware",
         "SafetyModelMiddleware",
         "SafetySubagentMiddleware",
         "SafetyToolMiddleware",
+        "resolve_profile",
     ]
 
 
@@ -63,6 +68,8 @@ def test_profile_constructs_default() -> None:
     p = Profile(name="default", description="balanced")
     assert p.name == "default"
     assert p.description == "balanced"
+    # Default rule sets present from the Pydantic field defaults.
+    assert "Prompt Injection" in p.rules_pre_inference
 
 
 def test_default_profile_singleton_present() -> None:
@@ -107,7 +114,7 @@ def test_middleware_classes_construct_with_string_profile() -> None:
 
 def test_middleware_classes_construct_with_profile_object() -> None:
     """Profile objects work too."""
-    p = Profile(name="test", description="test profile")
+    p = Profile(name="default", description="explicit-default fixture")
     for cls in MIDDLEWARE_CLASSES:
         instance = cls(profile=p)
         assert isinstance(instance, AgentMiddleware)

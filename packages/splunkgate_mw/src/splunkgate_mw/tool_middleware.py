@@ -42,7 +42,7 @@ from splunkgate_mw._fail_closed import (
 )
 from splunkgate_mw._sanitize import compose_sanitized, is_supported_rule, sanitize_args
 from splunkgate_mw.config import Config
-from splunkgate_mw.profiles import Profile
+from splunkgate_mw.profiles import Profile, resolve_profile
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -296,9 +296,7 @@ class SafetyToolMiddleware(AgentMiddleware):  # type: ignore[misc]
     ) -> None:
         """Wire profile + config + optional AI Defense client (None = no escalation)."""
         self._config: Config = config if config is not None else Config()
-        self._profile = (
-            profile if isinstance(profile, Profile) else Profile(name=profile, description="")
-        )
+        self._profile = resolve_profile(profile)
         self._ai_defense = ai_defense
         self._logger = structlog.get_logger("SafetyToolMiddleware").bind(profile=self._profile.name)
 

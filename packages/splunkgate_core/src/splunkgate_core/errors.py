@@ -105,6 +105,23 @@ class ToolBlockedBySplunkGate(SplunkGateError):  # noqa: N818 — name locked by
         self.verdict = verdict
 
 
+class UnknownProfile(SplunkGateError):  # noqa: N818 — name locked by story-mw-07
+    """Raised by `resolve_profile()` when the caller passed an unknown profile name.
+
+    `splunkgate_mw.resolve_profile("nonsense")` raises this to surface a
+    typo at construction time rather than silently falling back to the
+    default profile and shipping the wrong rule chain to a regulated
+    workload. Carries the offending name so callers can report it back to
+    the user.
+    """
+
+    def __init__(self, name: str) -> None:
+        """Wrap the offending profile name; message lists the valid set."""
+        valid = ("default", "financial_services", "healthcare", "public_sector")
+        super().__init__(f"Unknown profile {name!r} — valid: {valid}")
+        self.name = name
+
+
 class SubagentBlockedBySplunkGate(SplunkGateError):  # noqa: N818 — name locked by story-mw-05 + architecture.md
     """Raised by SafetySubagentMiddleware when subagent-call judgement returns BLOCK.
 

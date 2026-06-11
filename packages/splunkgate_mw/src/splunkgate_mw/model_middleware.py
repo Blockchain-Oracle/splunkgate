@@ -35,7 +35,7 @@ from splunkgate_mw._first_pass import (
 )
 from splunkgate_mw._post_inference import post_inference_scan
 from splunkgate_mw.config import Config
-from splunkgate_mw.profiles import Profile
+from splunkgate_mw.profiles import Profile, resolve_profile
 
 if TYPE_CHECKING:
     from splunkgate_judges.ai_defense_types import InspectRequest, InspectResponse
@@ -147,9 +147,7 @@ class SafetyModelMiddleware(AgentMiddleware):  # type: ignore[misc]
     ) -> None:
         """Wire profile + config + optional AI Defense client (None = no escalation)."""
         self._config: Config = config if config is not None else Config()
-        self._profile = (
-            profile if isinstance(profile, Profile) else Profile(name=profile, description="")
-        )
+        self._profile = resolve_profile(profile)
         self._ai_defense = ai_defense
         self._logger = structlog.get_logger("SafetyModelMiddleware").bind(
             profile=self._profile.name
