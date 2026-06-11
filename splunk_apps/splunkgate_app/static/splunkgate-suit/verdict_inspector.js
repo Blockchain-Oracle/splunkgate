@@ -73,8 +73,41 @@
         rulesOptions: [{ value: "*", label: "Any" }],
         searches: {},
         listRows: [],
-        selectedTraceId: null
+        selectedTraceId: null,
+        // Monotonic click sequence so detail+related results never bind to
+        // a row the user clicked away from before they returned. Tested
+        // by test_select_row_uses_click_seq.
+        lastClickSeq: 0,
+        // Filter-change debounce timer.
+        listRefreshTimer: null
     };
+
+    // Try to format a Splunk _time string. Accepts ISO-8601 (preferred)
+    // OR a numeric epoch (seconds, with optional fractional). Returns
+    // "unparseable: <raw>" so the analyst SEES that time formatting
+    // failed rather than reading garbage as a clock.
+    function formatSplunkTime(raw, kind) {
+        if (!raw) { return ""; }
+        // ISO-8601: 2026-06-11T13:42:01.000+00:00
+        if (typeof raw === "string" && raw.length >= 19 && raw.indexOf("T") === 10) {
+            if (kind === "hms") {
+                return raw.substring(11, 19);
+            }
+            return raw.substring(0, 19).replace("T", " ");
+        }
+        // Epoch (e.g. "1733932800.000000") — Splunk sometimes returns this.
+        var epoch = parseFloat(raw);
+        if (isFinite(epoch) && epoch > 0) {
+            var d = new Date(epoch * 1000);
+            if (!isNaN(d.getTime())) {
+                if (kind === "hms") {
+                    return d.toISOString().substring(11, 19);
+                }
+                return d.toISOString().substring(0, 19).replace("T", " ");
+            }
+        }
+        return "unparseable: " + String(raw);
+    }
 
     function escapeHtml(s) {
         if (s === null || s === undefined) {
@@ -89,13 +122,21 @@
     }
 
     // Splunk SPL values flowing into the search string via template subst.
-    // Wildcard `*` is allowed (verbatim contract); anything else is
-    // sanitized to alnum+@.-_ to prevent SPL injection from a hostile
-    // agent_id or trace_id stored upstream.
+    // Wildcard `*` is allowed (verbatim contract); anything else is checked
+    // against a safe whitelist (alnum + @ . _ - : /) to prevent SPL
+    // injection from a hostile agent_id or trace_id stored upstream.
+    //
+    // Returns an object { value, mutated }. When `mutated === true`, the
+    // caller MUST surface an error instead of running a search with a
+    // mutated identifier — silently stripping characters would produce a
+    // filter UI/SPL divergence (analyst sees "production-bot/v3" but
+    // SPL queries "production-botv3"), and during incident response
+    // that's an invisible coverage gap.
+    var SPL_SAFE_RE = /^[A-Za-z0-9@._\-:/]*$/;
     function sanitizeSplValue(v) {
-        if (!v) { return "*"; }
-        if (v === "*") { return "*"; }
-        return String(v).replace(/[^A-Za-z0-9@._\-:]/g, "");
+        if (!v || v === "*") { return { value: "*", mutated: false }; }
+        var s = String(v);
+        return { value: s, mutated: !SPL_SAFE_RE.test(s) };
     }
 
     function renderShell(root) {
@@ -247,7 +288,7 @@
             '</tr>';
         var bodyRows = rows.map(function (r, i) {
             var traceId = r.trace_id || "";
-            var time = r._time ? r._time.substring(0, 19).replace("T", " ") : "";
+            var time = formatSplunkTime(r._time);
             var selectedClass = traceId === state.selectedTraceId ? " vi-row-selected" : "";
             return (
                 '<tr class="vi-row' + selectedClass + '" data-trace-id="' + escapeHtml(traceId) + '" data-row-index="' + i + '">' +
@@ -265,45 +306,66 @@
         }).join("");
         body.innerHTML = '<table class="vi-table"><thead>' + headerCells + '</thead><tbody>' + bodyRows + '</tbody></table>';
         updateFooterCount(rows.length);
-        // Wire row clicks via delegation.
-        var tbody = body.querySelector("tbody");
-        if (tbody) {
-            tbody.addEventListener("click", function (e) {
-                var row = e.target.closest && e.target.closest("tr.vi-row");
-                if (!row) { return; }
-                var traceId = row.getAttribute("data-trace-id");
-                if (!traceId) { return; }
-                selectRow(traceId);
-            });
-        }
+        // Row clicks wired once at mount() via delegation on the persistent
+        // #vi-list-body container — see wireListDelegate(). No per-render
+        // listener attachment needed here.
+    }
+
+    function wireListDelegate() {
+        var body = document.getElementById("vi-list-body");
+        if (!body) { return; }
+        body.addEventListener("click", function (e) {
+            var row = e.target.closest && e.target.closest("tr.vi-row");
+            if (!row) { return; }
+            var traceId = row.getAttribute("data-trace-id");
+            if (!traceId) { return; }
+            selectRow(traceId);
+        });
     }
 
     function selectRow(traceId) {
+        // Capture a fresh click-sequence number. Both detail and related
+        // callbacks check this before mutating the DOM so a slow earlier
+        // search can never overwrite a newer click's panels — even if the
+        // network returns results out of order. Without this guard the
+        // detail panel can show trace_id A while the related panel shows
+        // trace_id B (silent-failure F2).
+        state.lastClickSeq += 1;
+        var seq = state.lastClickSeq;
         state.selectedTraceId = traceId;
+
         // Update row highlight.
         var rows = document.querySelectorAll("#vi-list-body tr.vi-row");
         rows.forEach(function (r) {
             r.classList.toggle("vi-row-selected", r.getAttribute("data-trace-id") === traceId);
         });
-        // Refresh detail + related searches.
+
+        var safe = sanitizeSplValue(traceId);
+        if (safe.mutated) {
+            setPanelError("vi-detail-body",
+                "trace_id contains characters that cannot be safely passed to SPL. Refusing to query a mutated identifier — escape upstream or contact the platform team.");
+            setPanelError("vi-related-body",
+                "trace_id contains characters that cannot be safely passed to SPL.");
+            return;
+        }
+
         setPanelLoading("vi-detail-body");
         setPanelLoading("vi-related-body");
-        var safeTid = sanitizeSplValue(traceId);
         runSearch(
             "detail",
-            QUERIES.detail.replace("{TRACE_ID}", safeTid),
+            QUERIES.detail.replace("{TRACE_ID}", safe.value),
             1,
             state.earliest, state.latest,
-            renderDetail,
-            function (m) { setPanelError("vi-detail-body", m); }
+            function (rows2) { if (seq === state.lastClickSeq) { renderDetail(rows2); } },
+            function (m) { if (seq === state.lastClickSeq) { setPanelError("vi-detail-body", m); } }
         );
         runSearch(
             "related",
-            QUERIES.related.replace("{TRACE_ID}", safeTid),
+            QUERIES.related.replace("{TRACE_ID}", safe.value),
             200,
             state.earliest, state.latest,
-            renderRelated,
-            function (m) { setPanelError("vi-related-body", m); }
+            function (rows2) { if (seq === state.lastClickSeq) { renderRelated(rows2); } },
+            function (m) { if (seq === state.lastClickSeq) { setPanelError("vi-related-body", m); } }
         );
     }
 
@@ -336,7 +398,7 @@
         body.innerHTML = [
             '<div class="vi-detail-field">',
             '<div class="vi-detail-label">Time</div>',
-            '<div class="vi-detail-value vi-mono">' + escapeHtml((r._time || "").substring(0, 19).replace("T", " ")) + '</div>',
+            '<div class="vi-detail-value vi-mono">' + escapeHtml(formatSplunkTime(r._time)) + '</div>',
             '</div>',
             '<div class="vi-detail-field">',
             '<div class="vi-detail-label">Trace ID</div>',
@@ -378,27 +440,42 @@
     function wireTraceChip() {
         var btn = document.getElementById("vi-trace-copy");
         if (!btn) { return; }
-        btn.addEventListener("click", function () {
+        // Use `onclick =` (single-slot) instead of addEventListener (cumulative)
+        // so re-renders are idempotent even if a future refactor stops doing
+        // full innerHTML replacement on the detail panel.
+        btn.onclick = function () {
             var tid = btn.getAttribute("data-trace-id") || "";
+            var txt = document.getElementById("vi-trace-text");
+            var orig = txt ? txt.textContent : "";
             copyToClipboard(tid).then(function () {
+                btn.classList.remove("vi-copy-failed");
                 btn.classList.add("vi-copied");
-                var txt = document.getElementById("vi-trace-text");
                 if (txt) {
-                    var orig = txt.textContent;
                     txt.textContent = "copied!";
                     setTimeout(function () {
                         btn.classList.remove("vi-copied");
                         txt.textContent = orig;
                     }, 800);
                 }
-            }).catch(function () {
-                // Best-effort: the chip stays as the trace_id; user can
-                // long-press / right-click to copy manually.
+            }).catch(function (err) {
+                // VISIBLE failure feedback: red chip, "copy failed" copy.
+                // The previous best-effort silent-warn would let the analyst
+                // paste a stale clipboard into the wrong ticket — a chain-of-
+                // custody break in SOX/HIPAA-audited shops.
+                btn.classList.remove("vi-copied");
+                btn.classList.add("vi-copy-failed");
+                if (txt) {
+                    txt.textContent = "copy failed — select manually";
+                    setTimeout(function () {
+                        btn.classList.remove("vi-copy-failed");
+                        txt.textContent = orig;
+                    }, 1500);
+                }
                 if (typeof console !== "undefined" && console.warn) {
-                    console.warn("[splunkgate-verdict-inspector] copy-to-clipboard failed");
+                    console.warn("[splunkgate-verdict-inspector] copy-to-clipboard failed", err);
                 }
             });
-        });
+        };
     }
 
     function copyToClipboard(text) {
@@ -435,7 +512,7 @@
             return;
         }
         body.innerHTML = rows.map(function (r) {
-            var t = r._time ? r._time.substring(11, 19) : "";
+            var t = formatSplunkTime(r._time, "hms");
             return (
                 '<div class="vi-related-row">' +
                 '<span class="vi-related-time">' + escapeHtml(t) + '</span>' +
@@ -540,11 +617,31 @@
     function refreshList() {
         var e = state.earliest;
         var l = state.latest;
+        // Refuse to query with a mutated identifier — silently stripping
+        // characters from a real agent_id would produce a filter-UI/SPL
+        // divergence that's invisible during incident response. See
+        // silent-failure F1 in the PR-143 review fleet.
+        var safeAgent = sanitizeSplValue(state.agent);
+        var safeSeverity = sanitizeSplValue(state.severity);
+        var safeLabel = sanitizeSplValue(state.verdictLabel);
+        var safeRule = sanitizeSplValue(state.rule);
+        var mutated = [];
+        if (safeAgent.mutated) { mutated.push("agent='" + state.agent + "'"); }
+        if (safeSeverity.mutated) { mutated.push("severity='" + state.severity + "'"); }
+        if (safeLabel.mutated) { mutated.push("verdict='" + state.verdictLabel + "'"); }
+        if (safeRule.mutated) { mutated.push("rule='" + state.rule + "'"); }
+        if (mutated.length > 0) {
+            setPanelError("vi-list-body",
+                "Refusing to query SPL with mutated identifiers: " + mutated.join(", ") +
+                ". Pick a different value or escape upstream.");
+            setFooterStatus("Mutated filter values — refused to query.");
+            return;
+        }
         var query = QUERIES.table
-            .replace("{AGENT}", sanitizeSplValue(state.agent))
-            .replace("{SEVERITY}", sanitizeSplValue(state.severity))
-            .replace("{VERDICT_LABEL}", sanitizeSplValue(state.verdictLabel))
-            .replace("{RULE}", sanitizeSplValue(state.rule));
+            .replace("{AGENT}", safeAgent.value)
+            .replace("{SEVERITY}", safeSeverity.value)
+            .replace("{VERDICT_LABEL}", safeLabel.value)
+            .replace("{RULE}", safeRule.value);
         setPanelLoading("vi-list-body");
         setFooterStatus("Loading verdict list…");
         runSearch("table", query, 200, e, l, function (rows) {
@@ -556,9 +653,34 @@
         });
     }
 
+    function debouncedRefreshList() {
+        // 150ms debounce: keyboard-driven dropdown changes can fire 5-10
+        // change events in 200ms; without debounce each one issues a
+        // SearchManager construction.
+        if (state.listRefreshTimer) { clearTimeout(state.listRefreshTimer); }
+        state.listRefreshTimer = setTimeout(function () {
+            state.listRefreshTimer = null;
+            refreshList();
+        }, 150);
+    }
+
     function refreshFacets() {
-        runSearch("agents_list", QUERIES.agents_list, 500, state.earliest, state.latest, renderAgentsList, function () {});
-        runSearch("rules_list", QUERIES.rules_list, 200, state.earliest, state.latest, renderRulesList, function () {});
+        // Facet load failures aren't show-stopping (the dropdowns stay at
+        // "Any" and the analyst can still filter via severity / verdict)
+        // but they SHOULD surface a footer warning so the analyst knows
+        // their agent + rule dropdowns are incomplete.
+        runSearch("agents_list", QUERIES.agents_list, 500, state.earliest, state.latest, renderAgentsList, function (msg) {
+            if (typeof console !== "undefined" && console.warn) {
+                console.warn("[splunkgate-verdict-inspector] agents facet load failed: " + msg);
+            }
+            setFooterStatus("Agent dropdown unavailable — filter via severity / verdict.");
+        });
+        runSearch("rules_list", QUERIES.rules_list, 200, state.earliest, state.latest, renderRulesList, function (msg) {
+            if (typeof console !== "undefined" && console.warn) {
+                console.warn("[splunkgate-verdict-inspector] rules facet load failed: " + msg);
+            }
+            setFooterStatus("Rule dropdown unavailable — filter via severity / verdict.");
+        });
     }
 
     function wireControls() {
@@ -572,13 +694,13 @@
             });
         }
         var a = document.getElementById("vi-agent");
-        if (a) { a.addEventListener("change", function (e) { state.agent = e.target.value; refreshList(); }); }
+        if (a) { a.addEventListener("change", function (e) { state.agent = e.target.value; debouncedRefreshList(); }); }
         var r = document.getElementById("vi-rule");
-        if (r) { r.addEventListener("change", function (e) { state.rule = e.target.value; refreshList(); }); }
+        if (r) { r.addEventListener("change", function (e) { state.rule = e.target.value; debouncedRefreshList(); }); }
         var s = document.getElementById("vi-severity");
-        if (s) { s.addEventListener("change", function (e) { state.severity = e.target.value; refreshList(); }); }
+        if (s) { s.addEventListener("change", function (e) { state.severity = e.target.value; debouncedRefreshList(); }); }
         var v = document.getElementById("vi-verdict");
-        if (v) { v.addEventListener("change", function (e) { state.verdictLabel = e.target.value; refreshList(); }); }
+        if (v) { v.addEventListener("change", function (e) { state.verdictLabel = e.target.value; debouncedRefreshList(); }); }
         var c = document.getElementById("vi-clear");
         if (c) {
             c.addEventListener("click", function () {
@@ -602,6 +724,7 @@
         }
         renderShell(root);
         wireControls();
+        wireListDelegate();
         refreshFacets();
         refreshList();
     }

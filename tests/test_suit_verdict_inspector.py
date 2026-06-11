@@ -80,6 +80,24 @@ _DRIFT_INVARIANTS = {
         "sanitizeSplValue",
         "A-Za-z0-9",
     ),
+    "fix_markers": (
+        # F1 (silent-failure #1): mutation detection — refuses to query.
+        "mutated",
+        "Refusing to query",
+        # F2 (silent-failure #2): click-sequence epoch protects against
+        # detail/related race.
+        # JS bundle: lastClickSeq state var; TSX: detailEnabled gating.
+        # Verified separately by test_click_seq_or_enabled_gating.
+        # F3 (silent-failure #3): visible copy-fail feedback.
+        "vi-copy-failed",
+        "copy failed",
+        # F4 (silent-failure #4): formatSplunkTime helper handles epoch.
+        "formatSplunkTime",
+        "unparseable",
+        # F5 (code-reviewer #3): monotonic SEARCH_ID_SEQ counter — no
+        # same-ms collisions.
+        "SEARCH_ID_SEQ",
+    ),
 }
 
 
@@ -256,6 +274,117 @@ def test_nav_default_includes_three_dashboards() -> None:
     )
     for view_name in ("agent_risk_overview", "verdict_inspector", "regulator_evidence_pack"):
         assert f'name="{view_name}"' in nav, f"nav missing {view_name}"
+
+
+def test_sanitizer_returns_mutation_flag() -> None:
+    """F1 fix: sanitizer returns { value, mutated }. Callers refuse to query when mutated."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    tsx = _DEV_TSX.read_text(encoding="utf-8")
+    # JS bundle: returns plain object with `mutated` field.
+    assert "mutated: false" in js
+    # TSX: SanitizedSpl interface declares the shape.
+    assert "interface SanitizedSpl" in tsx
+    assert "mutated: boolean" in tsx
+
+
+def test_refuses_to_query_mutated_identifiers() -> None:
+    """F1 fix: the search refusal text reaches both implementations."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    tsx = _DEV_TSX.read_text(encoding="utf-8")
+    for src in (js, tsx):
+        assert "Refusing to query" in src or "REFUSING TO QUERY" in src
+
+
+def test_click_seq_or_enabled_gating() -> None:
+    """F2 fix: detail/related results bind to the current click only."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    tsx = _DEV_TSX.read_text(encoding="utf-8")
+    # JS bundle: lastClickSeq + per-callback seq comparison.
+    assert "lastClickSeq" in js
+    assert "seq === state.lastClickSeq" in js
+    # TSX: relies on useEffect's cleanup + the cancelled-flag inside
+    # useSplunkSearch, which is keyed on the query string changing —
+    # so a new selectedTraceId tears down the old hook before the new
+    # one starts.
+    assert "detailEnabled" in tsx
+    assert "relatedEnabled" in tsx
+
+
+def test_copy_failure_is_visible() -> None:
+    """F3 fix: copy-to-clipboard failure produces a visible red chip + 'copy failed' text."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    css = _BUNDLE_CSS.read_text(encoding="utf-8")
+    tsx = _DEV_TSX.read_text(encoding="utf-8")
+    assert "vi-copy-failed" in js
+    assert "vi-copy-failed" in tsx
+    assert ".vi-trace-chip.vi-copy-failed" in css
+    # The user-facing failure copy:
+    assert "copy failed" in js
+    assert "copy failed" in tsx
+    # Chip uses idempotent onclick assignment (not addEventListener) in the JS bundle.
+    assert "btn.onclick = " in js
+
+
+def test_format_splunk_time_handles_epoch_and_iso() -> None:
+    """F4 fix: formatSplunkTime detects ISO-8601 OR numeric epoch, surfaces unparseable."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    tsx = _DEV_TSX.read_text(encoding="utf-8")
+    for src in (js, tsx):
+        assert "formatSplunkTime" in src
+        assert "parseFloat" in src
+        assert "unparseable" in src
+    # The render paths now call formatSplunkTime. The only `.substring` /
+    # `.replace("T", " ")` calls left in either file are inside the
+    # formatSplunkTime helper itself. There are exactly 2 such .replace
+    # calls in formatSplunkTime (ISO branch + epoch branch).
+    js_iso_replace = js.count('.substring(0, 19).replace("T", " ")')
+    assert js_iso_replace == 2, (
+        f"JS bundle has {js_iso_replace} ISO substring/replace calls; expected 2 (inside formatSplunkTime only)"
+    )
+    tsx_iso_replace = tsx.count('.substring(0, 19).replace("T", " ")')
+    assert tsx_iso_replace == 2, (
+        f"TSX has {tsx_iso_replace} ISO substring/replace calls; expected 2 (inside formatSplunkTime only)"
+    )
+
+
+def test_monotonic_search_id_counter() -> None:
+    """F5 (code-reviewer): monotonic SEARCH_ID_SEQ — no Date.now() same-ms collisions."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    tsx = _DEV_TSX.read_text(encoding="utf-8")
+    for src in (js, tsx):
+        assert "SEARCH_ID_SEQ" in src
+        # Date.now() used to live inside the SearchManager id; it's gone now.
+        # (Date.now() may still appear elsewhere for the click-seq debounce etc.)
+        # We only need to verify the SearchManager id template references
+        # SEARCH_ID_SEQ, not Date.now().
+        sm_id_chunk = src.split("id:", 2)[1].split("\n", 2)[0]
+        assert "SEARCH_ID_SEQ" in sm_id_chunk, "SearchManager id must use SEARCH_ID_SEQ"
+
+
+def test_filter_change_debounced() -> None:
+    """F-medium #5: rapid-fire filter changes are debounced before firing SPL."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    assert "debouncedRefreshList" in js
+    assert "listRefreshTimer" in js
+
+
+def test_facet_load_failure_surfaces_warning() -> None:
+    """F-medium #5: agents/rules facet failure no longer swallowed silently."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    assert "agents facet load failed" in js
+    assert "rules facet load failed" in js
+    assert "dropdown unavailable" in js.lower()
+
+
+def test_row_click_delegation_wired_once() -> None:
+    """The row-click delegate attaches once at mount() to the persistent container,
+    not re-bound on every render."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    assert "function wireListDelegate" in js
+    # wireListDelegate called in mount(); NOT in renderList (which would
+    # re-bind on every render).
+    mount_block = js.split("function mount", 1)[1].split("function ", 1)[0]
+    assert "wireListDelegate()" in mount_block
 
 
 def test_tarball_includes_verdict_inspector_bundle_and_excludes_hello() -> None:

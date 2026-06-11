@@ -349,6 +349,16 @@
     border-color: var(--allow);
 }
 
+/* Copy-to-clipboard failure feedback — visible to the analyst so they
+ * never paste a stale value. Red chip + monospace "copy failed — select
+ * manually" copy. The silent .catch(console.warn) we previously shipped
+ * was a chain-of-custody risk in SOX/HIPAA-audited shops. */
+#splunkgate-verdict-inspector .vi-trace-chip.vi-copy-failed {
+    background: var(--accent);
+    color: var(--paper);
+    border-color: var(--accent-deep);
+}
+
 #splunkgate-verdict-inspector .vi-explanation-block {
     background: var(--paper);
     border: 1px solid var(--rule);

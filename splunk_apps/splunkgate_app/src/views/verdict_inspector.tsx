@@ -76,14 +76,46 @@ const TIME_PRESETS = [
     { value: "-30d@d", label: "Last 30 days" },
 ] as const;
 
-function sanitizeSplValue(v: string): string {
-    if (!v) {
-        return "*";
+interface SanitizedSpl {
+    value: string;
+    mutated: boolean;
+}
+
+// SPL injection guard. Returns { value, mutated }; the caller MUST surface
+// an error if mutated, otherwise the filter UI/SPL diverge silently.
+const SPL_SAFE_RE = /^[A-Za-z0-9@._\-:/]*$/;
+function sanitizeSplValue(v: string): SanitizedSpl {
+    if (!v || v === "*") {
+        return { value: "*", mutated: false };
     }
-    if (v === "*") {
-        return "*";
+    return { value: v, mutated: !SPL_SAFE_RE.test(v) };
+}
+
+// Monotonic SearchManager ID counter — same-ms collisions are possible
+// with Date.now() (especially when 5 useSplunkSearch hooks fire on mount).
+let SEARCH_ID_SEQ = 0;
+
+function formatSplunkTime(raw: string | undefined, kind?: "hms"): string {
+    if (!raw) {
+        return "";
     }
-    return v.replace(/[^A-Za-z0-9@._\-:]/g, "");
+    if (raw.length >= 19 && raw.indexOf("T") === 10) {
+        if (kind === "hms") {
+            return raw.substring(11, 19);
+        }
+        return raw.substring(0, 19).replace("T", " ");
+    }
+    const epoch = parseFloat(raw);
+    if (isFinite(epoch) && epoch > 0) {
+        const d = new Date(epoch * 1000);
+        if (!isNaN(d.getTime())) {
+            if (kind === "hms") {
+                return d.toISOString().substring(11, 19);
+            }
+            return d.toISOString().substring(0, 19).replace("T", " ");
+        }
+    }
+    return `unparseable: ${raw}`;
 }
 
 function useSplunkSearch(
@@ -129,8 +161,9 @@ function useSplunkSearch(
                     return;
                 }
                 try {
+                    SEARCH_ID_SEQ += 1;
                     mgr = new SearchManager({
-                        id: `splunkgate-vi-${key}-${Date.now()}`,
+                        id: `splunkgate-vi-${key}-${SEARCH_ID_SEQ}`,
                         preview: false,
                         cache: false,
                         search: query,
@@ -266,22 +299,32 @@ interface TraceChipProps {
 }
 
 function TraceChip({ traceId }: TraceChipProps): React.ReactElement {
-    const [copied, setCopied] = React.useState<boolean>(false);
+    const [status, setStatus] = React.useState<"idle" | "copied" | "failed">("idle");
     const onClick = React.useCallback(() => {
         copyToClipboard(traceId)
             .then(() => {
-                setCopied(true);
-                setTimeout(() => setCopied(false), 800);
+                setStatus("copied");
+                setTimeout(() => setStatus("idle"), 800);
             })
-            .catch(() => {
+            .catch((err: unknown) => {
+                // VISIBLE failure feedback so the analyst never pastes a
+                // stale clipboard into the wrong ticket.
+                setStatus("failed");
+                setTimeout(() => setStatus("idle"), 1500);
                 // eslint-disable-next-line no-console
-                console.warn("[splunkgate-verdict-inspector] copy-to-clipboard failed");
+                console.warn("[splunkgate-verdict-inspector] copy-to-clipboard failed", err);
             });
     }, [traceId]);
+    const cls = status === "copied" ? "vi-copied" : status === "failed" ? "vi-copy-failed" : "";
+    const label = status === "copied"
+        ? "copied!"
+        : status === "failed"
+            ? "copy failed — select manually"
+            : traceId;
     return (
         <button
             type="button"
-            className={`vi-trace-chip ${copied ? "vi-copied" : ""}`}
+            className={`vi-trace-chip ${cls}`}
             onClick={onClick}
             data-trace-id={traceId}
         >
@@ -289,7 +332,7 @@ function TraceChip({ traceId }: TraceChipProps): React.ReactElement {
                 <rect x={3} y={3} width={9} height={11} rx={1} />
                 <path d="M5 1h7a2 2 0 0 1 2 2v8" />
             </svg>
-            <span>{copied ? "copied!" : traceId}</span>
+            <span>{label}</span>
         </button>
     );
 }
@@ -307,6 +350,17 @@ function DetailPanel({ state, selectedTraceId }: DetailProps): React.ReactElemen
             </div>
         );
     }
+    const safe = sanitizeSplValue(selectedTraceId);
+    if (safe.mutated) {
+        return (
+            <div className="vi-state-error-wrap">
+                <div className="vi-state-error-head">REFUSING TO QUERY MUTATED TRACE_ID</div>
+                <div className="vi-state-error-msg">
+                    {`trace_id '${selectedTraceId}' contains characters that cannot be safely passed to SPL. Refusing to query — escape upstream.`}
+                </div>
+            </div>
+        );
+    }
     const block = <PanelStateBlock state={state} emptyMessage={`No verdict found for trace_id ${selectedTraceId}.`} />;
     if (block) {
         return block;
@@ -318,9 +372,7 @@ function DetailPanel({ state, selectedTraceId }: DetailProps): React.ReactElemen
         <>
             <div className="vi-detail-field">
                 <div className="vi-detail-label">Time</div>
-                <div className="vi-detail-value vi-mono">
-                    {(r._time ?? "").substring(0, 19).replace("T", " ")}
-                </div>
+                <div className="vi-detail-value vi-mono">{formatSplunkTime(r._time)}</div>
             </div>
             <div className="vi-detail-field">
                 <div className="vi-detail-label">Trace ID</div>
@@ -387,7 +439,7 @@ function RelatedPanel({ state, selectedTraceId }: { state: SearchState; selected
     return (
         <>
             {state.rows.map((r, i) => {
-                const t = r._time ? r._time.substring(11, 19) : "";
+                const t = formatSplunkTime(r._time, "hms");
                 return (
                     <div className="vi-related-row" key={i}>
                         <span className="vi-related-time">{t}</span>
@@ -413,18 +465,32 @@ function VerdictInspectorView(): React.ReactElement {
     const agentsListState = useSplunkSearch("agents_list", QUERIES.agents_list, earliest, latest, 500, true);
     const rulesListState = useSplunkSearch("rules_list", QUERIES.rules_list, earliest, latest, 200, true);
 
+    const safeAgent = sanitizeSplValue(agent);
+    const safeSeverity = sanitizeSplValue(severity);
+    const safeVerdictLabel = sanitizeSplValue(verdictLabel);
+    const safeRule = sanitizeSplValue(ruleSel);
+    const mutatedFilters: string[] = [];
+    if (safeAgent.mutated) { mutatedFilters.push(`agent='${agent}'`); }
+    if (safeSeverity.mutated) { mutatedFilters.push(`severity='${severity}'`); }
+    if (safeVerdictLabel.mutated) { mutatedFilters.push(`verdict='${verdictLabel}'`); }
+    if (safeRule.mutated) { mutatedFilters.push(`rule='${ruleSel}'`); }
     const tableQuery = QUERIES.table
-        .replace("{AGENT}", sanitizeSplValue(agent))
-        .replace("{SEVERITY}", sanitizeSplValue(severity))
-        .replace("{VERDICT_LABEL}", sanitizeSplValue(verdictLabel))
-        .replace("{RULE}", sanitizeSplValue(ruleSel));
-    const tableState = useSplunkSearch("table", tableQuery, earliest, latest, 200, true);
+        .replace("{AGENT}", safeAgent.value)
+        .replace("{SEVERITY}", safeSeverity.value)
+        .replace("{VERDICT_LABEL}", safeVerdictLabel.value)
+        .replace("{RULE}", safeRule.value);
+    // Only run the table search if no filter values were mutated. The
+    // useSplunkSearch hook handles the disabled state via the `enabled`
+    // flag; the panel surfaces the error message inline.
+    const tableState = useSplunkSearch("table", tableQuery, earliest, latest, 200, mutatedFilters.length === 0);
 
-    const safeTid = selectedTraceId ? sanitizeSplValue(selectedTraceId) : "";
-    const detailQuery = QUERIES.detail.replace("{TRACE_ID}", safeTid);
-    const relatedQuery = QUERIES.related.replace("{TRACE_ID}", safeTid);
-    const detailState = useSplunkSearch("detail", detailQuery, earliest, latest, 1, selectedTraceId !== null);
-    const relatedState = useSplunkSearch("related", relatedQuery, earliest, latest, 200, selectedTraceId !== null);
+    const safeTraceId = selectedTraceId ? sanitizeSplValue(selectedTraceId) : { value: "", mutated: false };
+    const detailQuery = QUERIES.detail.replace("{TRACE_ID}", safeTraceId.value);
+    const relatedQuery = QUERIES.related.replace("{TRACE_ID}", safeTraceId.value);
+    const detailEnabled = selectedTraceId !== null && !safeTraceId.mutated;
+    const relatedEnabled = selectedTraceId !== null && !safeTraceId.mutated;
+    const detailState = useSplunkSearch("detail", detailQuery, earliest, latest, 1, detailEnabled);
+    const relatedState = useSplunkSearch("related", relatedQuery, earliest, latest, 200, relatedEnabled);
 
     const agentsOptions: { value: string; label: string }[] = React.useMemo(() => {
         const out = [{ value: "*", label: "Any" }];
@@ -533,7 +599,14 @@ function VerdictInspectorView(): React.ReactElement {
                             Click a row to inspect that verdict. Highlight + detail panel update in &lt;200ms.
                         </p>
                         <div className="vi-list-wrap">
-                            {tableState.status === "ok" && tableState.rows.length > 0 ? (
+                            {mutatedFilters.length > 0 ? (
+                                <div className="vi-state-error-wrap">
+                                    <div className="vi-state-error-head">REFUSING TO QUERY MUTATED FILTERS</div>
+                                    <div className="vi-state-error-msg">
+                                        {`Mutated filter values: ${mutatedFilters.join(", ")}. Pick a different value or escape upstream.`}
+                                    </div>
+                                </div>
+                            ) : tableState.status === "ok" && tableState.rows.length > 0 ? (
                                 <table className="vi-table">
                                     <thead>
                                         <tr>
@@ -551,7 +624,7 @@ function VerdictInspectorView(): React.ReactElement {
                                     <tbody>
                                         {tableState.rows.map((r, i) => {
                                             const traceId = r.trace_id ?? "";
-                                            const time = r._time ? r._time.substring(0, 19).replace("T", " ") : "";
+                                            const time = formatSplunkTime(r._time);
                                             const selected = traceId === selectedTraceId ? " vi-row-selected" : "";
                                             return (
                                                 <tr
