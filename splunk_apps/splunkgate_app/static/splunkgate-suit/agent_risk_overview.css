@@ -86,6 +86,14 @@
     padding-bottom: 8px;
 }
 
+/* Stale indicator — fires when the most recent refresh wave had any
+ * errored panel. Vermillion-deep ink so the SOC analyst registers
+ * "trust me less than usual" without missing it. */
+#splunkgate-agent-risk .ar-refresh-stale {
+    color: var(--accent-deep);
+    font-weight: 600;
+}
+
 /* KPI strip — 5 tiles, dense. */
 #splunkgate-agent-risk .ar-kpis {
     display: grid;
@@ -141,6 +149,44 @@
 
 #splunkgate-agent-risk .ar-kpi-high .ar-kpi-value {
     color: var(--med);
+}
+
+/* KPI loading — quiet, distinguishable from error AND from real "0".
+ * `.ar-kpi-loading` overrides any brand-accent border so the loading
+ * state never reads as live. */
+#splunkgate-agent-risk .ar-kpi-loading {
+    background: var(--paper-2);
+    border-color: var(--rule);
+}
+
+#splunkgate-agent-risk .ar-kpi-loading.ar-kpi-block,
+#splunkgate-agent-risk .ar-kpi-loading.ar-kpi-high {
+    border-top-color: var(--rule);
+}
+
+#splunkgate-agent-risk .ar-kpi-loading .ar-kpi-value {
+    color: var(--ink-3);
+}
+
+/* KPI failed — must NEVER look like a real zero. Vermillion border on
+ * all four sides, ink-on-paper "!" glyph, suffix in vermillion-deep.
+ * Overrides the BLOCKED tile's brand accent so a failed BLOCK refresh
+ * doesn't carry the live brand cue. */
+#splunkgate-agent-risk .ar-kpi-failed {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-top: 3px solid var(--accent-deep);
+}
+
+#splunkgate-agent-risk .ar-kpi-failed .ar-kpi-value {
+    color: var(--accent-deep);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 28px;
+}
+
+#splunkgate-agent-risk .ar-kpi-failed .ar-kpi-suffix {
+    color: var(--accent-deep);
+    font-weight: 600;
 }
 
 /* Live-tick pulse — the only motion. Hairline scan-line crossing the
@@ -221,9 +267,21 @@
 }
 
 #splunkgate-agent-risk .ar-area-allow { fill: var(--allow); fill-opacity: 0.55; }
-#splunkgate-agent-risk .ar-area-block { fill: var(--block); fill-opacity: 0.75; }
 #splunkgate-agent-risk .ar-area-modify { fill: var(--med); fill-opacity: 0.55; }
 #splunkgate-agent-risk .ar-area-review { fill: var(--blue); fill-opacity: 0.45; }
+
+/* BLOCK is painted as a discrete overlay (line + dots), NOT as a stack
+ * layer, so its vermillion brand moment never gets muddied by composition
+ * with the ALLOW/MODIFY/REVIEW stack underneath. */
+#splunkgate-agent-risk .ar-area-block-line {
+    fill: none;
+    stroke: var(--accent-deep);
+    stroke-width: 2;
+}
+
+#splunkgate-agent-risk .ar-area-block-dot {
+    fill: var(--accent-deep);
+}
 
 #splunkgate-agent-risk .ar-area-axis text {
     font-family: 'JetBrains Mono', ui-monospace, monospace;
