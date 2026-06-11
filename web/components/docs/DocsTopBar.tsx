@@ -27,7 +27,9 @@ export function DocsTopBar({ theme, onToggleTheme, onOpenMenu }: DocsTopBarProps
           <span className="docs-badge">Docs</span>
         </div>
         <div className="docs-top-r">
-          <Link href="/">← Back to site</Link>
+          <Link href="/" aria-label="Back to site">
+            ←<span className="docs-back-label"> Back to site</span>
+          </Link>
           <a href={AG_LINKS.github} target="_blank" rel="noreferrer">GitHub</a>
           <button
             className="theme-toggle"

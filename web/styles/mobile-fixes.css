@@ -1,0 +1,259 @@
+/* SplunkGate · mobile-responsive overrides.
+   ──────────────────────────────────────────────────────────────────────
+   The designer's CSS in `styles/designer/` collapses major landing-page
+   grids at 980/720/680 px, but it has no rules for the dark Splunk
+   dashboard mockups (`.spl-*`), no rules for the hero side panel
+   (`.hv-splunk` + `.sp-stats`), and no hamburger drawer for the landing
+   TopNav — only `nav-hide` hides three links at 880 px.
+
+   This file owns every mobile fix added on top of the designer's CSS so
+   the verbatim designer files stay untouched. Keep additions here;
+   never edit the files under `styles/designer/`. */
+
+
+/* ─── 1 · Section + wrap padding (phones lose horizontal breathing room) ─ */
+@media (max-width: 720px) {
+  .sec { padding: 64px 0; }
+  .wrap { padding: 0 22px; }
+  .topnav-in { padding: 13px 20px; }
+}
+
+
+/* ─── 2 · Hero: tighter scale + terminal padding on phones ─────────────── */
+@media (max-width: 720px) {
+  .hv-grid { padding: 36px 22px 52px; gap: 32px; }
+  .hero-page .ag-h1 { font-size: 40px; line-height: 1.04; }
+  .ag-sub { font-size: 16px; }
+  .sec-h2 { font-size: 30px; }
+  .sec-lead { font-size: 16px; }
+  .sec-head { margin-bottom: 36px; }
+  .ag-regrow { gap: 10px; padding-top: 18px; margin-top: 22px; }
+  .ag-reg { font-size: 11px; }
+  .hero-kick { font-size: 11.5px; margin-bottom: 18px; }
+  .hv-flowto { font-size: 11px; margin: 12px 2px; }
+  .ag-term-body { font-size: 12px; padding: 14px 14px 16px; line-height: 1.65; }
+  .ag-term-bar { padding: 10px 12px; }
+  .ag-term-title { font-size: 10.5px; }
+}
+
+/* Hero "Verdict Inspector" panel — 3-col KPI strip → 2 cols → 1 col */
+@media (max-width: 560px) {
+  .sp-stats { grid-template-columns: 1fr 1fr; }
+  .sp-stat { padding: 12px 14px; }
+  .sp-stat:nth-child(2n) { border-right: 0; }
+  .sp-v { font-size: 22px; }
+  .hv-splunk .sp-row { flex-wrap: wrap; gap: 8px; }
+}
+
+
+/* ─── 3a · Grid-item min-width fix (applies at every width) ──────────────
+   CSS grid items default to `min-width: auto`, which refuses to shrink
+   below the child's intrinsic content size. Wide content (Splunk dashboard
+   tables, code blocks with long lines, JSON dumps) was forcing grid columns
+   to expand past the viewport — `overflow-x: hidden` on `.ag.page` then
+   clipped the rest, hiding content rather than scrolling.
+
+   Forcing `min-width: 0` on every grid container's direct children lets the
+   tracks shrink to the assigned `1fr` and any internal overflow lands in
+   the proper scroll container (`.spl-body`, `pre`, etc.). */
+.dash-wrap > *,
+.hv-grid > *,
+.verdict-grid > *,
+.surf-panel > *,
+.start-grid > *,
+.card-grid > *,
+.tq-grid > *,
+.trust-grid > * { min-width: 0; }
+
+/* `.code` and `.spl` also need to fit their grid track — they own internal
+   horizontal scroll via `pre { overflow-x: auto }` and `.spl-body`. */
+.code,
+.spl { max-width: 100%; }
+
+/* ─── 3 · Splunk dashboard mockups — KPIs + RMF grid + bar + tables ───── */
+@media (max-width: 760px) {
+  .spl-kpis { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .spl-kpi { padding: 12px 14px; }
+  .spl-kpi .k-v { font-size: 26px; }
+  .spl-rmf { grid-template-columns: 1fr 1fr; }
+  .spl-body { padding: 12px; }
+  .spl-bar { flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+  .spl-bar .spl-time { margin-left: 0; }
+  .spl-export { font-size: 11.5px; padding: 6px 10px; }
+  .dash-cap { gap: 8px; }
+  .dash-cap .dc-badge { margin-left: 0; }
+}
+
+@media (max-width: 480px) {
+  .spl-kpis,
+  .spl-rmf { grid-template-columns: 1fr; }
+}
+
+/* Dashboard tables keep their nowrap design but scroll horizontally inside
+   the panel so the whole card never overflows the viewport. */
+@media (max-width: 760px) {
+  .spl-body { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .spl-table { min-width: 540px; }
+}
+
+
+/* ─── 4 · Eval table (landing "Honest by default") ────────────────────── */
+@media (max-width: 720px) {
+  .eval { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .eval table { min-width: 520px; }
+  .eval-note { padding: 12px 16px; font-size: 11px; }
+}
+
+
+/* ─── 5 · Footer (already wraps, but tighter on phones) ───────────────── */
+@media (max-width: 720px) {
+  .foot { padding: 44px 0 48px; }
+  .foot-in { padding: 0 22px; gap: 28px; }
+  .foot-bottom { padding: 20px 22px 0; flex-direction: column; gap: 8px; }
+}
+
+
+/* ─── 6 · Verdict path + judgment layer + surfaces tabs ───────────────── */
+@media (max-width: 560px) {
+  .vstep-head { flex-wrap: wrap; gap: 8px; }
+  .vstep-k { font-size: 18px; }
+  .surf-tab { min-width: 0; flex: 1 1 calc(50% - 5px); padding: 11px 12px; }
+  .surf-meta-row { flex-direction: column; gap: 4px; }
+  .surf-meta-row .mk { width: auto; padding-top: 0; }
+}
+
+
+/* ─── 7 · Docs: prose + tables + topbar ───────────────────────────────── */
+@media (max-width: 720px) {
+  .docs-main { padding: 28px 20px 80px; }
+  .docs-main h1 { font-size: 32px; }
+  .docs-sec > h2 { font-size: 26px; }
+  .docs-sec h3 { font-size: 19px; }
+  .docs-lede { font-size: 16px; }
+  .docs-eyebrow { font-size: 10.5px; }
+  .callout { padding: 14px 16px; gap: 10px; }
+  .enum-row { gap: 6px; }
+  .enum { font-size: 11.5px; padding: 4px 9px; }
+
+  /* dtable first column was `white-space: nowrap` — long type names like
+     `ModelInputBlockedBySplunkGate` would push the table past the viewport.
+     Allow wrapping on phones. */
+  .dtable td:first-child {
+    white-space: normal;
+    word-break: break-word;
+    font-size: 11.5px;
+  }
+  .dtable th,
+  .dtable td { padding: 9px 10px; font-size: 12.5px; }
+
+  /* docs top bar tightens up; the "Docs" badge gets dropped at this width */
+  .docs-top-in { padding: 12px 18px; gap: 12px; }
+  .docs-top-l { gap: 10px; }
+  .docs-top-r { gap: 12px; }
+  .docs-top-r a { font-size: 13px; }
+  .docs-badge { display: none; }
+}
+
+/* On the smallest phones, collapse "Back to site" → just "←" */
+@media (max-width: 480px) {
+  .docs-top-r .docs-back-label { display: none; }
+}
+
+
+/* ─── 8 · Landing TopNav: hamburger drawer ────────────────────────────── */
+
+/* The hamburger button — invisible above the breakpoint, shown below it. */
+.topnav-menu-btn {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  padding: 7px 11px;
+  color: var(--ink);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  align-items: center;
+  gap: 6px;
+}
+.topnav-menu-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* The drawer + scrim are always rendered in the DOM (so the
+   slide-in transition runs); the `.open` class flips the off-screen
+   `translateX` and reveals the scrim. */
+.topnav-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  z-index: 60;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+.topnav-drawer-scrim.open { opacity: 1; pointer-events: auto; }
+
+.topnav-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(300px, 86vw);
+  height: 100vh;
+  background: var(--paper);
+  border-left: 1px solid var(--rule);
+  z-index: 70;
+  transform: translateX(100%);
+  transition: transform .26s cubic-bezier(.3, .7, .3, 1);
+  padding: 22px 20px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: -10px 0 40px rgba(0, 0, 0, .25);
+}
+.topnav-drawer.open { transform: translateX(0); }
+
+.topnav-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 10px;
+}
+.topnav-drawer-x {
+  background: transparent;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  color: var(--ink-2);
+  width: 30px;
+  height: 30px;
+  line-height: 1;
+  font-size: 18px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.topnav-drawer-x:hover { color: var(--accent); border-color: var(--accent); }
+
+.topnav-drawer a {
+  display: block;
+  color: var(--ink);
+  font-family: 'Hanken Grotesk', sans-serif;
+  font-size: 15.5px;
+  padding: 10px 8px;
+  border-radius: var(--radius);
+}
+.topnav-drawer a:hover { color: var(--accent); background: var(--accent-soft); }
+.topnav-drawer .ag-btn { margin-top: 12px; }
+
+/* Show the hamburger + drawer at the same breakpoint that already hides the
+   inline nav cluster (.nav-hide is hidden at 880 px in the designer's CSS).
+   Below 720 px, even the "Docs / GitHub" links get folded into the drawer
+   to free up the top bar. */
+@media (max-width: 720px) {
+  .topnav-links { display: none; }
+  .topnav-menu-btn { display: inline-flex; }
+  .topnav .topnav-right { gap: 10px; }
+  .topnav .ag-btn-sm { padding: 7px 12px; font-size: 12.5px; }
+}

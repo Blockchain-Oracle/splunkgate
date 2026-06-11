@@ -6,6 +6,7 @@
 @import "../styles/designer/splunkgate-landing.css";
 @import "../styles/designer/splunkgate-docs.css";
 @import "../styles/designer/splunkgate-splunk-material.css";
+@import "../styles/mobile-fixes.css";
 
 html { scroll-behavior: smooth; }
 html, body { margin: 0; padding: 0; }
