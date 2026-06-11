@@ -1,0 +1,468 @@
+/* Regulator Evidence Pack — Dossier styling overlay.
+ *
+ * Layered on top of tokens.css (the base Dossier system). The dashboard is
+ * a single full-bleed paper substrate; every panel reuses the .card token
+ * from tokens.css. Print mode (browser Cmd+P) is the canonical examiner
+ * export path — print styles strip all chrome and force ink-on-paper.
+ */
+
+#splunkgate-evidence-pack {
+    min-height: 100vh;
+    padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+}
+
+#splunkgate-evidence-pack * {
+    box-sizing: border-box;
+}
+
+#splunkgate-evidence-pack .ep-page {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 36px 48px;
+}
+
+/* Header strip — title + controls + Export PDF action. */
+#splunkgate-evidence-pack .ep-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 18px;
+    margin-bottom: 24px;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+#splunkgate-evidence-pack .ep-header-title {
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.1;
+    margin: 0 0 4px 0;
+}
+
+#splunkgate-evidence-pack .ep-header-subtitle {
+    font-size: 13px;
+    color: var(--ink-2);
+    font-style: italic;
+}
+
+#splunkgate-evidence-pack .ep-controls {
+    display: flex;
+    gap: 14px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+#splunkgate-evidence-pack .ep-control label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-3);
+    margin-bottom: 4px;
+}
+
+#splunkgate-evidence-pack .ep-control select,
+#splunkgate-evidence-pack .ep-control input {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 13px;
+    background: var(--raised);
+    color: var(--ink);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius);
+    padding: 6px 10px;
+    min-width: 220px;
+}
+
+#splunkgate-evidence-pack .ep-export-btn {
+    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    background: var(--accent);
+    color: var(--paper);
+    border: 1px solid var(--accent-deep);
+    border-radius: var(--radius);
+    padding: 8px 18px;
+    cursor: pointer;
+    transition: background 120ms ease;
+}
+
+#splunkgate-evidence-pack .ep-export-btn:hover:not([disabled]) {
+    background: var(--accent-deep);
+}
+
+#splunkgate-evidence-pack .ep-export-btn[disabled] {
+    background: var(--paper-2);
+    color: var(--ink-3);
+    border-color: var(--rule);
+    cursor: not-allowed;
+}
+
+/* Jurisdiction banner — examiner-readable scope statement. Prints in the
+ * PDF so the examiner knows exactly which profile shaped the artifact. */
+#splunkgate-evidence-pack .ep-jurisdiction-banner {
+    display: grid;
+    grid-template-columns: 140px auto;
+    column-gap: 18px;
+    row-gap: 4px;
+    padding: 14px 20px;
+    margin-bottom: 24px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+}
+
+#splunkgate-evidence-pack .ep-banner-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+    grid-column: 1;
+}
+
+#splunkgate-evidence-pack .ep-banner-value {
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--accent-deep);
+    grid-column: 2;
+    line-height: 1.2;
+}
+
+#splunkgate-evidence-pack .ep-banner-scope {
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.45;
+    grid-column: 1 / -1;
+    margin-top: 4px;
+}
+
+/* KPI strip — coverage scope tiles. */
+#splunkgate-evidence-pack .ep-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 28px;
+}
+
+#splunkgate-evidence-pack .ep-kpi {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+}
+
+#splunkgate-evidence-pack .ep-kpi-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+    margin-bottom: 8px;
+}
+
+#splunkgate-evidence-pack .ep-kpi-value {
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1.05;
+}
+
+#splunkgate-evidence-pack .ep-kpi-suffix {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--ink-2);
+    margin-top: 4px;
+}
+
+/* Panel grid — NIST RMF + SR 26-2 quote side-by-side on wide; stacked on
+ * narrow + print. */
+#splunkgate-evidence-pack .ep-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+    margin-bottom: 28px;
+}
+
+#splunkgate-evidence-pack .ep-panel {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 22px 26px;
+    margin-bottom: 22px;
+}
+
+#splunkgate-evidence-pack .ep-grid .ep-panel {
+    margin-bottom: 0;
+}
+
+#splunkgate-evidence-pack .ep-panel h2 {
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0 0 6px 0;
+    color: var(--ink);
+}
+
+#splunkgate-evidence-pack .ep-panel-desc {
+    font-size: 12.5px;
+    color: var(--ink-2);
+    margin-bottom: 14px;
+    line-height: 1.45;
+}
+
+/* Profile-gated panels are removed entirely (display:none) when out of
+ * scope — both on screen and in print. The jurisdictional banner above
+ * tells the examiner what's in scope; this keeps the PDF clean. */
+#splunkgate-evidence-pack .ep-panel.ep-hidden {
+    display: none !important;
+}
+
+/* SR 26-2 verbatim quote panel — court-filing treatment. */
+#splunkgate-evidence-pack .ep-quote-panel {
+    background: var(--card);
+    border-left: 4px solid var(--accent);
+    border-top: 1px solid var(--rule);
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+#splunkgate-evidence-pack .ep-quote-panel h2 {
+    margin-bottom: 14px;
+}
+
+#splunkgate-evidence-pack .ep-quote {
+    font-family: 'Newsreader', Georgia, serif;
+    font-style: italic;
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--ink);
+    margin: 0 0 12px 0;
+    padding-left: 14px;
+    border-left: 2px solid var(--rule-strong);
+}
+
+#splunkgate-evidence-pack .ep-quote-attribution {
+    font-size: 11.5px;
+    color: var(--ink-2);
+    margin-bottom: 14px;
+}
+
+#splunkgate-evidence-pack .ep-quote-framing {
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.5;
+}
+
+#splunkgate-evidence-pack .ep-quote-framing strong {
+    color: var(--accent-deep);
+    font-weight: 600;
+}
+
+/* Tables — ink-on-paper, verbatim Cisco AI Defense rule names + verbatim
+ * NIST function names + verbatim Annex III labels. */
+#splunkgate-evidence-pack table.ep-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+#splunkgate-evidence-pack table.ep-table th {
+    text-align: left;
+    font-weight: 600;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-3);
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--rule-strong);
+}
+
+#splunkgate-evidence-pack table.ep-table td {
+    padding: 10px;
+    vertical-align: top;
+    border-bottom: 1px solid var(--rule);
+}
+
+#splunkgate-evidence-pack table.ep-table td.ep-mono {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--ink-2);
+}
+
+#splunkgate-evidence-pack table.ep-table td.ep-function {
+    font-family: 'Newsreader', Georgia, serif;
+    font-weight: 600;
+    color: var(--accent-deep);
+    width: 110px;
+}
+
+#splunkgate-evidence-pack table.ep-table tr:last-child td {
+    border-bottom: 0;
+}
+
+/* Empty state — quiet italic. Survives B&W print as italic gray-on-white. */
+#splunkgate-evidence-pack .ep-state,
+#splunkgate-evidence-pack .ep-state-empty {
+    font-size: 13px;
+    color: var(--ink-2);
+    font-style: italic;
+    padding: 14px 0;
+}
+
+/* Error state — hard-edged so it survives B&W print. Bold sans-serif
+ * header, monospace error body, vermillion border on top + bottom. */
+#splunkgate-evidence-pack .ep-state-error-wrap {
+    border-top: 3px solid var(--accent-deep);
+    border-bottom: 3px solid var(--accent-deep);
+    background: var(--accent-soft);
+    padding: 10px 14px;
+    margin: 8px 0;
+}
+
+#splunkgate-evidence-pack .ep-state-error-head {
+    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent-deep);
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+}
+
+#splunkgate-evidence-pack .ep-state-error-msg {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--ink);
+    line-height: 1.4;
+}
+
+/* Coverage footer — provenance, monospace, includes panel-status line. */
+#splunkgate-evidence-pack .ep-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 14px 22px;
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11.5px;
+    color: var(--ink-2);
+    margin-top: 28px;
+}
+
+/* Print mode — what the examiner sees in the PDF.
+ * - Strip Splunk Web chrome (handled by @media print + body selectors below).
+ * - Strip the page header controls (the dropdowns are interactive only).
+ * - Force two-column grid → stack so panels survive A4 portrait.
+ * - Drop background tints (printers don't reproduce subtle hues reliably).
+ * - Keep error panels visible AND keep the jurisdiction banner so an
+ *   examiner reading a static PDF sees coverage scope + any failed panels.
+ */
+@media print {
+    body,
+    #content,
+    .splunk-page,
+    .dashboard-body,
+    .splunk-view,
+    .splunk-header,
+    .navbar,
+    .nav-list,
+    .footer {
+        background: #fff !important;
+    }
+
+    .splunk-header,
+    .navbar,
+    .nav-list,
+    .footer,
+    .splunkgate-suit-app-footer,
+    #header,
+    #app-header {
+        display: none !important;
+    }
+
+    #splunkgate-evidence-pack {
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    #splunkgate-evidence-pack .ep-page {
+        padding: 18px 22px;
+    }
+
+    /* Controls disappear in print (no jurisdictional dropdown, no time
+     * picker, no Export PDF button — the artifact is static). */
+    #splunkgate-evidence-pack .ep-controls,
+    #splunkgate-evidence-pack .ep-export-btn {
+        display: none !important;
+    }
+
+    #splunkgate-evidence-pack .ep-header {
+        border-bottom: 2px solid #000;
+    }
+
+    #splunkgate-evidence-pack .ep-jurisdiction-banner {
+        background: #fff !important;
+        border: 1px solid #000 !important;
+        page-break-inside: avoid;
+    }
+
+    #splunkgate-evidence-pack .ep-banner-value {
+        color: #000 !important;
+    }
+
+    #splunkgate-evidence-pack .ep-kpis {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+
+    #splunkgate-evidence-pack .ep-kpi,
+    #splunkgate-evidence-pack .ep-panel,
+    #splunkgate-evidence-pack .ep-footer {
+        background: #fff !important;
+        border: 1px solid #999 !important;
+        page-break-inside: avoid;
+    }
+
+    #splunkgate-evidence-pack .ep-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #splunkgate-evidence-pack .ep-quote-panel {
+        border-left: 4px solid #000 !important;
+    }
+
+    #splunkgate-evidence-pack .ep-quote {
+        border-left: 2px solid #666 !important;
+    }
+
+    /* Error wrap stays loud in print so an examiner sees failed panels. */
+    #splunkgate-evidence-pack .ep-state-error-wrap {
+        border-top: 3px solid #000 !important;
+        border-bottom: 3px solid #000 !important;
+        background: #f5f5f5 !important;
+    }
+
+    #splunkgate-evidence-pack .ep-state-error-head {
+        color: #000 !important;
+    }
+}
+
+/* Narrow viewport — collapse the grid. */
+@media (max-width: 1100px) {
+    #splunkgate-evidence-pack .ep-grid {
+        grid-template-columns: 1fr;
+    }
+
+    #splunkgate-evidence-pack .ep-kpis {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
