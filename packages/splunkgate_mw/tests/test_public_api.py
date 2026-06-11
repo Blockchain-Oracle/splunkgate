@@ -23,8 +23,6 @@ from splunklib.ai.messages import AgentResponse
 from splunklib.ai.middleware import (
     AgentMiddleware,
     AgentRequest,
-    SubagentRequest,
-    SubagentResponse,
 )
 
 MIDDLEWARE_CLASSES = (
@@ -142,16 +140,10 @@ def test_middleware_kwargs_only() -> None:
 # story-mw-03). Behavioral coverage now lives in tests/test_model_middleware_pre.py.
 
 
-@pytest.mark.asyncio
-async def test_subagent_middleware_stub_delegates_to_handler() -> None:
-    instance = SafetySubagentMiddleware(profile="default")
-    sentinel = object()
-
-    async def handler(_request: SubagentRequest) -> SubagentResponse:
-        return sentinel  # type: ignore[return-value]
-
-    result = await instance.subagent_middleware(object(), handler)  # type: ignore[arg-type]
-    assert result is sentinel
+# test_subagent_middleware_stub_delegates_to_handler removed: SafetySubagentMiddleware
+# is no longer a pass-through stub (replaced by the real DefenseClaw + AI Defense
+# chain in story-mw-05). Behavioral coverage lives in
+# tests/test_subagent_middleware.py.
 
 
 @pytest.mark.asyncio

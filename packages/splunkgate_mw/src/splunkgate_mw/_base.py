@@ -18,15 +18,14 @@ from splunklib.ai.middleware import (
     AgentRequest,
     ModelRequest,
     ModelResponse,
-    SubagentRequest,
-    SubagentResponse,
 )
 
 # Re-exported here to preserve the story-mw-01 import surface
 # `from splunkgate_mw._base import SafetyToolMiddleware`. The real
-# implementation now lives in `tool_middleware.py` (story-mw-02).
+# implementations now live in their own modules.
 from splunkgate_mw.config import Config
 from splunkgate_mw.profiles import Profile
+from splunkgate_mw.subagent_middleware import SafetySubagentMiddleware
 from splunkgate_mw.tool_middleware import SafetyToolMiddleware
 
 if TYPE_CHECKING:
@@ -84,22 +83,6 @@ class SafetyModelMiddleware(_SafetyMiddlewareBase):
         handler: "Callable[[ModelRequest], Awaitable[ModelResponse]]",
     ) -> ModelResponse:
         """Pass-through stub; real logic in stories mw-03 and mw-04."""
-        return await handler(request)
-
-
-class SafetySubagentMiddleware(_SafetyMiddlewareBase):
-    """SplunkGate safety wrap for subagent handoffs.
-
-    Stub: delegates to `await handler(request)`. Real risk scoring (handoff
-    payload inspection) lands in story-mw-05.
-    """
-
-    async def subagent_middleware(
-        self,
-        request: SubagentRequest,
-        handler: "Callable[[SubagentRequest], Awaitable[SubagentResponse]]",
-    ) -> SubagentResponse:
-        """Pass-through stub; real logic in story-mw-05."""
         return await handler(request)
 
 
