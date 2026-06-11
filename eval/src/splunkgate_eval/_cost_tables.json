@@ -1,0 +1,7 @@
+{
+  "defenseclaw_regex_only": {"dollars_per_1k": 0.0, "note": "local compute"},
+  "ai_defense_alone": {"dollars_per_1k": 0.0, "note": "within Cisco AI Defense 10M/yr free tier"},
+  "splunkgate_full_stack": {"dollars_per_1k": 0.0, "note": "within 10M/yr free tier + Foundation-Sec via | ai"},
+  "gpt_oss_120b_judge": {"dollars_per_1k": null, "note": "TBD pending Splunk Hosted Models dev-tier confirmation"},
+  "splunklib_security_regex": {"dollars_per_1k": 0.0, "note": "local compute"}
+}
