@@ -1,0 +1,478 @@
+/* Agent Risk Overview — Dossier styling overlay.
+ *
+ * D2 = "cockpit": dense KPI tiles, severity stack chart, rules-by-hour
+ * heatmap, top offenders. Eye should find HIGH-severity activity in <5s.
+ * The BLOCKED tile uses the vermillion accent — the only "moment that
+ * matters" cue in the product. Live-tick pulse on the BLOCKED tile is
+ * the only motion.
+ */
+
+#splunkgate-agent-risk {
+    min-height: 100vh;
+    padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+}
+
+#splunkgate-agent-risk * {
+    box-sizing: border-box;
+}
+
+#splunkgate-agent-risk .ar-page {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 28px 36px;
+}
+
+/* Header: title + time-range control + auto-refresh toggle. */
+#splunkgate-agent-risk .ar-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 2px solid var(--accent);
+    padding-bottom: 16px;
+    margin-bottom: 22px;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+#splunkgate-agent-risk .ar-header-title {
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.1;
+    margin: 0 0 4px 0;
+}
+
+#splunkgate-agent-risk .ar-header-subtitle {
+    font-size: 13px;
+    color: var(--ink-2);
+    font-style: italic;
+}
+
+#splunkgate-agent-risk .ar-controls {
+    display: flex;
+    gap: 14px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+#splunkgate-agent-risk .ar-control label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-3);
+    margin-bottom: 4px;
+}
+
+#splunkgate-agent-risk .ar-control select {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 13px;
+    background: var(--raised);
+    color: var(--ink);
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius);
+    padding: 6px 10px;
+    min-width: 180px;
+}
+
+#splunkgate-agent-risk .ar-refresh {
+    font-size: 12px;
+    color: var(--ink-3);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    padding-bottom: 8px;
+}
+
+/* Stale indicator — fires when the most recent refresh wave had any
+ * errored panel. Vermillion-deep ink so the SOC analyst registers
+ * "trust me less than usual" without missing it. */
+#splunkgate-agent-risk .ar-refresh-stale {
+    color: var(--accent-deep);
+    font-weight: 600;
+}
+
+/* KPI strip — 5 tiles, dense. */
+#splunkgate-agent-risk .ar-kpis {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    margin-bottom: 22px;
+}
+
+#splunkgate-agent-risk .ar-kpi {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+}
+
+#splunkgate-agent-risk .ar-kpi-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+    margin-bottom: 6px;
+}
+
+#splunkgate-agent-risk .ar-kpi-value {
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1.05;
+}
+
+#splunkgate-agent-risk .ar-kpi-suffix {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--ink-2);
+    margin-top: 4px;
+}
+
+/* The BLOCKED tile is the brand moment — vermillion top rule + ink digits.
+ * The other 4 tiles are quiet. */
+#splunkgate-agent-risk .ar-kpi-block {
+    border-top: 3px solid var(--accent);
+}
+
+#splunkgate-agent-risk .ar-kpi-block .ar-kpi-value {
+    color: var(--accent-deep);
+}
+
+#splunkgate-agent-risk .ar-kpi-high {
+    border-top: 3px solid var(--med);
+}
+
+#splunkgate-agent-risk .ar-kpi-high .ar-kpi-value {
+    color: var(--med);
+}
+
+/* KPI loading — quiet, distinguishable from error AND from real "0".
+ * `.ar-kpi-loading` overrides any brand-accent border so the loading
+ * state never reads as live. */
+#splunkgate-agent-risk .ar-kpi-loading {
+    background: var(--paper-2);
+    border-color: var(--rule);
+}
+
+#splunkgate-agent-risk .ar-kpi-loading.ar-kpi-block,
+#splunkgate-agent-risk .ar-kpi-loading.ar-kpi-high {
+    border-top-color: var(--rule);
+}
+
+#splunkgate-agent-risk .ar-kpi-loading .ar-kpi-value {
+    color: var(--ink-3);
+}
+
+/* KPI failed — must NEVER look like a real zero. Vermillion border on
+ * all four sides, ink-on-paper "!" glyph, suffix in vermillion-deep.
+ * Overrides the BLOCKED tile's brand accent so a failed BLOCK refresh
+ * doesn't carry the live brand cue. */
+#splunkgate-agent-risk .ar-kpi-failed {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-top: 3px solid var(--accent-deep);
+}
+
+#splunkgate-agent-risk .ar-kpi-failed .ar-kpi-value {
+    color: var(--accent-deep);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 28px;
+}
+
+#splunkgate-agent-risk .ar-kpi-failed .ar-kpi-suffix {
+    color: var(--accent-deep);
+    font-weight: 600;
+}
+
+/* Live-tick pulse — the only motion. Hairline scan-line crossing the
+ * tile, ~200ms, no bounce, no skeuomorphism. Fires when the KPI value
+ * changes from a fresh search; the JS adds .ar-tick momentarily. */
+#splunkgate-agent-risk .ar-kpi.ar-tick::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg,
+        transparent 0%,
+        var(--accent-soft) 40%,
+        var(--accent-soft) 60%,
+        transparent 100%);
+    animation: ar-pulse 220ms linear forwards;
+    pointer-events: none;
+}
+
+@keyframes ar-pulse {
+    from { transform: translateX(0); }
+    to { transform: translateX(200%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    /* Respect motion preferences — drop the pulse, keep the visual
+     * border-top accent as the "this changed" cue. */
+    #splunkgate-agent-risk .ar-kpi.ar-tick::after {
+        animation: none;
+        display: none;
+    }
+}
+
+/* Panel grid — area chart full-bleed, then heatmap + top-agents
+ * side-by-side, then MSJ scaling line full-bleed. */
+#splunkgate-agent-risk .ar-panel {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    margin-bottom: 18px;
+}
+
+#splunkgate-agent-risk .ar-panel h2 {
+    font-family: 'Newsreader', Georgia, serif;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    color: var(--ink);
+}
+
+#splunkgate-agent-risk .ar-panel-desc {
+    font-size: 12px;
+    color: var(--ink-2);
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+
+#splunkgate-agent-risk .ar-grid {
+    display: grid;
+    grid-template-columns: 1.7fr 1fr;
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+#splunkgate-agent-risk .ar-grid .ar-panel {
+    margin-bottom: 0;
+}
+
+/* Stacked area — SVG. Uses tokens for fill + stroke; stack series colored
+ * per verdict label. */
+#splunkgate-agent-risk .ar-area-svg {
+    width: 100%;
+    height: 220px;
+    display: block;
+}
+
+#splunkgate-agent-risk .ar-area-allow { fill: var(--allow); fill-opacity: 0.55; }
+#splunkgate-agent-risk .ar-area-modify { fill: var(--med); fill-opacity: 0.55; }
+#splunkgate-agent-risk .ar-area-review { fill: var(--blue); fill-opacity: 0.45; }
+
+/* BLOCK is painted as a discrete overlay (line + dots), NOT as a stack
+ * layer, so its vermillion brand moment never gets muddied by composition
+ * with the ALLOW/MODIFY/REVIEW stack underneath. */
+#splunkgate-agent-risk .ar-area-block-line {
+    fill: none;
+    stroke: var(--accent-deep);
+    stroke-width: 2;
+}
+
+#splunkgate-agent-risk .ar-area-block-dot {
+    fill: var(--accent-deep);
+}
+
+#splunkgate-agent-risk .ar-area-axis text {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px;
+    fill: var(--ink-3);
+}
+
+#splunkgate-agent-risk .ar-area-axis path,
+#splunkgate-agent-risk .ar-area-axis line {
+    stroke: var(--rule);
+}
+
+#splunkgate-agent-risk .ar-legend {
+    display: flex;
+    gap: 18px;
+    font-size: 11px;
+    color: var(--ink-2);
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+#splunkgate-agent-risk .ar-legend-sw {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    margin-right: 6px;
+    vertical-align: -2px;
+}
+
+/* Rules-by-hour heatmap — CSS-grid based with per-cell intensity. The
+ * 11 Cisco AI Defense rule names anchor the Y axis; X axis = 24 hours.
+ * Cell intensity = sum(severity_score). Stranger walking past should
+ * read "SplunkGate" — vermillion-ramp palette, not viridis. */
+#splunkgate-agent-risk .ar-heatmap {
+    overflow-x: auto;
+}
+
+#splunkgate-agent-risk .ar-heatmap-table {
+    border-collapse: collapse;
+    font-size: 11px;
+}
+
+#splunkgate-agent-risk .ar-heatmap-table th,
+#splunkgate-agent-risk .ar-heatmap-table td {
+    border: 1px solid var(--rule);
+    padding: 0;
+    width: 28px;
+    height: 22px;
+    text-align: center;
+}
+
+#splunkgate-agent-risk .ar-heatmap-table th.ar-rule-label {
+    text-align: left;
+    padding: 0 8px;
+    width: 200px;
+    color: var(--ink);
+    font-family: 'Newsreader', Georgia, serif;
+    font-weight: 500;
+    background: var(--card);
+}
+
+#splunkgate-agent-risk .ar-heatmap-table th.ar-hour-label {
+    color: var(--ink-3);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-weight: 500;
+    background: var(--card);
+}
+
+#splunkgate-agent-risk .ar-heatmap-cell {
+    background: var(--paper-2);
+    cursor: default;
+}
+
+#splunkgate-agent-risk .ar-heatmap-cell[data-intensity="0"] { background: var(--paper-2); }
+#splunkgate-agent-risk .ar-heatmap-cell[data-intensity="1"] { background: rgba(188, 58, 38, 0.10); }
+#splunkgate-agent-risk .ar-heatmap-cell[data-intensity="2"] { background: rgba(188, 58, 38, 0.25); }
+#splunkgate-agent-risk .ar-heatmap-cell[data-intensity="3"] { background: rgba(188, 58, 38, 0.45); }
+#splunkgate-agent-risk .ar-heatmap-cell[data-intensity="4"] { background: rgba(188, 58, 38, 0.70); }
+#splunkgate-agent-risk .ar-heatmap-cell[data-intensity="5"] { background: var(--accent-deep); }
+
+/* Top agents table. */
+#splunkgate-agent-risk table.ar-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+#splunkgate-agent-risk table.ar-table th {
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-3);
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--rule-strong);
+}
+
+#splunkgate-agent-risk table.ar-table td {
+    padding: 8px;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--rule);
+}
+
+#splunkgate-agent-risk table.ar-table td.ar-mono {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--ink-2);
+}
+
+#splunkgate-agent-risk table.ar-table td.ar-count {
+    font-family: 'Newsreader', Georgia, serif;
+    font-weight: 600;
+    color: var(--accent-deep);
+    text-align: right;
+    width: 80px;
+}
+
+/* MSJ scaling line. */
+#splunkgate-agent-risk .ar-msj-svg {
+    width: 100%;
+    height: 110px;
+    display: block;
+}
+
+#splunkgate-agent-risk .ar-msj-line {
+    fill: none;
+    stroke: var(--accent-deep);
+    stroke-width: 1.5;
+}
+
+#splunkgate-agent-risk .ar-msj-dot {
+    fill: var(--accent);
+    r: 2.5;
+}
+
+/* State copy. */
+#splunkgate-agent-risk .ar-state {
+    font-size: 13px;
+    color: var(--ink-2);
+    font-style: italic;
+    padding: 14px 0;
+}
+
+#splunkgate-agent-risk .ar-state-error-wrap {
+    border-top: 3px solid var(--accent-deep);
+    border-bottom: 3px solid var(--accent-deep);
+    background: var(--accent-soft);
+    padding: 10px 14px;
+    margin: 8px 0;
+}
+
+#splunkgate-agent-risk .ar-state-error-head {
+    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent-deep);
+    letter-spacing: 0.04em;
+    margin-bottom: 4px;
+}
+
+#splunkgate-agent-risk .ar-state-error-msg {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--ink);
+    line-height: 1.4;
+}
+
+/* Footer. */
+#splunkgate-agent-risk .ar-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 12px 18px;
+    background: var(--paper-2);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--ink-2);
+    margin-top: 18px;
+}
+
+/* Narrow viewport. */
+@media (max-width: 1100px) {
+    #splunkgate-agent-risk .ar-grid {
+        grid-template-columns: 1fr;
+    }
+    #splunkgate-agent-risk .ar-kpis {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
