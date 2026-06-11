@@ -124,6 +124,25 @@ class AdvBenchSubmoduleMissingError(SplunkGateError):
         self.expected_path = expected_path
 
 
+class DefenseclawRulesMissingError(SplunkGateError):
+    """Raised when the DefenseClaw regex-baseline loader cannot find rules.go.
+
+    The eval harness depends on a vendored slice of upstream
+    `cisco-ai-defense/defenseclaw` at
+    `inspiration/defenseclaw/internal/gateway/rules.go`. The remediation
+    command lives verbatim in the message so operators can copy/paste
+    without leaving the traceback.
+    """
+
+    def __init__(self, expected_path: str) -> None:
+        """Wrap the expected path; message embeds the canonical remediation command."""
+        super().__init__(
+            f"DefenseClaw rules.go not found at {expected_path}; "
+            "run `git submodule update --init inspiration/defenseclaw`",
+        )
+        self.expected_path = expected_path
+
+
 class UnknownProfile(SplunkGateError):  # noqa: N818 — name locked by story-mw-07
     """Raised by `resolve_profile()` when the caller passed an unknown profile name.
 
