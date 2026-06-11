@@ -19,6 +19,17 @@ class AIDefenseUpstreamError(AIDefenseError):
     """HTTP 5xx — Cisco-side failure. Retryable."""
 
 
+class AIDefenseCircuitOpenError(AIDefenseError):
+    """The per-client circuit breaker is OPEN — request short-circuited.
+
+    Raised by `AIDefenseClient.inspect_chat` when the breaker has tripped
+    after `failure_threshold` consecutive failures. Callers (the SplunkGate
+    middleware layer) treat this as a fail-closed signal: fall back to the
+    cheap `splunklib.ai.security.detect_injection` regex path and emit a
+    degraded verdict. See `_circuit_breaker.py` for state transitions.
+    """
+
+
 class SplunkSearchError(SplunkGateError):
     """Splunk REST `/services/search/jobs` failure.
 
