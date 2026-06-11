@@ -1,0 +1,3 @@
+[submodule "inspiration/llm-attacks"]
+	path = inspiration/llm-attacks
+	url = https://github.com/llm-attacks/llm-attacks.git

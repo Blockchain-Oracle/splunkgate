@@ -105,6 +105,25 @@ class ToolBlockedBySplunkGate(SplunkGateError):  # noqa: N818 — name locked by
         self.verdict = verdict
 
 
+class AdvBenchSubmoduleMissingError(SplunkGateError):
+    """Raised when the AdvBench loader cannot find the git submodule CSV.
+
+    The eval harness depends on the upstream `llm-attacks/llm-attacks`
+    repo at `inspiration/llm-attacks/data/advbench/harmful_behaviors.csv`
+    via a git submodule pinned to commit `098262e`. The remediation
+    command lives verbatim in the message so operators can copy/paste
+    without leaving the traceback.
+    """
+
+    def __init__(self, expected_path: str) -> None:
+        """Wrap the expected path; message embeds the canonical remediation command."""
+        super().__init__(
+            f"AdvBench CSV not found at {expected_path}; "
+            "run `git submodule update --init inspiration/llm-attacks`",
+        )
+        self.expected_path = expected_path
+
+
 class UnknownProfile(SplunkGateError):  # noqa: N818 — name locked by story-mw-07
     """Raised by `resolve_profile()` when the caller passed an unknown profile name.
 

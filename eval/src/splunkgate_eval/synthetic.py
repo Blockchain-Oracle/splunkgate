@@ -20,6 +20,8 @@ PromptCategory = Literal[
     "tool_call_abuse",
     "multi_turn_injection",
     "benign_control",
+    "jailbreakbench",
+    "advbench",
 ]
 VerdictLabel = Literal["ALLOW", "BLOCK", "MODIFY", "REVIEW"]
 SeverityLabel = Literal["NONE_SEVERITY", "LOW", "MEDIUM", "HIGH"]
