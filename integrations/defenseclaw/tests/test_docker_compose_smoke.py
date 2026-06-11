@@ -77,8 +77,29 @@ def test_compose_file_parses() -> None:
         assert expected in services, f"{expected} missing from compose"
 
 
+def _dump_gateway_logs() -> str:
+    """Return the last 100 lines of the gateway container log; used to enrich failure messages."""
+    proc = subprocess.run(
+        [
+            "docker",
+            "compose",
+            "-f",
+            str(_COMPOSE),
+            "logs",
+            "--tail",
+            "100",
+            "defenseclaw-gateway",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    return proc.stdout + proc.stderr
+
+
 def test_compose_smoke_verifier_exits_zero(compose_up_and_down: object) -> None:  # noqa: ARG001
-    """Run the verifier one-shot; it must exit 0."""
+    """Run the verifier one-shot; it must exit 0. Dump gateway logs on failure for triage."""
     result = subprocess.run(
         ["docker", "compose", "-f", str(_COMPOSE), "run", "--rm", "verifier"],
         check=False,
@@ -86,7 +107,15 @@ def test_compose_smoke_verifier_exits_zero(compose_up_and_down: object) -> None:
         text=True,
         timeout=120,
     )
-    assert result.returncode == 0, f"verifier failed: {result.stdout}\n{result.stderr}"
+    if result.returncode != 0:
+        logs = _dump_gateway_logs()
+        msg = (
+            f"verifier exit={result.returncode}\n"
+            f"--- verifier stdout ---\n{result.stdout}\n"
+            f"--- verifier stderr ---\n{result.stderr}\n"
+            f"--- defenseclaw-gateway logs (tail 100) ---\n{logs}\n"
+        )
+        raise AssertionError(msg)
 
 
 def test_compose_smoke_verdict_lands_in_hec_double_volume(

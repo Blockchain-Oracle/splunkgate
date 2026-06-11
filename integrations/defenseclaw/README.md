@@ -52,6 +52,13 @@ Never commit the HEC token. `verify_tls: true` is the SplunkGate
 default; DefenseClaw upstream defaults to insecure for local dev — the
 example below overrides that to fail-secure.
 
+> **Heads up:** DefenseClaw's config loader expands `${VAR}` via
+> `os.ExpandEnv`, which substitutes an **empty string** when a variable
+> is unset. The HEC sink will then POST every verdict to `""` and log
+> only a transport error per event — startup succeeds. Run
+> `defenseclaw run --dry-run` (or grep the boot log for the resolved
+> sink endpoint) before relying on the wiring.
+
 ## Step 3 — Drop in the config
 
 ```bash
@@ -93,7 +100,18 @@ lands) the AI Defense Inspection API rule backend.
 
 `examples/docker-compose.yaml` brings up three services — DefenseClaw
 gateway, a Splunk HEC double, and a one-shot verifier — to prove the
-config wiring without touching production Splunk:
+config wiring without touching production Splunk.
+
+**Precondition.** DefenseClaw upstream does not publish a public Docker
+image. Build it once from the clone you made in Step 1:
+
+```bash
+cd defenseclaw   # the upstream clone from Step 1
+make docker-image TAG=v0.6.5
+docker tag defenseclaw:v0.6.5 cisco-ai-defense/defenseclaw:v0.6.5
+```
+
+Then run the smoke:
 
 ```bash
 cd integrations/defenseclaw/examples

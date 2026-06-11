@@ -8,7 +8,13 @@
 services:
 
   defenseclaw-gateway:
+    # No public Docker image exists for DefenseClaw v0.6.5 — the upstream
+    # repo (Apache-2.0) is build-from-source. The operator must clone +
+    # `make docker-image` at the pinned commit BEFORE `docker compose up`;
+    # this `build:` stanza assumes the resulting image tag.
+    # See README.md "Step 1 — Get DefenseClaw".
     image: cisco-ai-defense/defenseclaw:v0.6.5
+    pull_policy: never
     container_name: splunkgate-dc-gateway
     environment:
       SPLUNKGATE_SPLUNK_HEC_URL: http://splunk-hec-double:8088
@@ -56,8 +62,8 @@ services:
         condition: service_healthy
     environment:
       DC_GATEWAY_URL: http://defenseclaw-gateway:8443
-      MOCK_HEC_EVENTS_PATH: /data/events.jsonl
-      FLUSH_WAIT_S: "6"
+      DOUBLE_HEC_EVENTS_PATH: /data/events.jsonl
+      FLUSH_TIMEOUT_S: "30"
     command: ["python", "/app/verify.py"]
     volumes:
       - ./verify.py:/app/verify.py:ro
