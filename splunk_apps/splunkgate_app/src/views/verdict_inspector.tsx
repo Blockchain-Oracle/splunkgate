@@ -93,11 +93,17 @@ function sanitizeSplValue(v: string): SanitizedSpl {
 
 // Monotonic SearchManager ID counter — same-ms collisions are possible
 // with Date.now() (especially when 5 useSplunkSearch hooks fire on mount).
-let SEARCH_ID_SEQ = 0;
+// Seeded with a random offset so a second mount in the same Splunk Web
+// SUI session (view switch + re-mount) cannot collide with the prior
+// mount's still-cancelling SearchManager IDs in mvc.Components. F-POST-1.
+let SEARCH_ID_SEQ = Math.floor(Math.random() * 1000000);
 
 function formatSplunkTime(raw: string | undefined, kind?: "hms"): string {
-    if (!raw) {
+    if (raw === undefined || raw === null) {
         return "";
+    }
+    if (raw === "") {
+        return "(empty)";
     }
     if (raw.length >= 19 && raw.indexOf("T") === 10) {
         if (kind === "hms") {
@@ -106,7 +112,9 @@ function formatSplunkTime(raw: string | undefined, kind?: "hms"): string {
         return raw.substring(0, 19).replace("T", " ");
     }
     const epoch = parseFloat(raw);
-    if (isFinite(epoch) && epoch > 0) {
+    // Require > 1e9 (~ year 2001) so truncated fragments like "2026"
+    // can't pass and render a 1970 fake date. F-POST-3.
+    if (isFinite(epoch) && epoch > 1e9) {
         const d = new Date(epoch * 1000);
         if (!isNaN(d.getTime())) {
             if (kind === "hms") {
@@ -453,6 +461,18 @@ function RelatedPanel({ state, selectedTraceId }: { state: SearchState; selected
     );
 }
 
+// 150ms debounce so keyboard-driven dropdown spam coalesces into one
+// SearchManager construction (parity with the JS bundle's
+// debouncedRefreshList F-POST-medium fix).
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+    const [debounced, setDebounced] = React.useState<T>(value);
+    React.useEffect(() => {
+        const id = setTimeout(() => setDebounced(value), delayMs);
+        return () => clearTimeout(id);
+    }, [value, delayMs]);
+    return debounced;
+}
+
 function VerdictInspectorView(): React.ReactElement {
     const [earliest, setEarliest] = React.useState<string>("-24h@h");
     const latest = "now";
@@ -462,18 +482,25 @@ function VerdictInspectorView(): React.ReactElement {
     const [verdictLabel, setVerdictLabel] = React.useState<string>("*");
     const [selectedTraceId, setSelectedTraceId] = React.useState<string | null>(null);
 
+    // Debounce filter state changes through to the SPL query so
+    // rapid-fire dropdown changes don't issue 5+ SearchManagers in 200ms.
+    const debouncedAgent = useDebouncedValue(agent, 150);
+    const debouncedRule = useDebouncedValue(ruleSel, 150);
+    const debouncedSeverity = useDebouncedValue(severity, 150);
+    const debouncedVerdictLabel = useDebouncedValue(verdictLabel, 150);
+
     const agentsListState = useSplunkSearch("agents_list", QUERIES.agents_list, earliest, latest, 500, true);
     const rulesListState = useSplunkSearch("rules_list", QUERIES.rules_list, earliest, latest, 200, true);
 
-    const safeAgent = sanitizeSplValue(agent);
-    const safeSeverity = sanitizeSplValue(severity);
-    const safeVerdictLabel = sanitizeSplValue(verdictLabel);
-    const safeRule = sanitizeSplValue(ruleSel);
+    const safeAgent = sanitizeSplValue(debouncedAgent);
+    const safeSeverity = sanitizeSplValue(debouncedSeverity);
+    const safeVerdictLabel = sanitizeSplValue(debouncedVerdictLabel);
+    const safeRule = sanitizeSplValue(debouncedRule);
     const mutatedFilters: string[] = [];
-    if (safeAgent.mutated) { mutatedFilters.push(`agent='${agent}'`); }
-    if (safeSeverity.mutated) { mutatedFilters.push(`severity='${severity}'`); }
-    if (safeVerdictLabel.mutated) { mutatedFilters.push(`verdict='${verdictLabel}'`); }
-    if (safeRule.mutated) { mutatedFilters.push(`rule='${ruleSel}'`); }
+    if (safeAgent.mutated) { mutatedFilters.push(`agent='${debouncedAgent}'`); }
+    if (safeSeverity.mutated) { mutatedFilters.push(`severity='${debouncedSeverity}'`); }
+    if (safeVerdictLabel.mutated) { mutatedFilters.push(`verdict='${debouncedVerdictLabel}'`); }
+    if (safeRule.mutated) { mutatedFilters.push(`rule='${debouncedRule}'`); }
     const tableQuery = QUERIES.table
         .replace("{AGENT}", safeAgent.value)
         .replace("{SEVERITY}", safeSeverity.value)
@@ -521,6 +548,10 @@ function VerdictInspectorView(): React.ReactElement {
         setRuleSel("*");
         setSeverity("*");
         setVerdictLabel("*");
+        // Reset the row selection so an orphaned detail/related panel
+        // doesn't sit there pretending the data is still current after
+        // the list refreshes against different filters. F-POST-2.
+        setSelectedTraceId(null);
     };
 
     return (

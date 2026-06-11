@@ -26,7 +26,10 @@
 
     var MOUNT_ID = "splunkgate-verdict-inspector";
     var SEARCH_TIMEOUT_MS = 30000;
-    var SEARCH_ID_SEQ = 0;
+    // Seed with a random offset so a second mount in the same Splunk Web
+    // SUI session (view switch + re-mount) cannot collide with the prior
+    // mount's still-cancelling SearchManager IDs in mvc.Components. F-POST-1.
+    var SEARCH_ID_SEQ = Math.floor(Math.random() * 1000000);
 
     var QUERIES = {
         agents_list: '`splunkgate_data` | stats values(agent_id) as agent_id | mvexpand agent_id | rename agent_id as label | eval value=label',
@@ -72,22 +75,22 @@
         agentsOptions: [{ value: "*", label: "Any" }],
         rulesOptions: [{ value: "*", label: "Any" }],
         searches: {},
-        listRows: [],
         selectedTraceId: null,
         // Monotonic click sequence so detail+related results never bind to
         // a row the user clicked away from before they returned. Tested
-        // by test_select_row_uses_click_seq.
+        // by test_click_seq_or_enabled_gating + test_select_row_seq_wraps.
         lastClickSeq: 0,
         // Filter-change debounce timer.
         listRefreshTimer: null
     };
 
     // Try to format a Splunk _time string. Accepts ISO-8601 (preferred)
-    // OR a numeric epoch (seconds, with optional fractional). Returns
-    // "unparseable: <raw>" so the analyst SEES that time formatting
-    // failed rather than reading garbage as a clock.
+    // OR a numeric epoch (seconds, with optional fractional). Surfaces
+    // distinct sentinels for missing / empty / unparseable values so an
+    // analyst never confuses "field absent" with "field bad". F-POST-3.
     function formatSplunkTime(raw, kind) {
-        if (!raw) { return ""; }
+        if (raw === undefined || raw === null) { return ""; }
+        if (raw === "") { return "(empty)"; }
         // ISO-8601: 2026-06-11T13:42:01.000+00:00
         if (typeof raw === "string" && raw.length >= 19 && raw.indexOf("T") === 10) {
             if (kind === "hms") {
@@ -96,8 +99,10 @@
             return raw.substring(0, 19).replace("T", " ");
         }
         // Epoch (e.g. "1733932800.000000") — Splunk sometimes returns this.
+        // Require > 1e9 (~ year 2001) so truncated fragments like "2026"
+        // can't pass and render a 1970 fake date.
         var epoch = parseFloat(raw);
-        if (isFinite(epoch) && epoch > 0) {
+        if (isFinite(epoch) && epoch > 1e9) {
             var d = new Date(epoch * 1000);
             if (!isNaN(d.getTime())) {
                 if (kind === "hms") {
@@ -269,7 +274,6 @@
     function renderList(rows) {
         var body = document.getElementById("vi-list-body");
         if (!body) { return; }
-        state.listRows = rows || [];
         if (!rows || rows.length === 0) {
             setPanelEmpty("vi-list-body", "No verdicts match the current filters in the selected time range.");
             updateFooterCount(0);
@@ -291,7 +295,7 @@
             var time = formatSplunkTime(r._time);
             var selectedClass = traceId === state.selectedTraceId ? " vi-row-selected" : "";
             return (
-                '<tr class="vi-row' + selectedClass + '" data-trace-id="' + escapeHtml(traceId) + '" data-row-index="' + i + '">' +
+                '<tr class="vi-row' + selectedClass + '" data-trace-id="' + escapeHtml(traceId) + '">' +
                 '<td class="vi-mono">' + escapeHtml(time) + '</td>' +
                 '<td class="vi-mono">' + escapeHtml(r.agent_id || "") + '</td>' +
                 '<td class="vi-mono">' + escapeHtml(r.surface || "") + '</td>' +
@@ -306,9 +310,11 @@
         }).join("");
         body.innerHTML = '<table class="vi-table"><thead>' + headerCells + '</thead><tbody>' + bodyRows + '</tbody></table>';
         updateFooterCount(rows.length);
-        // Row clicks wired once at mount() via delegation on the persistent
-        // #vi-list-body container — see wireListDelegate(). No per-render
-        // listener attachment needed here.
+        // Row clicks wired once at mount() via delegation on the
+        // #vi-list-body WRAPPER (renderShell). innerHTML of that wrapper
+        // is rewritten on every render/empty/error transition, but the
+        // wrapper element itself persists, so the delegated listener
+        // survives. See wireListDelegate().
     }
 
     function wireListDelegate() {
@@ -441,9 +447,14 @@
         var btn = document.getElementById("vi-trace-copy");
         if (!btn) { return; }
         // Use `onclick =` (single-slot) instead of addEventListener (cumulative)
-        // so re-renders are idempotent even if a future refactor stops doing
-        // full innerHTML replacement on the detail panel.
+        // so re-renders are idempotent. Clear any pending copy-feedback
+        // timer carried over from a previous chip — without this, a
+        // stale 800ms/1500ms timer from the prior detail render can
+        // mutate the new chip's text mid-state. F-POST-4.
+        if (btn._copyTimer) { clearTimeout(btn._copyTimer); btn._copyTimer = null; }
         btn.onclick = function () {
+            // Cancel any in-flight restore timer before we start a new one.
+            if (btn._copyTimer) { clearTimeout(btn._copyTimer); btn._copyTimer = null; }
             var tid = btn.getAttribute("data-trace-id") || "";
             var txt = document.getElementById("vi-trace-text");
             var orig = txt ? txt.textContent : "";
@@ -452,9 +463,10 @@
                 btn.classList.add("vi-copied");
                 if (txt) {
                     txt.textContent = "copied!";
-                    setTimeout(function () {
+                    btn._copyTimer = setTimeout(function () {
+                        btn._copyTimer = null;
                         btn.classList.remove("vi-copied");
-                        txt.textContent = orig;
+                        if (txt.isConnected) { txt.textContent = orig; }
                     }, 800);
                 }
             }).catch(function (err) {
@@ -466,9 +478,10 @@
                 btn.classList.add("vi-copy-failed");
                 if (txt) {
                     txt.textContent = "copy failed — select manually";
-                    setTimeout(function () {
+                    btn._copyTimer = setTimeout(function () {
+                        btn._copyTimer = null;
                         btn.classList.remove("vi-copy-failed");
-                        txt.textContent = orig;
+                        if (txt.isConnected) { txt.textContent = orig; }
                     }, 1500);
                 }
                 if (typeof console !== "undefined" && console.warn) {
@@ -709,6 +722,20 @@
                 fillDropdown("vi-rule", state.rulesOptions, "*");
                 document.getElementById("vi-severity").value = "*";
                 document.getElementById("vi-verdict").value = "*";
+                // Cancel in-flight detail/related searches and reset the
+                // detail/related panels so a now-orphaned selection
+                // doesn't sit there pretending the data is still current.
+                // F-POST-2.
+                cancelAll();
+                state.selectedTraceId = null;
+                var detail = document.getElementById("vi-detail-body");
+                if (detail) {
+                    detail.innerHTML = '<div class="vi-detail-empty">No verdict selected — click a row in the table on the left.</div>';
+                }
+                var related = document.getElementById("vi-related-body");
+                if (related) {
+                    related.innerHTML = '<div class="vi-detail-empty">No trace_id selected.</div>';
+                }
                 refreshList();
             });
         }

@@ -296,18 +296,156 @@ def test_refuses_to_query_mutated_identifiers() -> None:
 
 
 def test_click_seq_or_enabled_gating() -> None:
-    """F2 fix: detail/related results bind to the current click only."""
+    """F2 fix: detail/related results bind to the current click only.
+
+    JS bundle: explicit lastClickSeq epoch.
+    TSX: useEffect cleanup tears down stale searches when query changes
+    (the `query` dep of useSplunkSearch changes when selectedTraceId
+    changes, re-firing the effect which sets `cancelled = true` on the
+    prior closure).
+    """
     js = _BUNDLE_JS.read_text(encoding="utf-8")
     tsx = _DEV_TSX.read_text(encoding="utf-8")
-    # JS bundle: lastClickSeq + per-callback seq comparison.
     assert "lastClickSeq" in js
     assert "seq === state.lastClickSeq" in js
-    # TSX: relies on useEffect's cleanup + the cancelled-flag inside
-    # useSplunkSearch, which is keyed on the query string changing —
-    # so a new selectedTraceId tears down the old hook before the new
-    # one starts.
     assert "detailEnabled" in tsx
     assert "relatedEnabled" in tsx
+
+
+def test_select_row_seq_wraps_all_four_callbacks() -> None:
+    """F2 fix coverage gap (test-analyzer Gap 2): there must be FOUR
+    `seq === state.lastClickSeq` wraps in the JS bundle — detail success,
+    detail error, related success, related error. Removing any one
+    re-introduces the race. Asserts the count is at least 4."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    count = js.count("seq === state.lastClickSeq")
+    assert count >= 4, f"expected ≥4 seq guards, found {count}"
+
+
+def test_select_row_refuses_mutated_trace_id_before_run_search() -> None:
+    """F1 enforcement (test-analyzer Gap 1): the selectRow flow must
+    `return` BEFORE any runSearch call when safe.mutated is true.
+
+    Substring grep of the selectRow function block: the first occurrence
+    of `if (safe.mutated)` must be followed (within the function body)
+    by `return;` before any `runSearch(` call."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    select_row_block = js.split("function selectRow", 1)[1].split("\n    }\n", 1)[0]
+    assert "if (safe.mutated)" in select_row_block, "F1 mutation guard missing in selectRow"
+    pre_runsearch = select_row_block.split("runSearch(", 1)[0]
+    assert "return;" in pre_runsearch, (
+        "F1 regression: selectRow calls runSearch BEFORE checking safe.mutated — "
+        "SPL injection guard is bypassed"
+    )
+
+
+def test_refresh_list_refuses_mutated_filters_before_run_search() -> None:
+    """F1 enforcement (test-analyzer Gap 1 cont'd): refreshList must
+    `return` BEFORE any runSearch call when any filter is mutated."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    block = js.split("function refreshList", 1)[1].split("\n    }\n", 1)[0]
+    assert "mutated.length > 0" in block, "F1 mutation collection missing in refreshList"
+    pre_runsearch = block.split("runSearch(", 1)[0]
+    assert "return;" in pre_runsearch, (
+        "F1 regression: refreshList runs SPL before checking mutated filter values"
+    )
+
+
+def test_tsx_table_gated_on_mutated_filters() -> None:
+    """F1 TSX enforcement: useSplunkSearch('table', ...) must pass
+    `mutatedFilters.length === 0` as its enabled flag."""
+    tsx = _DEV_TSX.read_text(encoding="utf-8")
+    # The table hook line carries the enabled-on-no-mutation contract.
+    table_hook_block = tsx.split('useSplunkSearch("table"', 1)[1].split(";", 1)[0]
+    assert "mutatedFilters.length === 0" in table_hook_block, (
+        "F1 TSX regression: table search ignores mutated-filter refusal"
+    )
+
+
+def test_tsx_detail_related_gated_on_safe_trace_id() -> None:
+    """F1 TSX enforcement: detail+related hooks must check safeTraceId.mutated."""
+    tsx = _DEV_TSX.read_text(encoding="utf-8")
+    assert "!safeTraceId.mutated" in tsx, (
+        "F1 TSX regression: detail/related run even when selectedTraceId is mutated"
+    )
+
+
+def test_search_id_seq_seeded_random() -> None:
+    """F-POST-1 fix: SEARCH_ID_SEQ seeded with a random offset so a second
+    mount in the same Splunk Web SUI session can't collide with prior
+    mounts' still-cancelling SearchManager IDs in mvc.Components."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    tsx = _DEV_TSX.read_text(encoding="utf-8")
+    for src in (js, tsx):
+        assert "SEARCH_ID_SEQ = Math.floor(Math.random()" in src
+
+
+def test_clear_button_resets_selection_and_cancels() -> None:
+    """F-POST-2 fix: Clear button cancels in-flight detail/related searches
+    AND resets selectedTraceId. Without this the detail panel keeps showing
+    stale data for a row that may not exist in the new filter results."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    tsx = _DEV_TSX.read_text(encoding="utf-8")
+    # JS: the clear handler block (between the listener binding and the
+    # outer closing brace) calls cancelAll() and sets selectedTraceId=null.
+    # Split on the click-handler `function ()` start, then take everything
+    # up to the next outer function declaration.
+    clear_handler_block = js.split('getElementById("vi-clear")', 1)[1]
+    clear_handler_block = clear_handler_block.split("\n    }\n", 1)[0]
+    assert "cancelAll()" in clear_handler_block, (
+        f"cancelAll() missing from clear handler block: {clear_handler_block[:300]!r}"
+    )
+    assert "selectedTraceId = null" in clear_handler_block
+    # TSX: onClearFilters calls setSelectedTraceId(null).
+    onclear_block = tsx.split("const onClearFilters", 1)[1].split("};", 1)[0]
+    assert "setSelectedTraceId(null)" in onclear_block
+
+
+def test_format_splunk_time_distinct_sentinels() -> None:
+    """F-POST-3 fix: distinct sentinels for missing / empty / unparseable."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    tsx = _DEV_TSX.read_text(encoding="utf-8")
+    for src in (js, tsx):
+        # Missing → "" (undefined/null guard).
+        assert "raw === undefined" in src
+        assert "raw === null" in src
+        # Empty → "(empty)" so analyst can distinguish from missing field.
+        assert '"(empty)"' in src or "'(empty)'" in src
+        # Epoch floor at 1e9 (~2001) — truncated fragments like "2026"
+        # no longer pass the epoch check.
+        assert "1e9" in src
+
+
+def test_trace_chip_copy_timer_cancellation() -> None:
+    """F-POST-4 fix: the 800ms restore timer is cancelled before a new
+    onclick fires, and the restore checks `isConnected` so a stale timer
+    cannot mutate a detached node."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    assert "btn._copyTimer" in js
+    assert "clearTimeout(btn._copyTimer)" in js
+    assert "txt.isConnected" in js
+
+
+def test_tsx_debounce_parity_with_js() -> None:
+    """Code-reviewer #1 fix: TSX filter changes debounce at 150ms so
+    keyboard-driven dropdown spam doesn't construct 5+ SearchManagers
+    in 200ms (parity with JS bundle's debouncedRefreshList)."""
+    tsx = _DEV_TSX.read_text(encoding="utf-8")
+    assert "useDebouncedValue" in tsx
+    assert "150" in tsx  # the debounce ms
+    assert "debouncedAgent" in tsx
+    assert "debouncedRule" in tsx
+    assert "debouncedSeverity" in tsx
+    assert "debouncedVerdictLabel" in tsx
+
+
+def test_no_dead_state_or_dead_attributes() -> None:
+    """Simplifier #1 fix: state.listRows + data-row-index were leftover
+    from a pre-delegation design. After wireListDelegate, only
+    data-trace-id is read in the click handler."""
+    js = _BUNDLE_JS.read_text(encoding="utf-8")
+    assert "state.listRows" not in js, "dead `listRows` state field re-introduced"
+    assert "data-row-index" not in js, "dead `data-row-index` attribute re-introduced"
 
 
 def test_copy_failure_is_visible() -> None:
