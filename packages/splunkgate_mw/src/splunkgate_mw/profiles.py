@@ -28,8 +28,11 @@ from __future__ import annotations
 
 from typing import Final, Literal
 
+import structlog
 from pydantic import BaseModel, ConfigDict
 from splunkgate_core.errors import UnknownProfile
+
+_logger = structlog.get_logger(__name__)
 
 __all__ = [
     "DEFAULT_PROFILE",
@@ -37,6 +40,7 @@ __all__ = [
     "HEALTHCARE_PROFILE",
     "PUBLIC_SECTOR_PROFILE",
     "Profile",
+    "log_if_custom_profile_shadows_canonical",
     "resolve_profile",
 ]
 
@@ -109,12 +113,51 @@ def resolve_profile(name_or_profile: str | Profile) -> Profile:
 
     Passing a `Profile` instance is the identity — same object back.
     Passing a string looks the profile up in the canonical registry;
-    unknown names raise `UnknownProfile` so a typo surfaces at
-    construction time rather than silently degrading to defaults.
+    unknown names raise `UnknownProfile` carrying the live valid-name
+    tuple so a typo surfaces at construction time rather than silently
+    degrading to defaults.
     """
     if isinstance(name_or_profile, Profile):
         return name_or_profile
     try:
         return _BY_NAME[name_or_profile]
     except KeyError as exc:
-        raise UnknownProfile(name_or_profile) from exc
+        raise UnknownProfile(name_or_profile, valid=tuple(_BY_NAME)) from exc
+
+
+def log_if_custom_profile_shadows_canonical(profile: Profile, *, owner: str) -> None:
+    """Log a warning when a Profile instance claims a canonical name but differs from the singleton.
+
+    A regulated-industry deployment that constructs
+    `Profile(name="healthcare", rules_post_inference=())` to "customise"
+    HIPAA wedge produces a Verdict with `splunkgate.profile=healthcare`
+    in Splunk while sending an empty rule set to AI Defense — the SOC
+    dashboard claims an enforcement posture that does not exist. This
+    helper does not block the construction (legitimate per-tenant
+    overrides exist) but emits a single warning at middleware
+    `__init__` so the divergence lands in the structlog stream and
+    operators can audit it. `owner` is the middleware class name so the
+    log line is easy to filter on.
+    """
+    canonical = _BY_NAME.get(profile.name)
+    if canonical is None or canonical is profile:
+        return
+    drift_fields: dict[str, object] = {}
+    for field in (
+        "rules_pre_inference",
+        "rules_post_inference",
+        "rules_tool_call",
+        "escalate_on_first_pass_hit",
+        "foundation_sec_enabled",
+    ):
+        canonical_value = getattr(canonical, field)
+        profile_value = getattr(profile, field)
+        if canonical_value != profile_value:
+            drift_fields[field] = {"canonical": canonical_value, "profile": profile_value}
+    if drift_fields:
+        _logger.warning(
+            "profile.custom_instance_shadows_canonical_name",
+            owner=owner,
+            profile=profile.name,
+            drift=drift_fields,
+        )

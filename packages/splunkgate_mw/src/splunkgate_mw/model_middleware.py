@@ -35,7 +35,7 @@ from splunkgate_mw._first_pass import (
 )
 from splunkgate_mw._post_inference import post_inference_scan
 from splunkgate_mw.config import Config
-from splunkgate_mw.profiles import Profile, resolve_profile
+from splunkgate_mw.profiles import Profile, log_if_custom_profile_shadows_canonical, resolve_profile
 
 if TYPE_CHECKING:
     from splunkgate_judges.ai_defense_types import InspectRequest, InspectResponse
@@ -104,17 +104,21 @@ async def pre_inference_scan(
         return _splunklib_block_verdict(trace_uuid, now, profile)
 
     from splunkgate_judges.ai_defense_types import (  # noqa: PLC0415
-        AIDefenseRule,
-        EnabledRule,
         InspectConfig,
         InspectMessage,
         InspectRequest,
     )
 
+    from splunkgate_mw._rule_mapping import profile_rules_to_enabled_rules  # noqa: PLC0415
+
     req = InspectRequest(
         messages=[InspectMessage(role="user", content=text)],
         config=InspectConfig(
-            enabled_rules=[EnabledRule(rule_name=AIDefenseRule.PROMPT_INJECTION)],
+            enabled_rules=profile_rules_to_enabled_rules(
+                profile.rules_pre_inference,
+                profile_name=profile.name,
+                surface="mw_model_pre",
+            ),
         ),
     )
     resp = await ai_defense.inspect_chat(req, trace_id=trace_id)
@@ -148,6 +152,7 @@ class SafetyModelMiddleware(AgentMiddleware):  # type: ignore[misc]
         """Wire profile + config + optional AI Defense client (None = no escalation)."""
         self._config: Config = config if config is not None else Config()
         self._profile = resolve_profile(profile)
+        log_if_custom_profile_shadows_canonical(self._profile, owner="SafetyModelMiddleware")
         self._ai_defense = ai_defense
         self._logger = structlog.get_logger("SafetyModelMiddleware").bind(
             profile=self._profile.name

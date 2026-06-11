@@ -31,13 +31,6 @@ __all__ = ["post_inference_scan"]
 
 _logger = structlog.get_logger(__name__)
 
-_OUTPUT_SENSITIVE_RULES: tuple[str, ...] = (
-    "PII",
-    "PHI",
-    "PCI",
-    "Code Detection",
-)
-
 
 def _extract_output_text(response: "ModelResponse") -> str:
     """Return the concatenated text content of an AIMessage.
@@ -98,14 +91,18 @@ async def post_inference_scan(
 
     # Lazy import keeps splunkgate_mw decoupled from splunkgate_judges at module load.
     from splunkgate_judges.ai_defense_types import (  # noqa: PLC0415
-        AIDefenseRule,
-        EnabledRule,
         InspectConfig,
         InspectMessage,
         InspectRequest,
     )
 
-    enabled_rules = [EnabledRule(rule_name=AIDefenseRule(name)) for name in _OUTPUT_SENSITIVE_RULES]
+    from splunkgate_mw._rule_mapping import profile_rules_to_enabled_rules  # noqa: PLC0415
+
+    enabled_rules = profile_rules_to_enabled_rules(
+        profile.rules_post_inference,
+        profile_name=profile.name,
+        surface="mw_model_post",
+    )
     req = InspectRequest(
         messages=[InspectMessage(role="assistant", content=text)],
         config=InspectConfig(enabled_rules=enabled_rules),

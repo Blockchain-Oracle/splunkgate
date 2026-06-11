@@ -51,7 +51,7 @@ from splunklib.ai.middleware import AgentMiddleware, AgentRequest
 
 from splunkgate_mw._fail_closed import safe_emit
 from splunkgate_mw.config import Config
-from splunkgate_mw.profiles import Profile, resolve_profile
+from splunkgate_mw.profiles import Profile, log_if_custom_profile_shadows_canonical, resolve_profile
 
 if TYPE_CHECKING:
     from contextvars import Token
@@ -112,6 +112,7 @@ class SafetyAgentMiddleware(AgentMiddleware):  # type: ignore[misc]
         """Wire profile + config + structlog binder for the session."""
         self._config: Config = config if config is not None else Config()
         self._profile = resolve_profile(profile)
+        log_if_custom_profile_shadows_canonical(self._profile, owner="SafetyAgentMiddleware")
         self._logger = structlog.get_logger("SafetyAgentMiddleware").bind(
             profile=self._profile.name,
         )

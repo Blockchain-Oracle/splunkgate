@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -19,6 +20,7 @@ from splunkgate_mw import (
     SafetyToolMiddleware,
     resolve_profile,
 )
+from splunkgate_mw._rule_mapping import profile_rules_to_enabled_rules
 
 ALL_PROFILES = (
     DEFAULT_PROFILE,
@@ -161,14 +163,98 @@ def test_middleware_constructors_reject_unknown_profile_string() -> None:
             cls(profile="banking")
 
 
-def test_support_agent_demo_body_under_30_loc() -> None:
-    """BDD criterion 7 — demo body grep ≤30 lines."""
+def test_support_agent_demo_body_under_30_loc_via_shell_grep() -> None:
+    """BDD criterion 7 — demo body grep ≤30 lines via the literal shell pipeline.
+
+    Spec line 143-145 names the literal `grep -v -E '...' | wc -l` command.
+    Run that exact pipeline via subprocess so a future refactor can't
+    drift the assertion semantics away from the CI verification script.
+    """
     demo = Path(__file__).parent.parent / "examples" / "support_agent.py"
-    body_lines = [
-        line
-        for line in demo.read_text().splitlines()
-        if line.strip() and not line.lstrip().startswith(("#", "from ", "import "))
-    ]
-    assert len(body_lines) <= 30, (
-        f"support_agent.py body is {len(body_lines)} non-blank non-comment non-import lines"
+    result = subprocess.run(
+        ["bash", "-c", f"grep -v -E '^\\s*(#|$|from |import )' {demo} | wc -l"],
+        check=True,
+        capture_output=True,
+        text=True,
     )
+    body_lines = int(result.stdout.strip())
+    assert body_lines <= 30, f"support_agent.py body is {body_lines} lines via spec-shell grep"
+
+
+def test_profile_rules_to_enabled_rules_filters_non_canonical() -> None:
+    """Sensitive Data + Jailbreak (DefenseClaw-only) must drop; canonical 11 must pass through."""
+    out = profile_rules_to_enabled_rules(
+        ("PCI", "Sensitive Data", "Code Detection", "Jailbreak", "Prompt Injection"),
+        profile_name="financial_services",
+        surface="mw_model_post",
+    )
+    out_names = [r.rule_name.value for r in out]
+    assert out_names == ["PCI", "Code Detection", "Prompt Injection"]
+
+
+def test_profile_rules_to_enabled_rules_empty_input_returns_empty_list() -> None:
+    """An empty profile tuple produces an empty list (caller chooses AI Defense default)."""
+    out = profile_rules_to_enabled_rules((), profile_name="default", surface="mw_tool")
+    assert out == []
+
+
+def test_financial_services_post_inference_maps_to_three_canonical_rules() -> None:
+    """The FSI post-inference subset has 1 DefenseClaw-only (Sensitive Data); 3 canonical land at AI Defense."""
+    out = profile_rules_to_enabled_rules(
+        FINANCIAL_SERVICES_PROFILE.rules_post_inference,
+        profile_name=FINANCIAL_SERVICES_PROFILE.name,
+        surface="mw_model_post",
+    )
+    assert {r.rule_name.value for r in out} == {"PCI", "PII", "Code Detection"}
+
+
+def test_healthcare_tool_call_subset_maps_to_two_canonical_rules() -> None:
+    """HIPAA tool-call: both PHI and Prompt Injection are canonical AI Defense rules."""
+    out = profile_rules_to_enabled_rules(
+        HEALTHCARE_PROFILE.rules_tool_call,
+        profile_name=HEALTHCARE_PROFILE.name,
+        surface="mw_tool",
+    )
+    assert {r.rule_name.value for r in out} == {"Prompt Injection", "PHI"}
+
+
+def test_unknown_profile_carries_live_valid_tuple() -> None:
+    """UnknownProfile.valid reads from the live registry, not a stale hardcoded list."""
+    with pytest.raises(UnknownProfile) as exc_info:
+        resolve_profile("nonsense")
+    assert set(exc_info.value.valid) == {
+        "default",
+        "financial_services",
+        "healthcare",
+        "public_sector",
+    }
+    assert "default" in str(exc_info.value)
+
+
+def test_custom_profile_shadowing_canonical_name_warns(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A Profile(name='healthcare', rules_*=()) must produce a structlog warning at middleware __init__.
+
+    structlog by default writes to stdout via ConsoleRenderer; capture
+    via `capsys` rather than caplog because the binding doesn't flow
+    through stdlib logging in this project's config.
+    """
+    rogue = Profile(
+        name="healthcare",
+        description="custom",
+        rules_post_inference=(),  # PHI removed — silent enforcement gap
+    )
+    SafetyToolMiddleware(profile=rogue)
+    captured = capsys.readouterr()
+    assert "profile.custom_instance_shadows_canonical_name" in captured.out
+    assert "rules_post_inference" in captured.out  # drift detail surfaces
+
+
+def test_canonical_profile_passed_through_does_not_warn(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Passing the canonical FSI singleton does not produce a drift warning."""
+    SafetyToolMiddleware(profile=FINANCIAL_SERVICES_PROFILE)
+    captured = capsys.readouterr()
+    assert "profile.custom_instance_shadows_canonical_name" not in captured.out

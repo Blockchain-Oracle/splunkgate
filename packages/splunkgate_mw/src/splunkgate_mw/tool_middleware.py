@@ -42,7 +42,7 @@ from splunkgate_mw._fail_closed import (
 )
 from splunkgate_mw._sanitize import compose_sanitized, is_supported_rule, sanitize_args
 from splunkgate_mw.config import Config
-from splunkgate_mw.profiles import Profile, resolve_profile
+from splunkgate_mw.profiles import Profile, log_if_custom_profile_shadows_canonical, resolve_profile
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -255,7 +255,14 @@ async def judge_tool_call(
         if not config.escalate_on_first_pass_hit or ai_defense is None:
             return _cheap_only_verdict(cheap_hit, ctx)
 
-        response = await run_escalation(call, cheap_hit, ai_defense, trace_uuid)
+        response = await run_escalation(
+            call,
+            cheap_hit,
+            ai_defense,
+            trace_uuid,
+            rules_tool_call=profile.rules_tool_call,
+            profile_name=profile.name,
+        )
         ctx = _build_ctx(
             trace_uuid=trace_uuid,
             now=now,
@@ -297,6 +304,7 @@ class SafetyToolMiddleware(AgentMiddleware):  # type: ignore[misc]
         """Wire profile + config + optional AI Defense client (None = no escalation)."""
         self._config: Config = config if config is not None else Config()
         self._profile = resolve_profile(profile)
+        log_if_custom_profile_shadows_canonical(self._profile, owner="SafetyToolMiddleware")
         self._ai_defense = ai_defense
         self._logger = structlog.get_logger("SafetyToolMiddleware").bind(profile=self._profile.name)
 
