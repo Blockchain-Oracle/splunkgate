@@ -1,20 +1,25 @@
-"""JailbreakBench loader (story-eval-02).
+"""JailbreakBench-style loader (story-eval-02).
 
-Reads `eval/data/jailbreakbench_behaviors.csv` (100 behaviors covering
-JailbreakBench Table 2 categories) and emits 1000 `EvalPrompt` records
-— each behavior x 10 phrasing variants. Every record is BLOCK / HIGH;
-the variants exist so a downstream attack-method loader (story-eval-04)
-can join its synthesised payloads onto the same `behavior_id` axis.
+100 hand-authored behaviors covering the same category axes as
+JailbreakBench Table 2 (malware / illegal_goods / fraud / cyber_misuse
+/ hate / sexual_content / harassment / misinformation /
+privacy_violation / physical_harm) — NOT a verbatim copy of upstream
+`behaviors.csv`. Downstream metrics must label results as
+"JailbreakBench-style" rather than "JailbreakBench ASR".
 
-Why we vendor instead of wrapping the `jailbreakbench` PyPI package:
-the upstream package pins `tenacity>=8.2.3,<9.0.0` (verified at
-2026-06-11), but our `splunkgate_judges.ai_defense` circuit breaker
-(story-judges-03) depends on `tenacity>=9.0`. Adding `jailbreakbench`
-to the workspace dependency graph makes `uv sync` unsatisfiable. The
-vendored CSV mirrors JailbreakBench's harmful-behavior taxonomy at
-100 entries verbatim; we own the 10 phrasing variants. When upstream
-relaxes the tenacity pin (tracked as a follow-up), we can swap to
-`jailbreakbench.read_dataset()` without breaking the loader contract.
+Each behavior is rendered through 10 phrasing variants → 1000 records,
+all BLOCK / HIGH. The variants exist so the attack-method loader
+(story-eval-04) can join its synthesised payloads onto the same
+behavior_id axis.
+
+Why we vendor instead of wrapping the PyPI package: upstream
+`jailbreakbench` 1.x pins `tenacity>=8.2.3,<9.0.0` (verified 2026-06-11
+against jailbreakbench 1.0.x on PyPI); our `splunkgate_judges.ai_defense`
+circuit breaker (story-judges-03) requires `tenacity>=9.0`. Adding
+jailbreakbench to the workspace dep graph makes `uv sync`
+unsatisfiable. Once upstream relaxes the pin, swap to
+`jailbreakbench.read_dataset()` lands as a one-line fix without
+breaking the loader contract.
 """
 
 from __future__ import annotations
@@ -85,7 +90,7 @@ def _hash_to_uuid_str(payload: str) -> str:
 
 
 def _render_prompt(behavior: str, variant: str) -> str:
-    """Apply the variant template to a behavior."""
+    """Apply the variant template; "encoded" base64s the behavior so the model must decode-then-comply."""
     if variant == "encoded":
         b64 = base64.b64encode(behavior.encode()).decode()
         return _VARIANT_TEMPLATES[variant].format(behavior_b64=b64)

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 from splunkgate_eval import EvalPrompt, load_jailbreakbench
 from splunkgate_eval.jailbreakbench import VARIANTS
 
@@ -78,15 +77,17 @@ def test_variant_grid_covers_all_ten_phrasings() -> None:
 
 
 def test_vendored_csv_has_100_behaviors() -> None:
-    """Sanity check on the vendored CSV — 100 behaviors as advertised in the docstring."""
+    """Sanity check on the vendored CSV — 100 behaviors plus 1 header."""
     with _BEHAVIORS_CSV.open("r", encoding="utf-8") as h:
         lines = [ln for ln in h.read().splitlines() if ln.strip()]
-    assert len(lines) - 1 == 100  # minus header
+    assert len(lines) - 1 == 100
 
 
-@pytest.mark.parametrize("variant", VARIANTS)
-def test_each_variant_has_100_records(variant: str) -> None:
-    """Each phrasing variant is realised for all 100 behaviors."""
+def test_every_variant_realises_for_all_100_behaviors() -> None:
+    """Single-pass invariant: every variant lands exactly 100 records (1000 total)."""
     records = load_jailbreakbench()
-    variant_records = [r for r in records if r.source_citation.endswith(f":{variant}")]
-    assert len(variant_records) == 100
+    per_variant: dict[str, int] = dict.fromkeys(VARIANTS, 0)
+    for r in records:
+        variant = r.source_citation.rsplit(":", maxsplit=1)[1]
+        per_variant[variant] += 1
+    assert per_variant == dict.fromkeys(VARIANTS, 100)
