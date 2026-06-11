@@ -134,65 +134,86 @@ class AIDefenseClient:
                 state=self._breaker.state,
             )
             raise AIDefenseCircuitOpenError(_MSG_CIRCUIT_OPEN)
+        # Track whether a terminal record_*/release was called so the
+        # finally block can refund a HALF_OPEN probe slot on the bypass
+        # paths (auth errors, malformed-body parse, asyncio.CancelledError,
+        # any other unexpected exception). Without this the probe slot
+        # leaks and the breaker is stuck HALF_OPEN forever. (PR #126 review.)
+        breaker_resolved = False
         start = time.perf_counter()
         try:
-            response = await self._post_with_retry(request, trace_id=trace_id)
-        except RetryError as exc:
-            # Tenacity exhausted its 3 retries. Tell the breaker — this is
-            # ONE failure from its perspective, not three. The breaker's
-            # mental model is "the endpoint is down", not "the retry loop
-            # failed".
-            await self._breaker.record_failure()
-            inner = exc.last_attempt.exception()
-            if isinstance(inner, httpx.TimeoutException):
-                raise AIDefenseTimeoutError(_MSG_TIMEOUT_AFTER_RETRIES) from exc
-            msg = f"Cisco AI Defense Inspection API failed after retries: {inner!r}"
-            raise AIDefenseUpstreamError(msg) from exc
+            try:
+                response = await self._post_with_retry(request, trace_id=trace_id)
+            except RetryError as exc:
+                # Tenacity exhausted its 3 retries. Tell the breaker — this
+                # is ONE failure from its perspective, not three.
+                await self._breaker.record_failure()
+                breaker_resolved = True
+                inner = exc.last_attempt.exception()
+                if isinstance(inner, httpx.TimeoutException):
+                    raise AIDefenseTimeoutError(_MSG_TIMEOUT_AFTER_RETRIES) from exc
+                if isinstance(inner, AIDefenseUpstreamError):
+                    # Re-raise the original error preserving its message —
+                    # don't double-wrap it inside another AIDefenseUpstreamError.
+                    raise inner from exc
+                if inner is None:
+                    msg = "Cisco AI Defense retry loop ended without an exception"
+                    raise AIDefenseUpstreamError(msg) from exc
+                msg = f"Cisco AI Defense Inspection API failed after retries: {inner!r}"
+                raise AIDefenseUpstreamError(msg) from exc
 
-        latency_ms = (time.perf_counter() - start) * 1000
-        if response.status_code in _AUTH_STATUS:
-            _logger.warning(
-                "aidefense.request.failure",
+            latency_ms = (time.perf_counter() - start) * 1000
+            if response.status_code in _AUTH_STATUS:
+                _logger.warning(
+                    "aidefense.request.failure",
+                    trace_id=trace_id,
+                    region=self._region,
+                    status_code=response.status_code,
+                    latency_ms=latency_ms,
+                )
+                msg = (
+                    f"Cisco AI Defense returned {response.status_code}: "
+                    "bad api_key or missing entitlement"
+                )
+                raise AIDefenseAuthError(msg)
+            if _HTTP_4XX_FLOOR <= response.status_code < _HTTP_5XX_FLOOR:
+                _logger.warning(
+                    "aidefense.request.failure",
+                    trace_id=trace_id,
+                    region=self._region,
+                    status_code=response.status_code,
+                    latency_ms=latency_ms,
+                )
+                msg = (
+                    f"Cisco AI Defense returned client error {response.status_code}: "
+                    f"{response.text[:200]}"
+                )
+                raise AIDefenseUpstreamError(msg)
+
+            parsed = InspectResponse.model_validate_json(response.content)
+            # Tell the breaker — a complete-and-parseable 2xx is a real
+            # upstream success. Auth/4xx errors above raise before reaching
+            # here and are NOT counted as breaker successes OR failures (they
+            # mean "the credential is bad", not "the endpoint is down").
+            await self._breaker.record_success()
+            breaker_resolved = True
+            _logger.info(
+                "aidefense.request.success",
                 trace_id=trace_id,
                 region=self._region,
-                status_code=response.status_code,
+                rules_count=len(parsed.rules),
+                severity=parsed.severity.value,
+                is_safe=parsed.is_safe,
                 latency_ms=latency_ms,
             )
-            msg = (
-                f"Cisco AI Defense returned {response.status_code}: "
-                "bad api_key or missing entitlement"
-            )
-            raise AIDefenseAuthError(msg)
-        if _HTTP_4XX_FLOOR <= response.status_code < _HTTP_5XX_FLOOR:
-            _logger.warning(
-                "aidefense.request.failure",
-                trace_id=trace_id,
-                region=self._region,
-                status_code=response.status_code,
-                latency_ms=latency_ms,
-            )
-            msg = (
-                f"Cisco AI Defense returned client error {response.status_code}: "
-                f"{response.text[:200]}"
-            )
-            raise AIDefenseUpstreamError(msg)
-
-        parsed = InspectResponse.model_validate_json(response.content)
-        # Tell the breaker — a complete-and-parseable 2xx is a real
-        # upstream success. Auth/4xx errors above raise before reaching
-        # here and are NOT counted as breaker successes OR failures (they
-        # mean "the credential is bad", not "the endpoint is down").
-        await self._breaker.record_success()
-        _logger.info(
-            "aidefense.request.success",
-            trace_id=trace_id,
-            region=self._region,
-            rules_count=len(parsed.rules),
-            severity=parsed.severity.value,
-            is_safe=parsed.is_safe,
-            latency_ms=latency_ms,
-        )
-        return parsed
+            return parsed
+        finally:
+            # Any exception path that bypassed record_success/record_failure
+            # (auth errors, 4xx, malformed-body parse, CancelledError, …)
+            # would otherwise leak a HALF_OPEN probe slot and brick the
+            # breaker. Release it explicitly.
+            if not breaker_resolved:
+                await self._breaker.release_probe()
 
     async def aclose(self) -> None:
         """Close the underlying httpx client."""

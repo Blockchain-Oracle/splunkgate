@@ -224,3 +224,60 @@ async def test_default_time_source_is_monotonic() -> None:
     # Smoke — default time_source resolves to time.monotonic without crashing.
     cb = CircuitBreaker()
     assert await cb.allow_request() is True
+
+
+# ── PR #126 review fixes ─────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_release_probe_refunds_half_open_slot() -> None:
+    """release_probe() lets a subsequent caller acquire the probe slot."""
+    clock, now = _make_clock()
+    cb = CircuitBreaker(
+        failure_threshold=3,
+        open_duration_s=30.0,
+        half_open_probe_count=1,
+        time_source=now,
+    )
+    for _ in range(3):
+        await cb.record_failure()
+    clock[0] = 30.1
+    assert await cb.allow_request() is True  # probe consumed
+    assert await cb.allow_request() is False  # cap reached
+    await cb.release_probe()
+    assert await cb.allow_request() is True  # refunded
+
+
+@pytest.mark.asyncio
+async def test_release_probe_is_noop_when_not_half_open() -> None:
+    cb = CircuitBreaker()
+    await cb.release_probe()  # no exception, no state change
+    assert cb.state == "CLOSED"
+
+
+@pytest.mark.asyncio
+async def test_record_failure_in_open_does_not_extend_timer() -> None:
+    """The recovery clock is sacrosanct — duplicate failures in OPEN do not push it out."""
+    clock, now = _make_clock()
+    cb = CircuitBreaker(failure_threshold=3, open_duration_s=30.0, time_source=now)
+    for _ in range(3):
+        await cb.record_failure()
+    assert cb.state == "OPEN"
+    # A duplicate record_failure 20s in does NOT reset the 30s timer.
+    clock[0] = 20.0
+    await cb.record_failure()
+    clock[0] = 30.1
+    assert await cb.allow_request() is True  # would be False if timer had been reset
+    assert cb.state == "HALF_OPEN"
+
+
+@pytest.mark.asyncio
+async def test_duplicate_failure_in_open_logs_warning() -> None:
+    cb = CircuitBreaker(failure_threshold=3)
+    for _ in range(3):
+        await cb.record_failure()
+    structlog.configure(processors=[structlog.processors.JSONRenderer()])
+    with capture_logs() as logs:
+        await cb.record_failure()
+    warned = [log for log in logs if log.get("event") == "aidefense.cb.duplicate_failure_in_open"]
+    assert len(warned) == 1

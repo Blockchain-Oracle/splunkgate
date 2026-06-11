@@ -17,7 +17,11 @@ import respx
 if TYPE_CHECKING:
     from collections.abc import Callable
 from splunkgate_judges._circuit_breaker import CircuitBreaker
-from splunkgate_judges._errors import AIDefenseCircuitOpenError, AIDefenseUpstreamError
+from splunkgate_judges._errors import (
+    AIDefenseAuthError,
+    AIDefenseCircuitOpenError,
+    AIDefenseUpstreamError,
+)
 from splunkgate_judges._regions import REGION_BASE_URLS
 from splunkgate_judges.ai_defense import AIDefenseClient
 from splunkgate_judges.ai_defense_types import InspectMessage, InspectRequest
@@ -169,7 +173,39 @@ async def test_independent_breakers_across_regions() -> None:
                 with pytest.raises(AIDefenseUpstreamError):
                     await client_us.inspect_chat(_sample_request())
             assert breaker_us.state == "OPEN"
-            # eu is unaffected.
+            # eu is unaffected — both state AND internal failure counter.
             response = await client_eu.inspect_chat(_sample_request())
             assert response.is_safe is True
             assert breaker_eu.state == "CLOSED"
+            assert breaker_eu._failure_count == 0  # noqa: SLF001 — invariant lock
+
+
+@pytest.mark.asyncio
+async def test_auth_error_in_half_open_releases_probe_slot() -> None:
+    """An auth error during a HALF_OPEN probe must NOT leak the probe slot.
+
+    Regression test for the PR #126 silent-failure finding: without the
+    finally-block probe release, a 401 during recovery left the breaker
+    stuck HALF_OPEN with all slots consumed.
+    """
+    clock, now = _make_clock()
+    breaker = CircuitBreaker(failure_threshold=3, open_duration_s=30.0, time_source=now)
+    async with AIDefenseClient(API_KEY, region="us", circuit_breaker=breaker) as client:
+        with respx.mock() as router:
+            # Trip the breaker with 3x503 then swap in a 401 for the probe.
+            route = router.post(URL)
+            route.mock(return_value=httpx.Response(503))
+            for _ in range(3):
+                with pytest.raises(AIDefenseUpstreamError):
+                    await client.inspect_chat(_sample_request())
+            assert breaker.state == "OPEN"
+            route.mock(return_value=httpx.Response(401))
+            clock[0] = 30.1
+            with pytest.raises(AIDefenseAuthError):
+                await client.inspect_chat(_sample_request())
+            # Without the release: stuck HALF_OPEN with probe slot consumed.
+            # With the fix: probe was released, so a second call can also probe.
+            assert breaker.state == "HALF_OPEN"
+            assert breaker._in_flight_probes == 0  # noqa: SLF001 — invariant lock
+            with pytest.raises(AIDefenseAuthError):
+                await client.inspect_chat(_sample_request())

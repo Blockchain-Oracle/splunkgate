@@ -147,27 +147,56 @@ class CircuitBreaker:
 
         From CLOSED: increment the failure counter; trip OPEN at threshold.
         From HALF_OPEN: re-open (the probe failed); restart the open timer.
-        From OPEN: ignored. Caller bypassed allow_request().
+        From OPEN: log + no-op. We deliberately do NOT touch _opened_at —
+        the recovery clock is sacrosanct so it's predictable in the Splunk
+        dashboard. (PR #126 review: silent timer extension here was an
+        observability footgun.)
         """
         async with self._lock:
             if self._state == "CLOSED":
                 self._failure_count += 1
                 if self._failure_count >= self._failure_threshold:
                     self._transition_to("OPEN")
-                    self._opened_at = self._time_source()
                 return
             if self._state == "HALF_OPEN":
                 self._in_flight_probes = max(0, self._in_flight_probes - 1)
                 self._transition_to("OPEN")
-                self._opened_at = self._time_source()
                 return
-            # OPEN: failure recorded while already OPEN — log and reset
-            # the open timer so we don't half-open against a still-broken
-            # upstream just because the original timer is expiring.
-            self._opened_at = self._time_source()
+            # OPEN: caller bypassed allow_request(). Log so the next
+            # operator can find the buggy integration; do not touch state.
+            _logger.warning(
+                "aidefense.cb.duplicate_failure_in_open",
+                state=self._state,
+                failure_count=self._failure_count,
+            )
+
+    async def release_probe(self) -> None:
+        """Refund a HALF_OPEN probe slot without recording success or failure.
+
+        Called from `AIDefenseClient.inspect_chat` in `finally` when the
+        request raised an exception path that does NOT semantically belong
+        to the breaker's failure model (auth errors, malformed-body parse
+        errors, asyncio.CancelledError, etc.). Without this, those paths
+        leak `_in_flight_probes` and the breaker is stuck in HALF_OPEN
+        with all slots consumed.
+
+        No-op when not in HALF_OPEN.
+        """
+        async with self._lock:
+            if self._state == "HALF_OPEN" and self._in_flight_probes > 0:
+                self._in_flight_probes -= 1
+                _logger.debug(
+                    "aidefense.cb.probe_released",
+                    in_flight=self._in_flight_probes,
+                )
 
     def _transition_to(self, new_state: CircuitState) -> None:
-        """Emit a structlog event for every state change.
+        """Emit a structlog event for every state change + maintain invariants.
+
+        Sets `_opened_at` on entry to OPEN and clears it on entry to CLOSED.
+        Keeping all state-related side-effects here makes future state-change
+        additions safer — callers don't have to remember to also set
+        `_opened_at` after calling this method.
 
         Event keys are stable for downstream Splunk parsing:
         `event`, `state_from`, `state_to`, `failure_count`, `since_open_s`.
@@ -189,13 +218,14 @@ class CircuitBreaker:
             failure_count=self._failure_count,
             since_open_s=since_open_s,
         )
-        prev_state = self._state
         self._state = new_state
         if new_state == "CLOSED":
             self._failure_count = 0
             self._opened_at = None
             self._in_flight_probes = 0
-        elif new_state == "OPEN" and prev_state == "HALF_OPEN":
-            # HALF_OPEN -> OPEN: reset probe slot but keep failure counter
-            # (the half-open probe's failure was already counted upstream).
+        elif new_state == "OPEN":
+            # The recovery clock starts here. Set unconditionally so the
+            # CLOSED->OPEN and HALF_OPEN->OPEN paths both behave correctly
+            # without each caller remembering to set _opened_at.
+            self._opened_at = self._time_source()
             self._in_flight_probes = 0
