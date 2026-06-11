@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTheme } from "@/components/hooks/useTheme";
 import { useScrollSpy } from "@/components/hooks/useScrollSpy";
+import { useBodyScrollLock } from "@/components/hooks/useBodyScrollLock";
 import { DocsTopBar } from "@/components/docs/DocsTopBar";
 import { DocsSidebar } from "@/components/docs/DocsSidebar";
 import { DocsContent } from "@/components/docs/DocsContent";
@@ -10,10 +11,12 @@ import { DOCS_IDS, DOCS_NAV } from "@/lib/docs-nav";
 
 const TOC_FLAT = DOCS_NAV.flatMap((g) => g.items);
 
+
 export default function DocsPage() {
   const { theme, toggle } = useTheme();
   const active = useScrollSpy(DOCS_IDS);
   const [menu, setMenu] = useState(false);
+  useBodyScrollLock(menu);
 
   return (
     <div
@@ -27,9 +30,13 @@ export default function DocsPage() {
         <DocsContent />
         <nav className="docs-toc">
           <h5>On this page</h5>
-          {TOC_FLAT.map(([id, label]) => (
-            <a key={id} href={`#${id}`} className={active === id ? "active" : ""}>
-              {label}
+          {TOC_FLAT.map((item) => (
+            <a
+              key={item.id}
+              href={`#${item.id}`}
+              className={active === item.id ? "active" : ""}
+            >
+              {item.label}
             </a>
           ))}
         </nav>

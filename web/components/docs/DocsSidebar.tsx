@@ -10,16 +10,16 @@ export function DocsSidebar({ active, open, onNav }: DocsSidebarProps) {
   return (
     <aside className={"docs-side" + (open ? " open" : "")}>
       {DOCS_NAV.map((grp) => (
-        <div className="docs-side-group" key={grp.g}>
-          <h4>{grp.g}</h4>
-          {grp.items.map(([id, label]) => (
+        <div className="docs-side-group" key={grp.group}>
+          <h4>{grp.group}</h4>
+          {grp.items.map((item) => (
             <a
-              key={id}
-              href={`#${id}`}
-              className={active === id ? "active" : ""}
+              key={item.id}
+              href={`#${item.id}`}
+              className={active === item.id ? "active" : ""}
               onClick={onNav}
             >
-              {label}
+              {item.label}
             </a>
           ))}
         </div>

@@ -6,7 +6,7 @@ export const AG_LINKS = {
   eupen: "https://artificialintelligenceact.eu/article/99/",
   sr262: "https://www.federalreserve.gov/supervisionreg/srletters/srletters.htm",
   cisco: "https://www.cisco.com/site/us/en/products/security/ai-defense/index.html",
-  foundsec: "https://huggingface.co/fdtn-ai/Foundation-Sec-8B-Instruct",
+  foundsec: "https://huggingface.co/fdtn-ai/Foundation-Sec-1.1-8B-Instruct",
   otel: "https://opentelemetry.io/docs/specs/semconv/gen-ai/",
   mcp: "https://modelcontextprotocol.io/",
   splunk7404: "https://splunkbase.splunk.com/app/7404",

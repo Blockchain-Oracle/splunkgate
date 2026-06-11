@@ -5,18 +5,24 @@ import { AG_LINKS } from "@/lib/links";
 import { EXAMPLE_VERDICT } from "@/lib/verdict-data";
 import { jsonHighlight } from "@/lib/highlight";
 
-type Row = [string, string, string?];
+interface DetailRow {
+  field: string;
+  value: string;
+  // Optional CSS class — paired with `value` so a label cell cannot lose its
+  // colour cue when fields move around.
+  valueClass?: string;
+}
 
-const ROWS: Row[] = [
-  ["_time", "2026-06-08 14:03:21.118"],
-  ["agent_id", "support-agent-7f3a"],
-  ["surface", "mw_model"],
-  ["verdict_label", "block", "l-block"],
-  ["severity", "HIGH", "s-high"],
-  ["rule", "Prompt Injection"],
-  ["source", "splunklib_security · ai_defense"],
-  ["latency_ms", "213.4"],
-  ["atlas", "AML.T0051"],
+const ROWS: ReadonlyArray<DetailRow> = [
+  { field: "_time", value: "2026-06-08 14:03:21.118" },
+  { field: "agent_id", value: "support-agent-7f3a" },
+  { field: "surface", value: "mw_model" },
+  { field: "verdict_label", value: "block", valueClass: "l-block" },
+  { field: "severity", value: "HIGH", valueClass: "s-high" },
+  { field: "rule", value: "Prompt Injection" },
+  { field: "source", value: "splunklib_security · ai_defense" },
+  { field: "latency_ms", value: "213.4" },
+  { field: "atlas", value: "AML.T0051" },
 ];
 
 export function RealVerdict() {
@@ -62,13 +68,13 @@ export function RealVerdict() {
                 <table className="spl-table">
                   <tbody>
                     {ROWS.map((r) => (
-                      <tr key={r[0]}>
-                        <td style={{ color: "#6f8499", width: 130 }}>{r[0]}</td>
+                      <tr key={r.field}>
+                        <td style={{ color: "#6f8499", width: 130 }}>{r.field}</td>
                         <td
-                          className={r[2] || ""}
-                          style={{ color: r[2] ? undefined : "#cfc8b6", whiteSpace: "normal" }}
+                          className={r.valueClass ?? ""}
+                          style={{ color: r.valueClass ? undefined : "#cfc8b6", whiteSpace: "normal" }}
                         >
-                          {r[1]}
+                          {r.value}
                         </td>
                       </tr>
                     ))}

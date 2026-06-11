@@ -1,18 +1,21 @@
 "use client";
 
-import { useMemo } from "react";
+import { useId } from "react";
 
 // Brand glyph — a ">" chevron meeting a gate post. Splunk-flavoured signal:
 // gradient stroke (orange→magenta) unless a solid `fill` is provided.
-let _sgGradN = 0;
+//
+// Gradient id comes from `useId()` so multiple Shields in the same SSR tree
+// don't share a `<linearGradient id>` — React 19 guarantees the id is
+// stable across server and client renders, so no hydration mismatch.
 
 interface ShieldProps {
   size?: number;
-  fill?: string | null;
+  fill?: string;
 }
 
-export function Shield({ size = 22, fill = null }: ShieldProps) {
-  const gid = useMemo(() => `sgGrad${_sgGradN++}`, []);
+export function Shield({ size = 22, fill }: ShieldProps) {
+  const gid = `sgGrad-${useId()}`;
   const stroke = fill ?? `url(#${gid})`;
   return (
     <svg

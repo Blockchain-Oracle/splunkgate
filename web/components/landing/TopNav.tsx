@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Brand } from "../shared/Brand";
 import { SunIcon, MoonIcon } from "../shared/ThemeIcons";
 import { AG_LINKS } from "@/lib/links";
 import type { Theme } from "../hooks/useTheme";
+import { useBodyScrollLock } from "../hooks/useBodyScrollLock";
 
 interface TopNavProps {
   theme: Theme;
@@ -25,16 +26,7 @@ const DRAWER_LINKS: Array<{ href: string; label: string; external?: boolean }> =
 export function TopNav({ theme, onToggleTheme }: TopNavProps) {
   const [menu, setMenu] = useState(false);
   const close = () => setMenu(false);
-
-  // Lock body scroll while the drawer is open so the page doesn't scroll
-  // underneath the slide-over.
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    document.body.style.overflow = menu ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [menu]);
+  useBodyScrollLock(menu);
 
   return (
     <>

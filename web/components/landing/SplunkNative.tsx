@@ -6,14 +6,70 @@ import { Shield } from "../shared/Shield";
 import { AreaChart } from "./AreaChart";
 import { AG_LINKS } from "@/lib/links";
 
-type Row = [string, string, string, string, string, string, string, string, string];
+// One row of the Verdict Inspector mockup. The Splunk dashboard table pairs
+// each colour-coded label with a CSS class — the type pins the pairing so a
+// future edit cannot land a red "block" cell on an "allow" CSS class.
+interface ColouredCell {
+  label: string;
+  className: string;
+}
 
-const ROWS: Row[] = [
-  ["14:03:21", "support-agent-7f3a", "mw_model", "block", "l-block", "HIGH", "s-high", "Prompt Injection", "213"],
-  ["14:02:54", "sales-copilot-2c", "mw_tool", "modify", "l-modify", "MEDIUM", "s-medium", "PII", "188"],
-  ["14:02:09", "kb-indexer-91", "mcp_judge_tool", "allow", "l-allow", "NONE", "", "—", "96"],
-  ["14:01:37", "support-agent-7f3a", "mw_model", "block", "l-block", "HIGH", "s-high", "PHI", "204"],
-  ["14:00:58", "ticket-triage-5", "mw_subagent", "review", "l-modify", "MEDIUM", "s-medium", "Code Detection", "231"],
+interface InspectorRow {
+  time: string;
+  agentId: string;
+  surface: string;
+  verdict: ColouredCell;
+  severity: ColouredCell;
+  rule: string;
+  latencyMs: string;
+}
+
+const ROWS: ReadonlyArray<InspectorRow> = [
+  {
+    time: "14:03:21",
+    agentId: "support-agent-7f3a",
+    surface: "mw_model",
+    verdict: { label: "block", className: "l-block" },
+    severity: { label: "HIGH", className: "s-high" },
+    rule: "Prompt Injection",
+    latencyMs: "213",
+  },
+  {
+    time: "14:02:54",
+    agentId: "sales-copilot-2c",
+    surface: "mw_tool",
+    verdict: { label: "modify", className: "l-modify" },
+    severity: { label: "MEDIUM", className: "s-medium" },
+    rule: "PII",
+    latencyMs: "188",
+  },
+  {
+    time: "14:02:09",
+    agentId: "kb-indexer-91",
+    surface: "mcp_judge_tool",
+    verdict: { label: "allow", className: "l-allow" },
+    severity: { label: "NONE", className: "" },
+    rule: "—",
+    latencyMs: "96",
+  },
+  {
+    time: "14:01:37",
+    agentId: "support-agent-7f3a",
+    surface: "mw_model",
+    verdict: { label: "block", className: "l-block" },
+    severity: { label: "HIGH", className: "s-high" },
+    rule: "PHI",
+    latencyMs: "204",
+  },
+  {
+    time: "14:00:58",
+    agentId: "ticket-triage-5",
+    surface: "mw_subagent",
+    verdict: { label: "review", className: "l-modify" },
+    severity: { label: "MEDIUM", className: "s-medium" },
+    rule: "Code Detection",
+    latencyMs: "231",
+  },
 ];
 
 export function SplunkNative() {
@@ -48,7 +104,7 @@ export function SplunkNative() {
                   <Shield size={12} fill="#cfc8b6" /> SplunkGate
                   <span className="spl-sep">›</span>Agent Risk Overview
                 </span>
-                <span className="spl-time mono">Last 24 hours</span>
+                <span className="spl-time mono">Last 24 hours · mock data</span>
               </div>
               <div className="spl-body">
                 <div className="spl-kpis">
@@ -94,14 +150,14 @@ export function SplunkNative() {
                   </thead>
                   <tbody>
                     {ROWS.map((r, i) => (
-                      <tr key={i} className={i === 0 ? "spl-newrow" : ""}>
-                        <td>{r[0]}</td>
-                        <td style={{ color: "#cfc8b6" }}>{r[1]}</td>
-                        <td>{r[2]}</td>
-                        <td className={r[4]}>{r[3]}</td>
-                        <td className={r[6]}>{r[5]}</td>
-                        <td style={{ color: "#cfc8b6" }}>{r[7]}</td>
-                        <td>{r[8]}</td>
+                      <tr key={`${r.time}-${r.agentId}`} className={i === 0 ? "spl-newrow" : ""}>
+                        <td>{r.time}</td>
+                        <td style={{ color: "#cfc8b6" }}>{r.agentId}</td>
+                        <td>{r.surface}</td>
+                        <td className={r.verdict.className}>{r.verdict.label}</td>
+                        <td className={r.severity.className}>{r.severity.label}</td>
+                        <td style={{ color: "#cfc8b6" }}>{r.rule}</td>
+                        <td>{r.latencyMs}</td>
                       </tr>
                     ))}
                   </tbody>

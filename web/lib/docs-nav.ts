@@ -3,57 +3,73 @@
 // rail "on this page" links — keep it consistent with the order sections
 // appear in DocsContent.
 
-export interface DocsNavGroup {
-  g: string;
-  items: ReadonlyArray<readonly [string, string]>;
+export interface DocsNavItem {
+  id: string;
+  label: string;
 }
 
-export const DOCS_NAV: ReadonlyArray<DocsNavGroup> = [
+export interface DocsNavGroup {
+  group: string;
+  items: ReadonlyArray<DocsNavItem>;
+}
+
+// `NonEmpty<T>` constrains an array to have at least one element so that
+// downstream consumers (useScrollSpy) can index `[0]` without a nullable
+// fallback. The IA below is never empty by construction; the type just
+// makes that contract visible.
+type NonEmpty<T> = readonly [T, ...T[]];
+
+export const DOCS_NAV: NonEmpty<DocsNavGroup> = [
   {
-    g: "Get started",
+    group: "Get started",
     items: [
-      ["overview", "Overview"],
-      ["install", "Installation"],
-      ["quickstart", "Quickstart"],
+      { id: "overview", label: "Overview" },
+      { id: "install", label: "Installation" },
+      { id: "quickstart", label: "Quickstart" },
     ],
   },
   {
-    g: "Concepts",
+    group: "Concepts",
     items: [
-      ["verdict-shape", "The Verdict type"],
-      ["enums", "Severity & result"],
-      ["surfaces", "The four surfaces"],
-      ["judgment", "Judgment layer"],
+      { id: "verdict-shape", label: "The Verdict type" },
+      { id: "enums", label: "Severity & result" },
+      { id: "surfaces", label: "The four surfaces" },
+      { id: "judgment", label: "Judgment layer" },
     ],
   },
   {
-    g: "Integration",
+    group: "Integration",
     items: [
-      ["s1", "S1 · Middleware"],
-      ["s2", "S2 · MCP server"],
-      ["s3", "S3 · DefenseClaw"],
-      ["s4", "S4 · Splunk app"],
-      ["configuration", "Configuration"],
+      { id: "s1", label: "S1 · Middleware" },
+      { id: "s2", label: "S2 · MCP server" },
+      { id: "s3", label: "S3 · DefenseClaw" },
+      { id: "s4", label: "S4 · Splunk app" },
+      { id: "configuration", label: "Configuration" },
     ],
   },
   {
-    g: "Operations",
+    group: "Operations",
     items: [
-      ["otel", "OTel emission"],
-      ["hec", "HEC sourcetype"],
-      ["failure", "Failure modes"],
-      ["errors", "Error reference"],
+      { id: "otel", label: "OTel emission" },
+      { id: "hec", label: "HEC sourcetype" },
+      { id: "failure", label: "Failure modes" },
+      { id: "errors", label: "Error reference" },
     ],
   },
   {
-    g: "Regulatory",
+    group: "Regulatory",
     items: [
-      ["nist", "NIST AI RMF"],
-      ["sr262", "SR 26-2"],
-      ["euact", "EU AI Act Art. 6"],
+      { id: "nist", label: "NIST AI RMF" },
+      { id: "sr262", label: "SR 26-2" },
+      { id: "euact", label: "EU AI Act Art. 6" },
     ],
   },
-  { g: "Evaluation", items: [["eval", "Datasets & results"]] },
+  {
+    group: "Evaluation",
+    items: [{ id: "eval", label: "Datasets & results" }],
+  },
 ] as const;
 
-export const DOCS_IDS = DOCS_NAV.flatMap((g) => g.items.map((i) => i[0]));
+export const DOCS_IDS: NonEmpty<string> = DOCS_NAV.flatMap((g) =>
+  g.items.map((i) => i.id)
+) as unknown as NonEmpty<string>;

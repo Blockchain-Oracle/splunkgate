@@ -1,5 +1,6 @@
 import { SectionHead } from "../shared/SectionHead";
 import { CodeBlock } from "../shared/CodeBlock";
+import { trust } from "@/lib/highlight";
 
 const BUILTON: Array<[string, string]> = [
   ["Cisco AI Defense", "Inspection API"],
@@ -11,17 +12,17 @@ const BUILTON: Array<[string, string]> = [
   ["DNS Guard AI", "app 7922"],
 ];
 
-const TERMINAL_HTML = `<span class="tok-com"># install the middleware</span>
+const TERMINAL_HTML = trust(`<span class="tok-com"># install the middleware</span>
 pip install <span class="tok-str">splunkgate-mw</span>
 
 <span class="tok-com"># then add SafetyModelMiddleware to your agent</span>
-<span class="tok-com"># middleware=[...] — that's the whole change</span>`;
+<span class="tok-com"># middleware=[...] — that's the whole change</span>`);
 
-const SPLUNK_HTML = `<span class="tok-com"># Manage Apps -> Install app from file</span>
+const SPLUNK_HTML = trust(`<span class="tok-com"># Manage Apps -> Install app from file</span>
 splunkgate_app-1.0.0.tgz
 
 <span class="tok-com"># dashboards live, sourcetype:</span>
-<span class="tok-blue">cisco_ai_defense:splunkgate_verdict</span>`;
+<span class="tok-blue">cisco_ai_defense:splunkgate_verdict</span>`);
 
 export function GetStarted() {
   return (

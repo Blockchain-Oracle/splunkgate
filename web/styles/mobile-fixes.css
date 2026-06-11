@@ -21,8 +21,16 @@
 
    `overflow-x: clip` does the same horizontal clipping without creating
    a containing block for sticky descendants (CSS Overflow Module Level 3,
-   widely supported since 2022 — Chrome 90 / Firefox 81 / Safari 16). */
-.ag.page { overflow-x: clip; }
+   widely supported since 2022 — Chrome 90 / Firefox 81 / Safari 16).
+
+   Cascade fallback: the `hidden` declaration sits underneath so old browsers
+   (Safari < 16) that don't understand `clip` still clip horizontal overflow
+   on the landing page. Modern browsers honour the later `clip` declaration
+   and the sticky sidebar works as intended. Both branches handled. */
+.ag.page {
+  overflow-x: hidden;
+  overflow-x: clip;
+}
 
 
 /* ─── 1 · Section + wrap padding (phones lose horizontal breathing room) ─ */
