@@ -37,7 +37,7 @@ SOC analysts can pivot on either.
 from __future__ import annotations
 
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 from uuid import NAMESPACE_OID, UUID, uuid4, uuid5
@@ -213,7 +213,7 @@ class SafetyAgentMiddleware(AgentMiddleware):  # type: ignore[misc]
             )
 
     @staticmethod
-    def _reset_structlog(token: dict[str, object], trace_uuid: UUID) -> None:
+    def _reset_structlog(token: Mapping[str, Token[Any]], trace_uuid: UUID) -> None:
         """Reset structlog contextvars; swallow + log so cleanup chain continues."""
         try:
             structlog.contextvars.reset_contextvars(**token)
