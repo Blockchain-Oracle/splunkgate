@@ -38,10 +38,28 @@ from splunkgate_judges.ai_defense_types import (
 from .fake_ai_defense_server import fake_ai_defense_server
 
 
-@pytest.fixture(autouse=True)
-def _patch_tenacity_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Skip wait_exponential_jitter sleeps so retry tests run in ms."""
-    monkeypatch.setattr("tenacity.nap.time.sleep", lambda _s: None)
+@pytest.fixture
+def _patch_asyncio_sleep(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Skip `asyncio.sleep` so tenacity's AsyncRetrying backoff runs in ms.
+
+    NOT autouse: pure mapping tests don't need this, and patching
+    `asyncio.sleep` globally would silence unrelated waits (e.g. uvicorn
+    startup probe). Use via `@pytest.mark.usefixtures("_patch_asyncio_sleep")`.
+
+    The previous version of this fixture patched `tenacity.nap.time.sleep`
+    — the SYNC path. AsyncRetrying actually waits via `asyncio.sleep`, so
+    the old patch was a no-op and retry tests slept real wall-clock
+    seconds (caught by PR #127 review).
+    """
+    import asyncio as _asyncio  # noqa: PLC0415 — scoped patch needs local ref
+
+    real_sleep = _asyncio.sleep
+
+    async def _short_sleep(_seconds: float) -> None:
+        # Yield to the loop without consuming real time.
+        await real_sleep(0)
+
+    monkeypatch.setattr("asyncio.sleep", _short_sleep)
 
 
 def _make_request(content: str = "hello") -> InspectRequest:
@@ -94,7 +112,7 @@ async def test_safe_response_has_no_rules_and_none_severity() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("fake_base_url")
+@pytest.mark.usefixtures("fake_base_url", "_patch_asyncio_sleep")
 async def test_503_twice_retries_and_recovers() -> None:
     """503 on attempts 1+2 of the same call → tenacity retries → 200 on 3rd."""
     breaker = CircuitBreaker(failure_threshold=3)
@@ -105,7 +123,7 @@ async def test_503_twice_retries_and_recovers() -> None:
 
 
 @pytest.mark.asyncio
-@pytest.mark.usefixtures("fake_base_url")
+@pytest.mark.usefixtures("fake_base_url", "_patch_asyncio_sleep")
 async def test_three_consecutive_failures_trip_breaker() -> None:
     breaker = CircuitBreaker(failure_threshold=3)
     async with AIDefenseClient("503-always", region="us", circuit_breaker=breaker) as client:
@@ -181,6 +199,22 @@ def test_medium_severity_maps_to_review_verdict() -> None:
     v = inspect_response_to_verdict(resp, trace_id=uuid4(), surface="mw_model", latency_ms=5.0)
     assert v.verdict is VerdictLabel.REVIEW
     assert v.severity is CoreSeverity.MEDIUM
+
+
+def test_not_safe_with_none_severity_maps_to_review() -> None:
+    """Regression: the degenerate `is_safe=False ∧ NONE_SEVERITY` branch maps to REVIEW.
+
+    BLOCK is too aggressive (no signal of severity), ALLOW contradicts
+    is_safe=False — REVIEW puts the verdict on the human review queue.
+    """
+    resp = InspectResponse(
+        is_safe=False,
+        severity=Severity.NONE_SEVERITY,
+        classifications=[],
+        rules=[],
+    )
+    v = inspect_response_to_verdict(resp, trace_id=uuid4(), surface="mw_model", latency_ms=1.0)
+    assert v.verdict is VerdictLabel.REVIEW
 
 
 def test_classifications_round_trip_as_strings() -> None:

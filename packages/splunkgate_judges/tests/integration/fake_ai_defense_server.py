@@ -23,6 +23,7 @@ port. FastAPI is banned in the SplunkGate runtime per architecture.md
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import socket
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Annotated
@@ -132,13 +133,30 @@ async def fake_ai_defense_server() -> AsyncIterator[str]:
     )
     server = uvicorn.Server(config)
     task = asyncio.create_task(server.serve())
-    # Poll uvicorn's `started` flag (it does not expose an asyncio.Event,
-    # so the documented event-driven alternative is unavailable here).
-    deadline = asyncio.get_event_loop().time() + 2.0
-    while not server.started and asyncio.get_event_loop().time() < deadline:  # noqa: ASYNC110
-        await asyncio.sleep(0.01)
+    # Race the started-flag wait against the task itself. If serve()
+    # crashes during startup (port conflict that survived
+    # `_pick_free_port`'s TOCTOU window, ImportError, etc.), the task
+    # finishes with an exception; without this race the generic
+    # "failed to start within 2s" would hide the real cause.
+    started_check = asyncio.create_task(_wait_started(server))
+    try:
+        done, _pending = await asyncio.wait(
+            {task, started_check},
+            timeout=2.0,
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+    finally:
+        started_check.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await started_check
+    if task in done:
+        # serve() exited before startup completed — propagate the real exception.
+        msg = "uvicorn serve() exited before startup completed"
+        raise RuntimeError(msg) from task.exception()
     if not server.started:
         task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
         msg = "fake AI Defense server failed to start within 2s"
         raise RuntimeError(msg)
     try:
@@ -146,6 +164,25 @@ async def fake_ai_defense_server() -> AsyncIterator[str]:
     finally:
         server.should_exit = True
         try:
-            await asyncio.wait_for(task, timeout=2.0)
-        except (TimeoutError, asyncio.CancelledError):
+            await asyncio.wait_for(asyncio.shield(task), timeout=2.0)
+        except TimeoutError:
             task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await task
+        # Surface any server-side exception so it isn't lost on teardown.
+        if task.done() and not task.cancelled():
+            exc = task.exception()
+            if exc is not None:
+                msg = "fake server raised during teardown"
+                raise RuntimeError(msg) from exc
+
+
+async def _wait_started(server: uvicorn.Server) -> None:
+    """Poll uvicorn's `started` flag at 10ms intervals. Caller bounds the timeout.
+
+    uvicorn does not expose an asyncio.Event for startup readiness, so a
+    polling loop is unavoidable here. ruff's ASYNC110 suggestion to use
+    `asyncio.Event` doesn't apply.
+    """
+    while not server.started:  # noqa: ASYNC110
+        await asyncio.sleep(0.01)
