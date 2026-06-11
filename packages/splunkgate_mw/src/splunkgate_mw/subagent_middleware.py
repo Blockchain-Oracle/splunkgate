@@ -47,7 +47,7 @@ from splunkgate_mw._fail_closed import (
 )
 from splunkgate_mw._sanitize import compose_sanitized, is_supported_rule, sanitize_args
 from splunkgate_mw.config import Config
-from splunkgate_mw.profiles import Profile
+from splunkgate_mw.profiles import Profile, log_if_custom_profile_shadows_canonical, resolve_profile
 
 if TYPE_CHECKING:
     from splunkgate_judges.ai_defense_types import InspectResponse
@@ -260,7 +260,14 @@ async def judge_subagent_call(
         if not config.escalate_on_first_pass_hit or ai_defense is None:
             return _cheap_only_verdict(cheap_hit, ctx)
 
-        response = await run_escalation(tool_shape_call, cheap_hit, ai_defense, trace_uuid)
+        response = await run_escalation(
+            tool_shape_call,
+            cheap_hit,
+            ai_defense,
+            trace_uuid,
+            rules_tool_call=profile.rules_tool_call,
+            profile_name=profile.name,
+        )
         ctx = _VerdictCtx(
             trace_uuid=trace_uuid,
             now=now,
@@ -321,16 +328,23 @@ class SafetySubagentMiddleware(AgentMiddleware):  # type: ignore[misc]
     ) -> None:
         """Wire profile + optional per-subagent overrides + config + AI Defense client."""
         self._config: Config = config if config is not None else Config()
-        self._profile = (
-            profile if isinstance(profile, Profile) else Profile(name=profile, description="")
-        )
+        self._profile = resolve_profile(profile)
+        log_if_custom_profile_shadows_canonical(self._profile, owner="SafetySubagentMiddleware")
         # Eagerly resolve string overrides into Profile instances so the
-        # hot-path lookup is a plain dict access.
+        # hot-path lookup is a plain dict access. resolve_profile() raises
+        # UnknownProfile up-front if a typo lands in the override map. The
+        # override map is captured at __init__; later mutations to the
+        # passed dict have no effect — pass a fresh middleware if you need
+        # dynamic overrides.
         overrides = per_subagent_profile or {}
-        self._per_subagent_profile: dict[str, Profile] = {
-            name: (p if isinstance(p, Profile) else Profile(name=p, description=""))
-            for name, p in overrides.items()
-        }
+        self._per_subagent_profile: dict[str, Profile] = {}
+        for name, p in overrides.items():
+            resolved = resolve_profile(p)
+            log_if_custom_profile_shadows_canonical(
+                resolved,
+                owner=f"SafetySubagentMiddleware.per_subagent_profile[{name!r}]",
+            )
+            self._per_subagent_profile[name] = resolved
         self._ai_defense = ai_defense
         self._logger = structlog.get_logger("SafetySubagentMiddleware").bind(
             profile=self._profile.name,

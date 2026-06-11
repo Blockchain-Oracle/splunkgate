@@ -135,29 +135,46 @@ async def run_cheap_pass(
         ) from exc
 
 
-async def run_escalation(
+async def run_escalation(  # noqa: PLR0913 — every arg is load-bearing for the escalation
     call: ToolCall,
     cheap_hit: RuleHit,
     ai_defense: AIDefenseLike,
     trace_uuid: UUID,
+    *,
+    rules_tool_call: tuple[str, ...] = (),
+    profile_name: str = "default",
 ) -> InspectResponse:
-    """Escalate to AI Defense; raise `FailClosedError` on AIDefenseError."""
+    """Escalate to AI Defense; raise `FailClosedError` on AIDefenseError.
+
+    `rules_tool_call` carries the profile-derived rule subset; when empty
+    AI Defense falls back to the key's default-enabled rules. Surface label
+    `mw_tool` is used here; subagent callers pass `mw_subagent` via
+    `profile_name`-keyed structlog binding upstream.
+    """
     from splunkgate_judges.ai_defense_types import (  # noqa: PLC0415 — lazy import
         InspectConfig,
         InspectMessage,
         InspectRequest,
     )
 
+    from splunkgate_mw._rule_mapping import (  # noqa: PLC0415 — break import cycle
+        profile_rules_to_enabled_rules,
+    )
     from splunkgate_mw._serialization import (  # noqa: PLC0415 — break import cycle
         serialize_tool_call,
     )
 
     try:
         body = serialize_tool_call(call)
+        enabled_rules = profile_rules_to_enabled_rules(
+            rules_tool_call,
+            profile_name=profile_name,
+            surface="mw_tool",
+        )
         req = InspectRequest(
             messages=[InspectMessage(role="user", content=body)],
             metadata={"tool_name": call.name},
-            config=InspectConfig(),
+            config=InspectConfig(enabled_rules=enabled_rules or None),
         )
         return await ai_defense.inspect_chat(req, trace_id=str(trace_uuid))
     except AIDefenseError as exc:
