@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+env:
+  PYTHON_VERSION: 3.13
+  UV_VERSION: latest
+
+jobs:
+  build-and-sign:
+    name: Build wheels + Splunk .tgz + sigstore-sign
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      id-token: write  # sigstore OIDC
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+      - run: uv python install ${{ env.PYTHON_VERSION }}
+      - run: uv sync --all-packages --frozen
+
+      - name: Build all 4 wheels in a single tagged run
+        run: |
+          mkdir -p dist/
+          uv build --all-packages --out-dir dist/
+          ls -la dist/
+
+      - name: Build Splunk app .tgz
+        run: |
+          if [ -d splunk_apps/splunkgate_app ]; then
+            tar --exclude='__pycache__' --exclude='*.pyc' --exclude='.appinspect.expect.yaml' \
+                -czf dist/splunkgate_app-${{ github.ref_name }}.tgz \
+                -C splunk_apps splunkgate_app
+          else
+            echo "splunk_apps/splunkgate_app/ not present yet (EPIC-09); release tarball skipped."
+          fi
+          ls -la dist/
+
+      - name: Sigstore sign every artifact (wheels + .tgz)
+        uses: sigstore/gh-action-sigstore-python@v3.0.0
+        with:
+          inputs: ./dist/*.whl ./dist/*.tgz
+          # bundle outputs land at <input>.sigstore alongside the artifact
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: dist/
+
+  gh-release:
+    name: Create signed GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [build-and-sign]
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: dist/
+      # TODO(v0.2): publish to PyPI once Abu approves package namespace.
+      - name: Publish GitHub Release with auto-generated changelog
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.whl
+            dist/*.whl.sigstore
+            dist/*.tgz
+            dist/*.tgz.sigstore
+          generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'alpha') }}
