@@ -42,7 +42,12 @@ class Bucket:
 BLOCK_VERDICTS = {"BLOCK", "MODIFY"}  # any non-ALLOW we treat as "alerted" for P/R/F1
 
 _FOOTER = (
-    "\n\n[^imprompter]: Per arxiv:2410.14923 (Fu et al., UCSD+NTU 2024), the\n"
+    "\n\n[^ece-proxy]: The ECE column uses a verdict-tier proxy probability\n"
+    "    (BLOCK→1.0, MODIFY/REVIEW→0.5, ALLOW→0.0) rather than a model-native\n"
+    "    confidence. Baselines that surface real logprobs (gpt-oss-120b once\n"
+    "    Hosted Models access lands) will swap in real confidences; rule-\n"
+    "    based baselines stay on the proxy by design.\n"
+    "[^imprompter]: Per arxiv:2410.14923 (Fu et al., UCSD+NTU 2024), the\n"
     "    Imprompter PII-exfil pattern was patched by Mistral on 2024-09-13 at\n"
     "    the renderer layer (markdown-image rendering disabled). SplunkGate\n"
     "    detects the payload pattern in LLM output for defense-in-depth, not\n"
@@ -70,19 +75,17 @@ class Row:
 
 
 def _iter_per_dataset(per_dataset_dir: Path) -> list[dict[str, object]]:
-    """Read every per-dataset JSON in deterministic (filename) order."""
     return [
         json.loads(p.read_text(encoding="utf-8")) for p in sorted(per_dataset_dir.glob("*.json"))
     ]
 
 
 def _binarise(label: str) -> int:
-    """1 if SplunkGate would have alerted (BLOCK/MODIFY), 0 otherwise."""
     return 1 if label in BLOCK_VERDICTS else 0
 
 
 def _proba_for(label: str) -> float:
-    """Probability proxy: 1.0 on BLOCK, 0.5 on MODIFY/REVIEW, 0.0 on ALLOW."""
+    """Probability proxy for ECE: BLOCK → 1.0, MODIFY/REVIEW → 0.5, ALLOW → 0.0."""
     if label == "BLOCK":
         return 1.0
     if label in {"MODIFY", "REVIEW"}:
@@ -111,7 +114,6 @@ def _gather(per_dataset: list[dict[str, object]]) -> dict[str, Bucket]:
 
 
 def _row(baseline_id: str, bucket: Bucket) -> Row:
-    """Compute one Row from the gathered bucket."""
     lat = percentiles(bucket.latencies_ms)
     return Row(
         evaluator=baseline_id,
@@ -128,14 +130,13 @@ def _row(baseline_id: str, bucket: Bucket) -> Row:
 
 
 def _format_cost(cost: CostSummary) -> str:
-    """Render a dollar amount or the human-readable note when None."""
     return f"${cost.dollars_per_1k:.3f}" if cost.dollars_per_1k is not None else cost.note
 
 
 def _render_table(rows: list[Row]) -> str:
     """Render the headline pipe-separated markdown table."""
     header = (
-        "| Evaluator | Precision | Recall | F1 | ECE | p50 latency (ms) | "
+        "| Evaluator | Precision | Recall | F1 | ECE[^ece-proxy] | p50 latency (ms) | "
         "p99 latency (ms) | $/1k verdicts |\n"
         "|---|---|---|---|---|---|---|---|\n"
     )

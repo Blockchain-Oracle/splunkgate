@@ -42,9 +42,12 @@ def cost_per_1k_verdicts(baseline_id: str, verdict_count: int) -> CostSummary:
     table = _load_table()
     row = table.get(baseline_id, {"dollars_per_1k": None, "note": "unknown baseline"})
     rate = row.get("dollars_per_1k")
+    # `bool` ⊂ `int` so we must explicitly reject it — a future JSON edit
+    # like `"dollars_per_1k": true` would otherwise render as "$1.000".
+    numeric_rate = rate if isinstance(rate, (int, float)) and not isinstance(rate, bool) else None
     return CostSummary(
         baseline_id=baseline_id,
         verdict_count=verdict_count,
-        dollars_per_1k=rate if isinstance(rate, (int, float)) else None,
+        dollars_per_1k=numeric_rate,
         note=str(row.get("note", "")),
     )

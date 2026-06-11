@@ -101,3 +101,4 @@ node_modules/
 # Eval artifacts (big)
 eval/results/
 eval/datasets/cached/
+docs/eval-results.md

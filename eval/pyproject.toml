@@ -4,7 +4,12 @@ version = "0.0.1"
 description = "SplunkGate eval harness — JailbreakBench, AdvBench, synthetic prompt-injection datasets"
 requires-python = ">=3.13"
 license = { text = "Apache-2.0" }
-dependencies = ["splunkgate-core", "splunkgate-judges"]
+dependencies = [
+    "splunkgate-core",
+    "splunkgate-judges",
+    "numpy>=2.0",
+    "matplotlib>=3.10",
+]
 
 [tool.uv.sources]
 splunkgate-core = { workspace = true }
