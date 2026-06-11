@@ -32,6 +32,13 @@ dev = [
     # downgrade to 4.1.x even if a dep complains. Used by the `appinspect`
     # CI job (story-cicd-05) to gate splunk_apps/splunkgate_app/ on every PR.
     "splunk-appinspect>=4.2.1",
+    # FastAPI + uvicorn — test-only dependency used by
+    # `packages/splunkgate_judges/tests/integration/fake_ai_defense_server.py`
+    # to spin up an in-process Cisco AI Defense fake. Permitted in
+    # tests/integration/ per docs/architecture.md (only banned in the MCP
+    # server runtime context).
+    "fastapi>=0.115",
+    "uvicorn>=0.32",
 ]
 
 [tool.pytest.ini_options]
