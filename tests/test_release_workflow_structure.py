@@ -33,11 +33,14 @@ def test_tag_trigger_glob_is_v_semver() -> None:
 
 
 def test_id_token_write_permission_present() -> None:
-    """sigstore OIDC requires `id-token: write` on the signing job."""
+    """sigstore OIDC requires `id-token: write` on the signing job; contents:write lives on gh-release."""
     parsed = _load()
     perms = parsed["jobs"]["build-and-sign"]["permissions"]
     assert perms["id-token"] == "write"
-    assert perms["contents"] == "write"
+    # Least-privilege: OIDC-holding job runs contents:read; gh-release owns contents:write.
+    assert perms["contents"] == "read"
+    release_perms = parsed["jobs"]["gh-release"]["permissions"]
+    assert release_perms["contents"] == "write"
 
 
 def test_sigstore_action_is_used() -> None:

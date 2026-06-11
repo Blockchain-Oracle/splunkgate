@@ -49,11 +49,30 @@ for f in "${PYPROJECTS[@]}"; do
         echo "bump_version FAIL: $f missing" >&2
         exit 1
     fi
+    # Assert the regex will match BEFORE editing — a future `dynamic = [...]`
+    # or differently-indented version line would otherwise sed-noop silently.
+    if ! grep -qE '^version = ".*"' "$f"; then
+        echo "bump_version FAIL: $f has no '^version = \"...\"' line (dynamic versioning?)" >&2
+        exit 1
+    fi
     sed_inplace -E "s|^version = \".*\"|version = \"${VERSION}\"|" "$f"
+    # Belt-and-suspenders: assert the file actually changed to the target version.
+    if ! grep -qE "^version = \"${VERSION}\"$" "$f"; then
+        echo "bump_version FAIL: sed did not update $f to $VERSION" >&2
+        exit 1
+    fi
 done
 
 if [[ -f "$APP_CONF" ]]; then
+    if ! grep -qE '^version = .*' "$APP_CONF"; then
+        echo "bump_version FAIL: $APP_CONF has no '^version = ...' line" >&2
+        exit 1
+    fi
     sed_inplace -E "s|^version = .*|version = ${VERSION}|" "$APP_CONF"
+    if ! grep -qE "^version = ${VERSION}$" "$APP_CONF"; then
+        echo "bump_version FAIL: sed did not update $APP_CONF to $VERSION" >&2
+        exit 1
+    fi
 else
     echo "bump_version WARN: $APP_CONF missing — Splunk app version not bumped" >&2
 fi

@@ -4,6 +4,10 @@ on:
   push:
     tags: ['v*.*.*']
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   PYTHON_VERSION: 3.13
   UV_VERSION: latest
@@ -14,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
-      contents: write
+      contents: read   # OIDC-holding job runs at least-privilege; gh-release owns contents:write
       id-token: write  # sigstore OIDC
     steps:
       - uses: actions/checkout@v4
@@ -34,13 +38,13 @@ jobs:
 
       - name: Build Splunk app .tgz
         run: |
-          if [ -d splunk_apps/splunkgate_app ]; then
-            tar --exclude='__pycache__' --exclude='*.pyc' --exclude='.appinspect.expect.yaml' \
-                -czf dist/splunkgate_app-${{ github.ref_name }}.tgz \
-                -C splunk_apps splunkgate_app
-          else
-            echo "splunk_apps/splunkgate_app/ not present yet (EPIC-09); release tarball skipped."
+          if [ ! -d splunk_apps/splunkgate_app ]; then
+            echo "::error::splunk_apps/splunkgate_app/ missing — refusing to publish a partial release for tag ${{ github.ref_name }}"
+            exit 1
           fi
+          tar --exclude='__pycache__' --exclude='*.pyc' --exclude='.appinspect.expect.yaml' \
+              -czf dist/splunkgate_app-${{ github.ref_name }}.tgz \
+              -C splunk_apps splunkgate_app
           ls -la dist/
 
       - name: Sigstore sign every artifact (wheels + .tgz)
@@ -48,6 +52,18 @@ jobs:
         with:
           inputs: ./dist/*.whl ./dist/*.tgz
           # bundle outputs land at <input>.sigstore alongside the artifact
+
+      - name: Verify every artifact has a sigstore bundle
+        run: |
+          cd dist
+          shopt -s nullglob
+          for f in *.whl *.tgz; do
+            if [ ! -f "${f}.sigstore" ]; then
+              echo "::error::Missing sigstore bundle for ${f}"
+              exit 1
+            fi
+          done
+          echo "All artifacts have sigstore bundles."
 
       - uses: actions/upload-artifact@v4
         with:
@@ -63,12 +79,20 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/download-artifact@v4
         with:
           name: release-artifacts
           path: dist/
+      - name: Verify sigstore bundles before publishing
+        run: |
+          cd dist
+          shopt -s nullglob
+          for f in *.whl *.tgz; do
+            if [ ! -f "${f}.sigstore" ]; then
+              echo "::error::Missing sigstore bundle for ${f} — refusing to publish unsigned artifact"
+              exit 1
+            fi
+          done
       # TODO(v0.2): publish to PyPI once Abu approves package namespace.
       - name: Publish GitHub Release with auto-generated changelog
         uses: softprops/action-gh-release@v2
