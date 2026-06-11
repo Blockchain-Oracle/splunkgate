@@ -22,7 +22,6 @@ import asyncio
 import os
 import sys
 import time
-import uuid
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -119,22 +118,32 @@ def _row_matches(verdict: Verdict, row: SplunkRow) -> int:
 async def _invoke_agent_and_capture(prompt: str, profile: str) -> Verdict:
     """Build the support agent, send the prompt, capture the blocking Verdict.
 
-    Raises `RuntimeError("not blocked")` when the agent did NOT block — that
-    means SplunkGate's safety net failed (exit 1 caller-side).
+    Only the four `*BlockedBySplunkGate` subclasses qualify as "captured" —
+    those are the typed BLOCK exceptions that carry a `.verdict`. Anything
+    else (ConfigError, NetworkError, UnknownProfile, …) signals "demo env
+    broken" and is left to propagate as an uncaught exception so the
+    operator sees the original traceback, not a synthetic "exit 1".
     """
-    from splunkgate_core.errors import SplunkGateError  # noqa: PLC0415
+    from splunkgate_core.errors import (  # noqa: PLC0415
+        ModelInputBlockedBySplunkGate,
+        ModelOutputBlockedBySplunkGate,
+        SubagentBlockedBySplunkGate,
+        ToolBlockedBySplunkGate,
+    )
     from splunkgate_mw.examples.support_agent import build_agent  # noqa: PLC0415
 
     os.environ["SPLUNKGATE_DEMO_PROFILE"] = profile
+    blocked_classes = (
+        ModelInputBlockedBySplunkGate,
+        ModelOutputBlockedBySplunkGate,
+        ToolBlockedBySplunkGate,
+        SubagentBlockedBySplunkGate,
+    )
     try:
         async with build_agent() as agent:  # type: ignore[attr-defined]
             await agent.invoke_with_data(prompt, {})  # type: ignore[attr-defined]
-    except SplunkGateError as exc:
-        verdict = getattr(exc, "verdict", None)
-        if verdict is None:
-            msg = f"SplunkGateError without .verdict attribute: {exc!r}"
-            raise RuntimeError(msg) from exc
-        return verdict
+    except blocked_classes as exc:
+        return exc.verdict  # type: ignore[no-any-return,union-attr]
     msg = "agent.invoke_with_data did not raise — SplunkGate did not block the malicious prompt"
     raise RuntimeError(msg)
 
@@ -175,6 +184,8 @@ async def _poll_splunk(trace_id: str, timeout: int, earliest: str) -> SplunkRow 
 
 async def _run(args: argparse.Namespace) -> int:
     """Orchestrate the end-to-end run; return exit code."""
+    import contextlib  # noqa: PLC0415
+
     from splunkgate_core.otel_hec_exporter import (  # noqa: PLC0415
         configure_hec_exporter,
         shutdown_hec_exporter,
@@ -189,7 +200,10 @@ async def _run(args: argparse.Namespace) -> int:
             return 1
         raise
     finally:
-        shutdown_hec_exporter()
+        # Shutdown is a network flush that can raise on a wedged HEC endpoint;
+        # suppress so the original exit code / traceback survives.
+        with contextlib.suppress(Exception):
+            shutdown_hec_exporter()
 
     started = time.perf_counter()
     row = await _poll_splunk(str(verdict.trace_id), args.timeout, args.earliest)
@@ -218,9 +232,6 @@ def main(argv: list[str] | None = None) -> int:
     missing = _missing_env_vars()
     if missing:
         return _missing_env_exit(missing)
-    # Use a deterministic trace_id for the demo run so the SPL polling
-    # query is byte-identical to what the operator can grep manually.
-    os.environ.setdefault("SPLUNKGATE_E2E_TRACE_ID", str(uuid.uuid4()))
     return asyncio.run(_run(args))
 
 
