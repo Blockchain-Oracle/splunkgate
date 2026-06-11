@@ -142,9 +142,7 @@ jobs:
           version: ${{ env.UV_VERSION }}
       - run: uv python install ${{ env.PYTHON_VERSION }}
       - run: uv sync --all-packages --frozen
-      - name: Run eval-smoke (20 prompts, < 60s budget)
-        run: uv run python eval/scripts/eval_smoke.py
-      - name: Test eval-smoke contract
+      - name: Test eval-smoke contract (includes the happy-path script run)
         run: uv run pytest eval/tests/test_eval_smoke.py -v
 
   build-app:
