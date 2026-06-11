@@ -316,14 +316,14 @@ def test_footer_status_reflects_per_search_outcome() -> None:
 
 
 def test_verdict_inspector_drilldown_feature_flagged() -> None:
-    """F-silent-7 fix: top-agents row renders as <span> until PR #18 ships."""
+    """PR #18 flips VERDICT_INSPECTOR_AVAILABLE to true: top-agents rows now render as anchors."""
     js = _BUNDLE_JS.read_text(encoding="utf-8")
     tsx = _DEV_TSX.read_text(encoding="utf-8")
     for src in (js, tsx):
         assert "VERDICT_INSPECTOR_AVAILABLE" in src
-    # Flag is OFF by default (PR #17 ships before PR #18).
-    assert "VERDICT_INSPECTOR_AVAILABLE = false" in js
-    assert "VERDICT_INSPECTOR_AVAILABLE = false" in tsx
+    # Flag is ON now that PR #18 ships the verdict_inspector SUIT view.
+    assert "VERDICT_INSPECTOR_AVAILABLE = true" in js
+    assert "VERDICT_INSPECTOR_AVAILABLE = true" in tsx
 
 
 def test_tick_timer_tracked_per_tile() -> None:

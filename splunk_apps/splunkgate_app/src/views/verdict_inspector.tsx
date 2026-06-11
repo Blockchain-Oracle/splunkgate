@@ -1,0 +1,629 @@
+/**
+ * SplunkGate — Verdict Inspector (SUIT view, story-suit-verdict-inspector).
+ *
+ * TypeScript source-of-truth for the built bundle at
+ * `static/splunkgate-suit/verdict_inspector.js`.
+ *
+ * **DRIFT CONTRACT**: when you fix a bug in this file, you MUST fix the
+ * same bug in `static/splunkgate-suit/verdict_inspector.js`. The test
+ * `test_vi_drift_invariants_match_between_js_and_tsx` enforces shared
+ * invariants.
+ *
+ * SPL data sources lift verbatim from
+ * `docs/archive/dashboard-studio-v2/verdict_inspector.xml`.
+ */
+
+import * as React from "react";
+import { createRoot } from "react-dom/client";
+import "../styles/tokens.css";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+declare const require: any;
+
+const MOUNT_ID = "splunkgate-verdict-inspector";
+const SEARCH_TIMEOUT_MS = 30000;
+
+const QUERIES = {
+    agents_list:
+        "`splunkgate_data` | stats values(agent_id) as agent_id | mvexpand agent_id | rename agent_id as label | eval value=label",
+    rules_list:
+        "`splunkgate_data` | mvexpand rule | stats values(rule) as rule | mvexpand rule | rename rule as label | eval value=label",
+    table:
+        '`splunkgate_data` agent_id="{AGENT}" severity="{SEVERITY}" verdict_label="{VERDICT_LABEL}" rule="{RULE}" | eval explanation_short = if(len(explanation)>120, substr(explanation,1,120)."…", explanation) | table _time agent_id surface verdict_label severity rule explanation_short latency_ms trace_id | sort -_time | head 200',
+    detail:
+        '`splunkgate_data` trace_id="{TRACE_ID}" | head 1 | table _time agent_id surface verdict_label severity rule explanation latency_ms trace_id atlas_technique_id atlas_technique_name atlas_tactic_id',
+    related: '`splunkgate_data` trace_id="{TRACE_ID}" | table _time surface verdict_label severity rule | sort _time',
+} as const;
+
+type SearchKey = keyof typeof QUERIES;
+type Row = Record<string, string>;
+type Status = "loading" | "ok" | "error" | "idle";
+
+interface SearchState {
+    status: Status;
+    rows: Row[];
+    error?: string;
+}
+
+interface SearchManagerInstance {
+    cancel?: () => void;
+    on: (event: string, cb: (props?: { message?: string }) => void) => void;
+    data: (kind: string, params?: { count: number; offset: number }) => {
+        on: (event: string, cb: (_unused: unknown, data: { results: Row[] }) => void) => void;
+    };
+}
+
+const SEVERITY_OPTIONS = [
+    { value: "*", label: "Any" },
+    { value: "HIGH", label: "HIGH" },
+    { value: "MEDIUM", label: "MEDIUM" },
+    { value: "LOW", label: "LOW" },
+    { value: "NONE_SEVERITY", label: "NONE_SEVERITY" },
+] as const;
+
+const VERDICT_LABEL_OPTIONS = [
+    { value: "*", label: "Any" },
+    { value: "block", label: "block" },
+    { value: "modify", label: "modify" },
+    { value: "review", label: "review" },
+    { value: "allow", label: "allow" },
+] as const;
+
+const TIME_PRESETS = [
+    { value: "-1h@h", label: "Last 1 hour" },
+    { value: "-24h@h", label: "Last 24 hours" },
+    { value: "-7d@d", label: "Last 7 days" },
+    { value: "-30d@d", label: "Last 30 days" },
+] as const;
+
+function sanitizeSplValue(v: string): string {
+    if (!v) {
+        return "*";
+    }
+    if (v === "*") {
+        return "*";
+    }
+    return v.replace(/[^A-Za-z0-9@._\-:]/g, "");
+}
+
+function useSplunkSearch(
+    key: SearchKey | string,
+    query: string,
+    earliest: string,
+    latest: string,
+    resultsCount: number,
+    enabled: boolean
+): SearchState {
+    const [s, setS] = React.useState<SearchState>({ status: "idle", rows: [] });
+
+    React.useEffect(() => {
+        if (!enabled) {
+            setS({ status: "idle", rows: [] });
+            return;
+        }
+        setS({ status: "loading", rows: [] });
+        let cancelled = false;
+        let mgr: SearchManagerInstance | null = null;
+        const timer = setTimeout(() => {
+            if (cancelled) {
+                return;
+            }
+            cancelled = true;
+            mgr?.cancel?.();
+            setS({
+                status: "error",
+                rows: [],
+                error: `Search timed out after ${SEARCH_TIMEOUT_MS / 1000}s — no response from Splunk Search SDK`,
+            });
+        }, SEARCH_TIMEOUT_MS);
+
+        if (typeof require !== "function") {
+            clearTimeout(timer);
+            setS({ status: "error", rows: [], error: "Splunk runtime not detected" });
+            return;
+        }
+        require(
+            ["splunkjs/mvc/searchmanager"],
+            (SearchManager: new (cfg: object) => SearchManagerInstance) => {
+                if (cancelled) {
+                    return;
+                }
+                try {
+                    mgr = new SearchManager({
+                        id: `splunkgate-vi-${key}-${Date.now()}`,
+                        preview: false,
+                        cache: false,
+                        search: query,
+                        earliest_time: earliest,
+                        latest_time: latest,
+                    });
+                } catch (e: unknown) {
+                    if (cancelled) {
+                        return;
+                    }
+                    cancelled = true;
+                    clearTimeout(timer);
+                    setS({
+                        status: "error",
+                        rows: [],
+                        error: `SearchManager construction failed: ${(e as Error).message ?? "unknown error"}`,
+                    });
+                    return;
+                }
+                mgr.on("search:error", (props) => {
+                    if (cancelled) {
+                        return;
+                    }
+                    cancelled = true;
+                    clearTimeout(timer);
+                    setS({
+                        status: "error",
+                        rows: [],
+                        error: props?.message ?? "Splunk search returned an error (no message)",
+                    });
+                });
+                mgr.data("results", { count: resultsCount, offset: 0 }).on("data", (_unused, data) => {
+                    if (cancelled) {
+                        return;
+                    }
+                    cancelled = true;
+                    clearTimeout(timer);
+                    setS({ status: "ok", rows: data?.results ?? [] });
+                });
+            },
+            (err: { message?: string; requireType?: string }) => {
+                if (cancelled) {
+                    return;
+                }
+                cancelled = true;
+                clearTimeout(timer);
+                setS({
+                    status: "error",
+                    rows: [],
+                    error: `Splunk Search SDK failed to load: ${err?.message ?? err?.requireType ?? "unknown require error"}`,
+                });
+            }
+        );
+        return () => {
+            cancelled = true;
+            clearTimeout(timer);
+            mgr?.cancel?.();
+        };
+    }, [key, query, earliest, latest, resultsCount, enabled]);
+
+    return s;
+}
+
+function copyToClipboard(text: string): Promise<void> {
+    if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+    }
+    return new Promise<void>((resolve, reject) => {
+        try {
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            ta.style.position = "fixed";
+            ta.style.top = "-1000px";
+            ta.style.left = "-1000px";
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            const ok = document.execCommand("copy");
+            document.body.removeChild(ta);
+            if (ok) {
+                resolve();
+            } else {
+                reject(new Error("execCommand returned false"));
+            }
+        } catch (e) {
+            reject(e as Error);
+        }
+    });
+}
+
+interface ChipProps {
+    label: string;
+}
+
+function SeverityChip({ label }: ChipProps): React.ReactElement {
+    const sev = label || "NONE_SEVERITY";
+    return <span className={`vi-chip vi-sev-${sev}`}>{sev}</span>;
+}
+
+function ResultChip({ label }: ChipProps): React.ReactElement | null {
+    const v = (label || "").toLowerCase();
+    if (!v) {
+        return null;
+    }
+    return <span className={`vi-result vi-result-${v}`}>{v}</span>;
+}
+
+interface PanelStateProps {
+    state: SearchState;
+    emptyMessage?: string;
+}
+
+function PanelStateBlock({ state, emptyMessage }: PanelStateProps): React.ReactElement | null {
+    if (state.status === "loading" || state.status === "idle") {
+        return <div className="vi-state">Loading…</div>;
+    }
+    if (state.status === "error") {
+        return (
+            <div className="vi-state-error-wrap">
+                <div className="vi-state-error-head">PANEL FAILED TO LOAD</div>
+                <div className="vi-state-error-msg">{state.error}</div>
+            </div>
+        );
+    }
+    if (state.rows.length === 0) {
+        return <div className="vi-state">{emptyMessage ?? "No data."}</div>;
+    }
+    return null;
+}
+
+interface TraceChipProps {
+    traceId: string;
+}
+
+function TraceChip({ traceId }: TraceChipProps): React.ReactElement {
+    const [copied, setCopied] = React.useState<boolean>(false);
+    const onClick = React.useCallback(() => {
+        copyToClipboard(traceId)
+            .then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 800);
+            })
+            .catch(() => {
+                // eslint-disable-next-line no-console
+                console.warn("[splunkgate-verdict-inspector] copy-to-clipboard failed");
+            });
+    }, [traceId]);
+    return (
+        <button
+            type="button"
+            className={`vi-trace-chip ${copied ? "vi-copied" : ""}`}
+            onClick={onClick}
+            data-trace-id={traceId}
+        >
+            <svg className="vi-trace-chip-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                <rect x={3} y={3} width={9} height={11} rx={1} />
+                <path d="M5 1h7a2 2 0 0 1 2 2v8" />
+            </svg>
+            <span>{copied ? "copied!" : traceId}</span>
+        </button>
+    );
+}
+
+interface DetailProps {
+    state: SearchState;
+    selectedTraceId: string | null;
+}
+
+function DetailPanel({ state, selectedTraceId }: DetailProps): React.ReactElement {
+    if (!selectedTraceId) {
+        return (
+            <div className="vi-detail-empty">
+                No verdict selected — click a row in the table on the left.
+            </div>
+        );
+    }
+    const block = <PanelStateBlock state={state} emptyMessage={`No verdict found for trace_id ${selectedTraceId}.`} />;
+    if (block) {
+        return block;
+    }
+    const r = state.rows[0];
+    const traceId = r.trace_id ?? selectedTraceId;
+    const esUrl = `/app/SplunkEnterpriseSecuritySuite/investigation_workbench?form.search=trace_id%3D%22${encodeURIComponent(traceId)}%22`;
+    return (
+        <>
+            <div className="vi-detail-field">
+                <div className="vi-detail-label">Time</div>
+                <div className="vi-detail-value vi-mono">
+                    {(r._time ?? "").substring(0, 19).replace("T", " ")}
+                </div>
+            </div>
+            <div className="vi-detail-field">
+                <div className="vi-detail-label">Trace ID</div>
+                <div className="vi-detail-value">
+                    <TraceChip traceId={traceId} />
+                </div>
+            </div>
+            <div className="vi-detail-field">
+                <div className="vi-detail-label">Agent</div>
+                <div className="vi-detail-value vi-mono">{r.agent_id ?? ""}</div>
+            </div>
+            <div className="vi-detail-field">
+                <div className="vi-detail-label">Surface</div>
+                <div className="vi-detail-value vi-mono">{r.surface ?? ""}</div>
+            </div>
+            <div className="vi-detail-field">
+                <div className="vi-detail-label">Verdict</div>
+                <div className="vi-detail-value">
+                    <ResultChip label={r.verdict_label ?? ""} /> &nbsp; <SeverityChip label={r.severity ?? ""} />
+                </div>
+            </div>
+            <div className="vi-detail-field">
+                <div className="vi-detail-label">Rule</div>
+                <div className="vi-detail-value">{r.rule ?? ""}</div>
+            </div>
+            <div className="vi-detail-field">
+                <div className="vi-detail-label">Latency</div>
+                <div className="vi-detail-value vi-mono">{r.latency_ms ?? ""} ms</div>
+            </div>
+            {(r.atlas_technique_id || r.atlas_technique_name) && (
+                <div className="vi-detail-field">
+                    <div className="vi-detail-label">MITRE ATLAS</div>
+                    <div className="vi-detail-value vi-mono">
+                        {r.atlas_technique_id ?? ""} · {r.atlas_technique_name ?? ""}
+                        {r.atlas_tactic_id ? ` · tactic ${r.atlas_tactic_id}` : ""}
+                    </div>
+                </div>
+            )}
+            <div className="vi-detail-field">
+                <div className="vi-detail-label">Explanation</div>
+                <div className="vi-detail-value">
+                    {r.explanation ? (
+                        <div className="vi-explanation-block">{r.explanation}</div>
+                    ) : (
+                        <span className="vi-state">No explanation attached to this verdict.</span>
+                    )}
+                </div>
+            </div>
+            <a className="vi-es-drill-btn" href={esUrl} target="_blank" rel="noopener noreferrer">
+                Open in ES Investigation Workbench →
+            </a>
+        </>
+    );
+}
+
+function RelatedPanel({ state, selectedTraceId }: { state: SearchState; selectedTraceId: string | null }): React.ReactElement {
+    if (!selectedTraceId) {
+        return <div className="vi-detail-empty">No trace_id selected.</div>;
+    }
+    const block = <PanelStateBlock state={state} emptyMessage="No related events under this trace_id." />;
+    if (block) {
+        return block;
+    }
+    return (
+        <>
+            {state.rows.map((r, i) => {
+                const t = r._time ? r._time.substring(11, 19) : "";
+                return (
+                    <div className="vi-related-row" key={i}>
+                        <span className="vi-related-time">{t}</span>
+                        <span className="vi-related-rule">{r.rule ?? ""}</span>
+                        <span className="vi-related-surface">{r.surface ?? ""}</span>
+                        <ResultChip label={r.verdict_label ?? ""} />
+                    </div>
+                );
+            })}
+        </>
+    );
+}
+
+function VerdictInspectorView(): React.ReactElement {
+    const [earliest, setEarliest] = React.useState<string>("-24h@h");
+    const latest = "now";
+    const [agent, setAgent] = React.useState<string>("*");
+    const [ruleSel, setRuleSel] = React.useState<string>("*");
+    const [severity, setSeverity] = React.useState<string>("*");
+    const [verdictLabel, setVerdictLabel] = React.useState<string>("*");
+    const [selectedTraceId, setSelectedTraceId] = React.useState<string | null>(null);
+
+    const agentsListState = useSplunkSearch("agents_list", QUERIES.agents_list, earliest, latest, 500, true);
+    const rulesListState = useSplunkSearch("rules_list", QUERIES.rules_list, earliest, latest, 200, true);
+
+    const tableQuery = QUERIES.table
+        .replace("{AGENT}", sanitizeSplValue(agent))
+        .replace("{SEVERITY}", sanitizeSplValue(severity))
+        .replace("{VERDICT_LABEL}", sanitizeSplValue(verdictLabel))
+        .replace("{RULE}", sanitizeSplValue(ruleSel));
+    const tableState = useSplunkSearch("table", tableQuery, earliest, latest, 200, true);
+
+    const safeTid = selectedTraceId ? sanitizeSplValue(selectedTraceId) : "";
+    const detailQuery = QUERIES.detail.replace("{TRACE_ID}", safeTid);
+    const relatedQuery = QUERIES.related.replace("{TRACE_ID}", safeTid);
+    const detailState = useSplunkSearch("detail", detailQuery, earliest, latest, 1, selectedTraceId !== null);
+    const relatedState = useSplunkSearch("related", relatedQuery, earliest, latest, 200, selectedTraceId !== null);
+
+    const agentsOptions: { value: string; label: string }[] = React.useMemo(() => {
+        const out = [{ value: "*", label: "Any" }];
+        if (agentsListState.status === "ok") {
+            agentsListState.rows.forEach((r) => {
+                if (r.value) {
+                    out.push({ value: r.value, label: r.label ?? r.value });
+                }
+            });
+        }
+        return out;
+    }, [agentsListState]);
+
+    const rulesOptions = React.useMemo(() => {
+        const out = [{ value: "*", label: "Any" }];
+        if (rulesListState.status === "ok") {
+            rulesListState.rows.forEach((r) => {
+                if (r.value) {
+                    out.push({ value: r.value, label: r.label ?? r.value });
+                }
+            });
+        }
+        return out;
+    }, [rulesListState]);
+
+    const onClearFilters = (): void => {
+        setAgent("*");
+        setRuleSel("*");
+        setSeverity("*");
+        setVerdictLabel("*");
+    };
+
+    return (
+        <div className="splunkgate-suit">
+            <div className="vi-page">
+                <header className="vi-header">
+                    <div>
+                        <h1 className="vi-header-title">SplunkGate — Verdict Inspector</h1>
+                        <div className="vi-header-subtitle">
+                            Filter by time / agent / rule / severity / verdict label. Click a row to see full provenance + every other
+                            verdict from the same trace_id across all four SplunkGate surfaces.
+                        </div>
+                    </div>
+                </header>
+
+                <section className="vi-filter-bar">
+                    <div className="vi-control">
+                        <label htmlFor="vi-time">Time range</label>
+                        <select id="vi-time" value={earliest} onChange={(e) => setEarliest(e.target.value)}>
+                            {TIME_PRESETS.map((p) => (
+                                <option key={p.value} value={p.value}>
+                                    {p.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="vi-control">
+                        <label htmlFor="vi-agent">Agent</label>
+                        <select id="vi-agent" value={agent} onChange={(e) => setAgent(e.target.value)}>
+                            {agentsOptions.map((o) => (
+                                <option key={o.value} value={o.value}>
+                                    {o.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="vi-control">
+                        <label htmlFor="vi-rule">Rule</label>
+                        <select id="vi-rule" value={ruleSel} onChange={(e) => setRuleSel(e.target.value)}>
+                            {rulesOptions.map((o) => (
+                                <option key={o.value} value={o.value}>
+                                    {o.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="vi-control">
+                        <label htmlFor="vi-severity">Severity</label>
+                        <select id="vi-severity" value={severity} onChange={(e) => setSeverity(e.target.value)}>
+                            {SEVERITY_OPTIONS.map((o) => (
+                                <option key={o.value} value={o.value}>
+                                    {o.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="vi-control">
+                        <label htmlFor="vi-verdict">Verdict label</label>
+                        <select id="vi-verdict" value={verdictLabel} onChange={(e) => setVerdictLabel(e.target.value)}>
+                            {VERDICT_LABEL_OPTIONS.map((o) => (
+                                <option key={o.value} value={o.value}>
+                                    {o.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <button type="button" className="vi-clear-btn" onClick={onClearFilters} title="Reset all filters">
+                        Clear
+                    </button>
+                </section>
+
+                <section className="vi-body">
+                    <div className="vi-panel">
+                        <h2>Verdicts (latest 200)</h2>
+                        <p className="vi-panel-desc">
+                            Click a row to inspect that verdict. Highlight + detail panel update in &lt;200ms.
+                        </p>
+                        <div className="vi-list-wrap">
+                            {tableState.status === "ok" && tableState.rows.length > 0 ? (
+                                <table className="vi-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Time</th>
+                                            <th>Agent</th>
+                                            <th>Surface</th>
+                                            <th>Verdict</th>
+                                            <th>Severity</th>
+                                            <th>Rule</th>
+                                            <th>Explanation</th>
+                                            <th>Latency</th>
+                                            <th>Trace</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {tableState.rows.map((r, i) => {
+                                            const traceId = r.trace_id ?? "";
+                                            const time = r._time ? r._time.substring(0, 19).replace("T", " ") : "";
+                                            const selected = traceId === selectedTraceId ? " vi-row-selected" : "";
+                                            return (
+                                                <tr
+                                                    key={i}
+                                                    className={`vi-row${selected}`}
+                                                    onClick={() => setSelectedTraceId(traceId || null)}
+                                                >
+                                                    <td className="vi-mono">{time}</td>
+                                                    <td className="vi-mono">{r.agent_id ?? ""}</td>
+                                                    <td className="vi-mono">{r.surface ?? ""}</td>
+                                                    <td>
+                                                        <ResultChip label={r.verdict_label ?? ""} />
+                                                    </td>
+                                                    <td>
+                                                        <SeverityChip label={r.severity ?? ""} />
+                                                    </td>
+                                                    <td>{r.rule ?? ""}</td>
+                                                    <td className="vi-explanation">{r.explanation_short ?? ""}</td>
+                                                    <td className="vi-mono">{r.latency_ms ?? ""}ms</td>
+                                                    <td className="vi-mono">{traceId.substring(0, 8)}…</td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <PanelStateBlock
+                                    state={tableState}
+                                    emptyMessage="No verdicts match the current filters in the selected time range."
+                                />
+                            )}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div className="vi-panel">
+                            <h2>Verdict detail</h2>
+                            <p className="vi-panel-desc">
+                                Full provenance for the selected trace_id including MITRE ATLAS technique mapping. Drill into ES
+                                Investigation Workbench from the button below.
+                            </p>
+                            <DetailPanel state={detailState} selectedTraceId={selectedTraceId} />
+                        </div>
+                        <div className="vi-panel">
+                            <h2>Related events for this trace_id</h2>
+                            <p className="vi-panel-desc">
+                                Every other SplunkGate verdict emitted under the same trace_id, across all four surfaces
+                                (mw_model / mw_tool / mw_subagent / mcp_*).
+                            </p>
+                            <RelatedPanel state={relatedState} selectedTraceId={selectedTraceId} />
+                        </div>
+                    </div>
+                </section>
+
+                <footer className="vi-footer">
+                    <span>SplunkGate v1.0.0</span>
+                    <span>
+                        {tableState.status === "ok"
+                            ? `${tableState.rows.length} row${tableState.rows.length === 1 ? "" : "s"}`
+                            : "—"}
+                    </span>
+                    <span>Filter changes apply immediately.</span>
+                </footer>
+            </div>
+        </div>
+    );
+}
+
+const root = document.getElementById(MOUNT_ID);
+if (!root) {
+    // eslint-disable-next-line no-console
+    console.warn(`[splunkgate-verdict-inspector] mount node #${MOUNT_ID} not found`);
+} else {
+    createRoot(root).render(<VerdictInspectorView />);
+}

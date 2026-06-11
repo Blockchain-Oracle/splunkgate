@@ -1,171 +1,26 @@
-<dashboard version="2" theme="dark">
-  <label>SplunkGate — Verdict Inspector</label>
-  <description>SOC + AI platform engineer drill-down. Filter by time / agent / rule / severity / verdict label, click a row to slide in a full detail panel + related events from the same trace_id across all four surfaces.</description>
-  <definition><![CDATA[
-{
-  "title": "SplunkGate — Verdict Inspector",
-  "description": "Click a row to inspect a verdict. Use the filter bar to narrow.",
-  "inputs": {
-    "input_time": {
-      "type": "input.timerange",
-      "title": "Time range",
-      "options": {"defaultValue": "-24h@h,now", "token": "input_time"}
-    },
-    "input_agent_id": {
-      "type": "input.dropdown",
-      "title": "Agent",
-      "options": {
-        "defaultValue": "*",
-        "token": "input_agent_id",
-        "items": [{"label": "Any", "value": "*"}]
-      },
-      "dataSources": {"primary": "ds_agents_list"}
-    },
-    "input_rule": {
-      "type": "input.dropdown",
-      "title": "Rule",
-      "options": {
-        "defaultValue": "*",
-        "token": "input_rule",
-        "items": [{"label": "Any", "value": "*"}]
-      },
-      "dataSources": {"primary": "ds_rules_list"}
-    },
-    "input_severity": {
-      "type": "input.dropdown",
-      "title": "Severity",
-      "options": {
-        "defaultValue": "*",
-        "token": "input_severity",
-        "items": [
-          {"label": "Any", "value": "*"},
-          {"label": "HIGH", "value": "HIGH"},
-          {"label": "MEDIUM", "value": "MEDIUM"},
-          {"label": "LOW", "value": "LOW"},
-          {"label": "NONE_SEVERITY", "value": "NONE_SEVERITY"}
-        ]
-      }
-    },
-    "input_verdict_label": {
-      "type": "input.dropdown",
-      "title": "Verdict label",
-      "options": {
-        "defaultValue": "*",
-        "token": "input_verdict_label",
-        "items": [
-          {"label": "Any", "value": "*"},
-          {"label": "block", "value": "block"},
-          {"label": "modify", "value": "modify"},
-          {"label": "review", "value": "review"},
-          {"label": "allow", "value": "allow"}
-        ]
-      }
-    }
-  },
-  "dataSources": {
-    "ds_agents_list": {
-      "type": "ds.search",
-      "options": {
-        "query": "`splunkgate_data` | stats values(agent_id) as agent_id | mvexpand agent_id | rename agent_id as label | eval value=label"
-      },
-      "name": "ds_agents_list"
-    },
-    "ds_rules_list": {
-      "type": "ds.search",
-      "options": {
-        "query": "`splunkgate_data` | mvexpand rule | stats values(rule) as rule | mvexpand rule | rename rule as label | eval value=label"
-      },
-      "name": "ds_rules_list"
-    },
-    "ds_table": {
-      "type": "ds.search",
-      "options": {
-        "query": "`splunkgate_data` agent_id=\"$input_agent_id$\" severity=\"$input_severity$\" verdict_label=\"$input_verdict_label$\" rule=\"$input_rule$\" | eval explanation_short = if(len(explanation)>120, substr(explanation,1,120).\"…\", explanation) | table _time agent_id surface verdict_label severity rule explanation_short latency_ms trace_id | sort -_time | head 200"
-      },
-      "name": "ds_table"
-    },
-    "ds_detail": {
-      "type": "ds.search",
-      "options": {
-        "query": "`splunkgate_data` trace_id=\"$row_trace_id$\" | head 1 | table _time agent_id surface verdict_label severity rule explanation latency_ms trace_id atlas_technique_id atlas_technique_name atlas_tactic_id"
-      },
-      "name": "ds_detail"
-    },
-    "ds_related": {
-      "type": "ds.search",
-      "options": {
-        "query": "`splunkgate_data` trace_id=\"$row_trace_id$\" | table _time surface verdict_label severity rule | sort _time"
-      },
-      "name": "ds_related"
-    }
-  },
-  "visualizations": {
-    "verdict_filter_bar": {
-      "type": "splunk.markdown",
-      "options": {
-        "markdown": "**Active filters** — Time: `$input_time.earliest$ → $input_time.latest$` · Agent: `$input_agent_id$` · Rule: `$input_rule$` · Severity: `$input_severity$` · Verdict: `$input_verdict_label$`\\n\\nClick a row in the table below to inspect a verdict and see related events from the same `trace_id` across all four SplunkGate surfaces (mw_model / mw_tool / mw_subagent / mcp_*)."
-      }
-    },
-    "verdict_table": {
-      "type": "splunk.table",
-      "title": "Verdicts (latest 200)",
-      "dataSources": {"primary": "ds_table"},
-      "options": {"rowNumbers": true},
-      "eventHandlers": [
-        {
-          "type": "drilldown.event.click",
-          "options": {
-            "tokens": [
-              {"name": "row_trace_id", "value": "$row.trace_id$"},
-              {"name": "row_agent_id", "value": "$row.agent_id$"}
-            ]
-          }
-        }
-      ]
-    },
-    "detail_panel": {
-      "type": "splunk.table",
-      "title": "Verdict detail (click a row above to populate)",
-      "description": "Full provenance for the selected trace_id including the MITRE ATLAS technique mapping.",
-      "dataSources": {"primary": "ds_detail"},
-      "options": {"rowNumbers": false},
-      "eventHandlers": [
-        {
-          "type": "drilldown.event.click",
-          "options": {
-            "valid": true,
-            "uri": "/app/SplunkEnterpriseSecuritySuite/investigation_workbench?form.search=trace_id%3D%22$row.trace_id$%22"
-          }
-        }
-      ]
-    },
-    "related_events_panel": {
-      "type": "splunk.table",
-      "title": "Related events for this trace_id",
-      "description": "Other SplunkGate verdicts emitted under the same trace_id, across all four surfaces.",
-      "dataSources": {"primary": "ds_related"},
-      "options": {"rowNumbers": false}
-    }
-  },
-  "layout": {
-    "type": "absolute",
-    "options": {"width": 1440, "height": 1140, "backgroundColor": "#0e1a2b"},
-    "structure": [
-      {"item": "verdict_filter_bar", "type": "block", "position": {"x": 0, "y": 0, "w": 1440, "h": 120}},
-      {"item": "verdict_table", "type": "block", "position": {"x": 0, "y": 140, "w": 1440, "h": 400}},
-      {"item": "detail_panel", "type": "block", "position": {"x": 0, "y": 560, "w": 960, "h": 560}},
-      {"item": "related_events_panel", "type": "block", "position": {"x": 980, "y": 560, "w": 460, "h": 560}}
-    ]
-  },
-  "defaults": {
-    "dataSources": {
-      "ds.search": {"options": {"queryParameters": {"earliest": "$input_time.earliest$", "latest": "$input_time.latest$"}}}
-    },
-    "tokens": [
-      {"name": "row_trace_id", "value": ""},
-      {"name": "row_agent_id", "value": ""}
-    ]
-  }
-}
-]]></definition>
-</dashboard>
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SplunkGate — Verdict Inspector (SUIT rebuild, story-suit-verdict-inspector).
+
+  D3 "microscope" per docs/dashboard design brief: two-column layout with
+  filter bar (4 inputs) + verdict list table (left, 60%) / detail panel +
+  related events (right, 40%). Drill-down to ES investigation workbench
+  on detail-panel click. The trace_id copy-to-clipboard chip is the hero
+  micro-interaction.
+
+  SPL data sources unchanged (lifted verbatim from
+  docs/archive/dashboard-studio-v2/verdict_inspector.xml).
+
+  Rollback: docs/archive/dashboard-studio-v2/verdict_inspector.xml.
+-->
+<view template="dashboards/template.dashboard.html"
+      stylesheet="splunkgate-suit/tokens.css,splunkgate-suit/verdict_inspector.css"
+      script="splunkgate-suit/verdict_inspector.js">
+    <label>SplunkGate — Verdict Inspector</label>
+    <description>SOC + AI platform engineer drill-down. Filter by time / agent / rule / severity / verdict label, click a row to inspect a verdict and see related events from the same trace_id across all four surfaces. Dossier-styled SUIT view; SPL queries unchanged from the archived Dashboard Studio v2 definition.</description>
+    <module name="HTML">
+        <param name="html"><![CDATA[
+            <div id="splunkgate-verdict-inspector"></div>
+        ]]></param>
+    </module>
+</view>

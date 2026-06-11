@@ -29,7 +29,7 @@ declare const require: any;
 const MOUNT_ID = "splunkgate-agent-risk";
 const SEARCH_TIMEOUT_MS = 30000;
 // Flip to true the moment PR #18 (verdict_inspector SUIT rebuild) lands.
-const VERDICT_INSPECTOR_AVAILABLE = false;
+const VERDICT_INSPECTOR_AVAILABLE = true;
 // Heatmap intensity bucketing — absolute floor for bucket-5 so a single
 // hit on a sparse window doesn't paint vermillion-deep.
 const HEATMAP_BUCKET_5_FLOOR = 6.0;

@@ -27,7 +27,7 @@
     var SEARCH_ID_SEQ = 0;
     // Flip to true the moment PR #18 (verdict_inspector SUIT rebuild) lands.
     // Until then, the drill-down would 404 — render as <span>, not <a>.
-    var VERDICT_INSPECTOR_AVAILABLE = false;
+    var VERDICT_INSPECTOR_AVAILABLE = true;
     // Heatmap intensity bucketing — absolute floor for bucket-5 so a single
     // hit on a sparse window doesn't paint vermillion-deep. Severity scores
     // are 1 (LOW) / 2 (MEDIUM) / 4 (HIGH) per the canonical map, so 6+
